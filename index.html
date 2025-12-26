@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KV-Cache Offloading Architecture — Complete Technical Reference</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .hero {
+      text-align: center;
+      padding: 4rem 2rem 3rem;
+      background: linear-gradient(180deg, rgba(88, 166, 255, 0.05) 0%, transparent 100%);
+      border-bottom: 1px solid var(--border-primary);
+      margin-bottom: 3rem;
+    }
+    
+    .hero-label {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--accent-purple);
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      margin-bottom: 1.5rem;
+    }
+    
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: clamp(2rem, 5vw, 3.5rem);
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 1rem;
+      line-height: 1.2;
+    }
+    
+    .hero-subtitle {
+      font-size: 1.25rem;
+      color: var(--text-secondary);
+      max-width: 700px;
+      margin: 0 auto 2rem;
+      line-height: 1.6;
+    }
+    
+    .hero-stats {
+      display: flex;
+      justify-content: center;
+      gap: 3rem;
+      flex-wrap: wrap;
+      margin-top: 2rem;
+    }
+    
+    .hero-stat {
+      text-align: center;
+    }
+    
+    .hero-stat-value {
+      font-family: var(--font-mono);
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+    }
+    
+    .hero-stat-label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+    
+    .section-title {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    
+    .section-title-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+    
+    .chapter-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1rem;
+      margin-bottom: 3rem;
+    }
+    
+    .chapter-card {
+      display: block;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-primary);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-decoration: none;
+      transition: all 0.25s ease;
+    }
+    
+    .chapter-card:hover {
+      border-color: var(--accent-cyan);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(88, 166, 255, 0.1);
+      text-decoration: none;
+    }
+    
+    .chapter-card-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      margin-bottom: 0.75rem;
+    }
+    
+    .chapter-num {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--accent-purple);
+      background: rgba(163, 113, 247, 0.1);
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+    
+    .chapter-card-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      line-height: 1.3;
+    }
+    
+    .chapter-card-desc {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    
+    .chapter-card-topics {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+    
+    .topic-tag {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      background: var(--bg-primary);
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+    }
+    
+    .appendix-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 1rem;
+    }
+    
+    .appendix-card {
+      display: block;
+      background: var(--bg-card);
+      border: 1px solid var(--border-primary);
+      border-radius: 10px;
+      padding: 1.25rem;
+      text-decoration: none;
+      transition: all 0.2s ease;
+    }
+    
+    .appendix-card:hover {
+      border-color: var(--accent-purple);
+      text-decoration: none;
+    }
+    
+    .appendix-letter {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--accent-purple);
+      margin-bottom: 0.5rem;
+    }
+    
+    .appendix-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 0.25rem;
+    }
+    
+    .appendix-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    
+    .quick-links {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 3rem;
+    }
+    
+    .quick-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.25rem;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-primary);
+      border-radius: 8px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+    }
+    
+    .quick-link:hover {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+      text-decoration: none;
+    }
+    
+    .quick-link-icon {
+      font-size: 1.1rem;
+    }
+  
+    /* Watermark */
+    .watermark {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: rgba(88, 166, 255, 0.15);
+      pointer-events: none;
+      z-index: 9999;
+      text-align: right;
+      line-height: 1.4;
+    }
+    .watermark::before {
+      content: "CONFIDENTIAL";
+      display: block;
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: 4px;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="watermark">
+    © 2025 Subramaniyam (Sam) Pooni<br>
+    All Rights Reserved<br>
+    Proprietary & Confidential
+  </div>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="nav-brand">
+        <span class="nav-brand-icon">⚡</span>
+        KV-Cache Architecture
+      </a>
+      <div class="nav-links">
+        <a href="chapters/ch00-executive-summary.html" class="nav-link">Summary</a>
+        <a href="chapters/ch01-introduction.html" class="nav-link">Introduction</a>
+        <a href="chapters/ch03-architecture.html" class="nav-link">Architecture</a>
+        <a href="appendix/index.html" class="nav-link">Appendix</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <!-- Hero Section -->
+    <div class="hero">
+      <div class="hero-label">Technical Reference Documentation</div>
+      <h1 class="hero-title">Distributed Endpoint Architecture for<br>KV-Cache Offloading in LLM Inference</h1>
+      <p class="hero-subtitle">A comprehensive guide to memory-efficient large language model serving using CXL-based intelligent memory endpoints with hardware-accelerated cache management.</p>
+      
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="hero-stat-value">6×</div>
+          <div class="hero-stat-label">Memory Expansion</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-value">8×</div>
+          <div class="hero-stat-label">User Capacity</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-value">95%</div>
+          <div class="hero-stat-label">HBM Hit Rate</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-value">36%</div>
+          <div class="hero-stat-label">Cost Reduction</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="container">
+      <!-- Quick Links -->
+      <div class="quick-links">
+        <a href="chapters/ch00-executive-summary.html" class="quick-link">
+          <span class="quick-link-icon">📋</span>
+          Executive Summary
+        </a>
+        <a href="chapters/ch03-architecture.html" class="quick-link">
+          <span class="quick-link-icon">🏗️</span>
+          System Architecture
+        </a>
+        <a href="chapters/ch07-kv-cache.html" class="quick-link">
+          <span class="quick-link-icon">🧠</span>
+          KV-Cache Management
+        </a>
+        <a href="chapters/ch11-performance.html" class="quick-link">
+          <span class="quick-link-icon">📊</span>
+          Performance Analysis
+        </a>
+        <a href="appendix/index.html" class="quick-link">
+          <span class="quick-link-icon">📚</span>
+          Technical Appendix
+        </a>
+      </div>
+
+      <!-- Main Chapters -->
+      <div class="section-title">
+        <span class="section-title-icon" style="background: rgba(88, 166, 255, 0.15); color: var(--accent-cyan);">📖</span>
+        Chapters
+      </div>
+
+      <div class="chapter-grid">
+        <!-- Chapter 0 -->
+        <a href="chapters/ch00-executive-summary.html" class="chapter-card">
+          <div class="chapter-card-header">
+            <span class="chapter-num">CH 0</span>
+            <span class="chapter-card-title">Executive Summary</span>
+          </div>
+          <p class="chapter-card-desc">High-level overview of the memory wall problem in LLM inference and the proposed intelligent endpoint architecture solution.</p>
+          <div class="chapter-card-topics">
+            <span class="topic-tag">Problem Statement</span>
+            <span class="topic-tag">Key Results</span>
+            <span class="topic-tag">Architecture Overview</span>
+          </div>
+        </a>
+
+        <!-- Chapter 1 -->
+        <a href="chapters/ch01-introduction.html" class="chapter-card">
+          <div class="chapter-card-header">
+            <span class="chapter-num">CH 1</span>
+            <span class="chapter-card-title">Introduction</span>
+          </div>
+          <p class="chapter-card-desc">The von Neumann bottleneck, why KV-cache matters for LLM serving, and the scope of this technical documentation.</p>
+          <div class="chapter-card-topics">
+            <span class="topic-tag">Memory Bottleneck</span>
+            <span class="topic-tag">KV-Cache Importance</span>
+            <span class="topic-tag">Document Scope</span>
+          </div>
+        </a>
+
+        <!-- Chapter 2 -->
+        <a href="chapters/ch02-background.html" class="chapter-card">
+          <div class="chapter-card-header">
+            <span class="chapter-num">CH 2</span>
+            <span class="chapter-card-title">Background</span>
+          </div>
+          <p class="chapter-card-desc">LLM inference fundamentals, the bandwidth-compute gap, and limitations of current approaches like vLLM and tensor parallelism.</p>
+          <div class="chapter-card-topics">
+            <span class="topic-tag">Prefill vs Decode</span>
+            <span class="topic-tag">Memory Wall</span>
+            <span class="topic-tag">Current Solutions</span>
+          </div>
+        </a>
+
+        <!-- Chapter 3 -->
+        <a href="chapters/ch03-architecture.html" class="chapter-card">
+          <div class="chapter-card-header">
+            <span class="chapter-num">CH 3</span>
+            <span class="chapter-card-title">Distributed Endpoint Architecture</span>
+          </div>
+          <p class="chapter-card-desc">Core architecture concepts including memory controller offloading, CXL 3.0, and system topology for single and multi-node deployments.</p>
+          <div class="chapter-card-topics">
+            <span class="topic-tag">CXL 3.0</span>
+            <span class="topic-tag">Endpoint Design</span>
+            <span class="topic-tag">System Topology</span>
+          </div>
+        </a>
+
+        <!-- Chapter 4 -->
+        <a href="chapters/ch04-latency.html" class="chapter-card">
+          <div class="chapter-card-header">
+            <span class="chapter-num">CH 4</span>
+            <span class="chapter-card-title">Effective Latency Analysis</span>
+          </div>
+          <p class="chapter-card-desc">Two-tier cache model analysis, latency formulas, and the 65× improvement over traditional PCIe paths.</p>
+          <div class="chapter-card-topics">
+            <span class="topic-tag">Cache Tiers</span>
+            <span class="topic-tag">Latency Formula</span>
+            <span class="topic-tag">PCIe Comparison</span>
+          </div>
+        </a>
+
+        <!-- Chapter 5 -->
+        <a href="chapters/ch05-bandwidth.html" class="chapter-card">
+          <div class="chapter-card-header">
+            <span class="chapter-num">CH 5</span>
+            <span class="chapter-card-title">Bandwidth Aggregation</span>
+          </div>
+          <p class="chapter-card-desc">CXL switch topology for linear bandwidth scaling, layer prefetch strategies, and practical bandwidth calculations.</p>
+          <div class="chapter-card-topics">
+            <span class="topic-tag">Switch Topology</span>
+            <span class="topic-tag">Prefetch Strategy</span>
+            <span class="topic-tag">Bandwidth Math</span>
+          </div>
+        </a>
+
+        <!-- Chapter 6 -->
+        <a href="chapters/ch06-preprocessing.html" class="chapter-card">
+          <div class="chapter-card-header">
+            <span class="chapter-num">CH 6</span>
+            <span class="chapter-card-title">Preprocessing Offload</span>
+          </div>
+          <p class="chapter-card-desc">Offloading tokenization, image processing, and format conversion to ARM cores in endpoints for 5-10× latency reduction.</p>
+          <div class="chapter-card-topics">
+            <span class="topic-tag">Tokenization</span>
+            <span class="topic-tag">ARM Cores</span>
+            <span class="topic-tag">Data Conversion</span>
+          </div>
+        </a>
+
+        <!-- Chapter 7 -->
+        <a href="chapters/ch07-kv-cache.html" class="chapter-card">
+          <div class="chapter-card-header">
+            <span class="chapter-num">CH 7</span>
+            <span class="chapter-card-title">Intelligent KV-Cache Management</span>
+          </div>
+          <p class="chapter-card-desc">Per-head tracking, EMA-based attention scoring, RoPE-aware prefetch, and the eviction priority function achieving 97% hit rates.</p>
+          <div class="chapter-card-topics">
+            <span class="topic-tag">Per-Head Tracking</span>
+            <span class="topic-tag">EMA Scoring</span>
+            <span class="topic-tag">RoPE Prefetch</span>
+          </div>
+        </a>
+
+        <!-- Chapter 8 -->
+        <a href="chapters/ch08-moe.html" class="chapter-card">
+          <div class="chapter-card-header">
+            <span class="chapter-num">CH 8</span>
+            <span class="chapter-card-title">MoE Routing Support</span>
+          </div>
+          <p class="chapter-card-desc">Handling Mixture-of-Experts models with routing histograms, activation tracking, and adaptive caching strategies.</p>
+          <div class="chapter-card-topics">
+            <span class="topic-tag">Expert Selection</span>
+            <span class="topic-tag">Histogram Tracking</span>
+            <span class="topic-tag">Cache Strategy</span>
+          </div>
+        </a>
+
+        <!-- Chapter 9 -->
+        <a href="chapters/ch09-gpu-integration.html" class="chapter-card">
+          <div class="chapter-card-header">
+            <span class="chapter-num">CH 9</span>
+            <span class="chapter-card-title">GPU Integration</span>
+          </div>
+          <p class="chapter-card-desc">Memory mapping, hint interfaces, driver-to-firmware translation, and fault handling for seamless GPU access.</p>
+          <div class="chapter-card-topics">
+            <span class="topic-tag">Memory Mapping</span>
+            <span class="topic-tag">Hint API</span>
+            <span class="topic-tag">Fault Handling</span>
+          </div>
+        </a>
+
+        <!-- Chapter 10 -->
+        <a href="chapters/ch10-market.html" class="chapter-card">
+          <div class="chapter-card-header">
+            <span class="chapter-num">CH 10</span>
+            <span class="chapter-card-title">Market Landscape</span>
+          </div>
+          <p class="chapter-card-desc">Analysis of commercial CXL products, software frameworks, recent research, and competitive differentiation.</p>
+          <div class="chapter-card-topics">
+            <span class="topic-tag">Samsung CMM</span>
+            <span class="topic-tag">vLLM/Mooncake</span>
+            <span class="topic-tag">Differentiation</span>
+          </div>
+        </a>
+
+        <!-- Chapter 11 -->
+        <a href="chapters/ch11-performance.html" class="chapter-card">
+          <div class="chapter-card-header">
+            <span class="chapter-num">CH 11</span>
+            <span class="chapter-card-title">Performance Analysis</span>
+          </div>
+          <p class="chapter-card-desc">TTFT improvements, compute vs IO-bound analysis, continuous batching impact, and asymptotic speedup models.</p>
+          <div class="chapter-card-topics">
+            <span class="topic-tag">TTFT Analysis</span>
+            <span class="topic-tag">Crossover Points</span>
+            <span class="topic-tag">Speedup Models</span>
+          </div>
+        </a>
+
+        <!-- Chapter 12 -->
+        <a href="chapters/ch12-implementation.html" class="chapter-card">
+          <div class="chapter-card-header">
+            <span class="chapter-num">CH 12</span>
+            <span class="chapter-card-title">Implementation Considerations</span>
+          </div>
+          <p class="chapter-card-desc">Hardware requirements, software stack, driver modifications, firmware development, and deployment scenarios.</p>
+          <div class="chapter-card-topics">
+            <span class="topic-tag">Hardware Reqs</span>
+            <span class="topic-tag">Software Stack</span>
+            <span class="topic-tag">Deployment</span>
+          </div>
+        </a>
+
+        <!-- Chapter 13 -->
+        <a href="chapters/ch13-conclusion.html" class="chapter-card">
+          <div class="chapter-card-header">
+            <span class="chapter-num">CH 13</span>
+            <span class="chapter-card-title">Conclusion</span>
+          </div>
+          <p class="chapter-card-desc">Summary of contributions, key takeaways, and future research directions for next-generation LLM infrastructure.</p>
+          <div class="chapter-card-topics">
+            <span class="topic-tag">Contributions</span>
+            <span class="topic-tag">Key Takeaways</span>
+            <span class="topic-tag">Future Work</span>
+          </div>
+        </a>
+      </div>
+
+      <!-- Technical Appendix -->
+      <div class="section-title">
+        <span class="section-title-icon" style="background: rgba(163, 113, 247, 0.15); color: var(--accent-purple);">📚</span>
+        Technical Appendix
+      </div>
+
+      <div class="appendix-grid">
+        <a href="appendix/a-transformer-fundamentals.html" class="appendix-card">
+          <div class="appendix-letter">APPENDIX A</div>
+          <div class="appendix-title">Transformer Fundamentals</div>
+          <div class="appendix-desc">Architecture, parameters, memory footprint</div>
+        </a>
+        
+        <a href="appendix/b-attention-mechanism.html" class="appendix-card">
+          <div class="appendix-letter">APPENDIX B</div>
+          <div class="appendix-title">Attention Mechanism</div>
+          <div class="appendix-desc">Q/K/V computation, multi-head, GQA</div>
+        </a>
+        
+        <a href="appendix/c-kv-cache-math.html" class="appendix-card">
+          <div class="appendix-letter">APPENDIX C</div>
+          <div class="appendix-title">KV-Cache Mathematics</div>
+          <div class="appendix-desc">Size formulas, growth analysis</div>
+        </a>
+        
+        <a href="appendix/d-rope-encoding.html" class="appendix-card">
+          <div class="appendix-letter">APPENDIX D</div>
+          <div class="appendix-title">RoPE Position Encoding</div>
+          <div class="appendix-desc">Rotation mechanics, locality properties</div>
+        </a>
+        
+        <a href="appendix/e-head-specialization.html" class="appendix-card">
+          <div class="appendix-letter">APPENDIX E</div>
+          <div class="appendix-title">Attention Head Types</div>
+          <div class="appendix-desc">Recency, anchor, retrieval, syntactic</div>
+        </a>
+        
+        <a href="appendix/f-cxl-technology.html" class="appendix-card">
+          <div class="appendix-letter">APPENDIX F</div>
+          <div class="appendix-title">CXL Technology</div>
+          <div class="appendix-desc">Protocol details, latency breakdown</div>
+        </a>
+        
+        <a href="appendix/g-ema-algorithm.html" class="appendix-card">
+          <div class="appendix-letter">APPENDIX G</div>
+          <div class="appendix-title">EMA Scoring Algorithm</div>
+          <div class="appendix-desc">Mathematical foundation, α selection</div>
+        </a>
+        
+        <a href="appendix/h-memory-hierarchy.html" class="appendix-card">
+          <div class="appendix-letter">APPENDIX H</div>
+          <div class="appendix-title">Memory Hierarchy</div>
+          <div class="appendix-desc">Three-tier design, hit rate analysis</div>
+        </a>
+        
+        <a href="appendix/i-bandwidth-calculations.html" class="appendix-card">
+          <div class="appendix-letter">APPENDIX I</div>
+          <div class="appendix-title">Bandwidth Calculations</div>
+          <div class="appendix-desc">Decode requirements, prefetch capacity</div>
+        </a>
+        
+        <a href="appendix/j-implementation-reference.html" class="appendix-card">
+          <div class="appendix-letter">APPENDIX J</div>
+          <div class="appendix-title">Implementation Reference</div>
+          <div class="appendix-desc">Code examples, configuration</div>
+        </a>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-primary);">
+        <p style="font-size: 0.8rem; color: var(--text-muted);">
+          © 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.<br>
+          This document contains proprietary and confidential information.<br>
+          Unauthorized reproduction or distribution is strictly prohibited.
+        </p>
+      </div>
+      <p>Distributed Endpoint Architecture for KV-Cache Offloading in LLM Inference</p>
+      <p style="margin-top: 0.5rem;">Technical Documentation v3.0 — December 2025</p>
+    </footer>
+  </div>
+</body>
+</html>
