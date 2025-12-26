@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Appendix F: CXL Technology — KV-Cache Offloading</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <div class="watermark">
+    © 2025 Subramaniyam (Sam) Pooni<br>
+    All Rights Reserved<br>
+    Proprietary & Confidential
+  </div>
+
+  <nav class="nav"><div class="nav-inner"><a href="../index.html" class="nav-brand"><span class="nav-brand-icon">⚡</span> KV-Cache Architecture</a></div></nav>
+  <div class="page-wrapper">
+    <div class="container">
+      <header class="chapter-header">
+        <div class="chapter-label">Appendix F</div>
+        <h1 class="chapter-title">CXL Technology Primer</h1>
+        <p class="chapter-subtitle">Protocol details, latency breakdown, and comparison with PCIe DMA.</p>
+      </header>
+
+      <h2>F.1 CXL Protocol Types</h2>
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>Protocol</th><th>Direction</th><th>Purpose</th></tr></thead>
+          <tbody>
+            <tr><td><strong>CXL.io</strong></td><td>Bidirectional</td><td>PCIe-equivalent I/O, config, interrupts</td></tr>
+            <tr><td><strong>CXL.cache</strong></td><td>Device → Host</td><td>Device caches host memory</td></tr>
+            <tr><td style="color: var(--accent-cyan);"><strong>CXL.mem</strong></td><td>Host → Device</td><td>Host accesses device memory (our primary)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>F.2 CXL.mem Latency Breakdown</h2>
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>Component</th><th>Latency</th></tr></thead>
+          <tbody>
+            <tr><td>Host controller</td><td class="mono">10-20 ns</td></tr>
+            <tr><td>PCIe PHY (×16 Gen5)</td><td class="mono">20 ns</td></tr>
+            <tr><td>Switch traversal</td><td class="mono">50 ns</td></tr>
+            <tr><td>Endpoint controller</td><td class="mono">30-50 ns</td></tr>
+            <tr><td>DRAM access</td><td class="mono">80-100 ns</td></tr>
+            <tr><td>Return path</td><td class="mono">~70 ns</td></tr>
+            <tr style="background: rgba(63,185,80,0.1);"><td><strong>Total</strong></td><td class="mono highlight"><strong>~250 ns</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>F.3 CXL vs PCIe DMA</h2>
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>Aspect</th><th>CXL.mem</th><th>PCIe DMA</th></tr></thead>
+          <tbody>
+            <tr><td>Latency</td><td class="mono highlight">250 ns</td><td class="mono danger">5-10 μs</td></tr>
+            <tr><td>CPU involvement</td><td>None</td><td>Required</td></tr>
+            <tr><td>Semantics</td><td>Load/Store</td><td>Explicit DMA</td></tr>
+            <tr><td>Coherence</td><td>Hardware</td><td>Software</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><strong>Result: 40× latency improvement</strong></p>
+
+      <div class="chapter-nav">
+        <a href="e-head-specialization.html" class="chapter-nav-btn prev"><span class="chapter-nav-label">← Previous</span><span class="chapter-nav-title">Appendix E</span></a>
+        <a href="g-ema-algorithm.html" class="chapter-nav-btn next"><span class="chapter-nav-label">Next →</span><span class="chapter-nav-title">Appendix G</span></a>
+      </div>
+    </div>
+    <footer class="footer">
+      <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-primary);">
+        <p style="font-size: 0.8rem; color: var(--text-muted);">
+          © 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.<br>
+          This document contains proprietary and confidential information.<br>
+          Unauthorized reproduction or distribution is strictly prohibited.
+        </p>
+      </div>
+      <p>Distributed Endpoint Architecture for KV-Cache Offloading in LLM Inference</p>
+      <p style="margin-top: 0.5rem;">Technical Documentation v3.0 — December 2025</p>
+    </footer>
+  </div>
+</body>
+</html>

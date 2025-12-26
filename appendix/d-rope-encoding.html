@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Appendix D: RoPE Position Encoding — KV-Cache Offloading</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <div class="watermark">
+    © 2025 Subramaniyam (Sam) Pooni<br>
+    All Rights Reserved<br>
+    Proprietary & Confidential
+  </div>
+
+  <nav class="nav"><div class="nav-inner"><a href="../index.html" class="nav-brand"><span class="nav-brand-icon">⚡</span> KV-Cache Architecture</a></div></nav>
+  <div class="page-wrapper">
+    <div class="container">
+      <header class="chapter-header">
+        <div class="chapter-label">Appendix D</div>
+        <h1 class="chapter-title">Rotary Position Embeddings (RoPE)</h1>
+        <p class="chapter-subtitle">Rotation mechanics, frequency spectra, and distance-dependent attention decay.</p>
+      </header>
+
+      <h2>D.1 Core Concept</h2>
+      <p>RoPE encodes position by rotating Q and K vectors in 2D subspaces:</p>
+      <div class="equation">RoPE(x, m) = x ⊗ cos(mθ) + rotate(x) ⊗ sin(mθ)</div>
+      <p>where m is position and θ<sub>i</sub> = 10000<sup>-2i/d</sup> for dimension pair i.</p>
+
+      <h2>D.2 Position-Dependent Attention</h2>
+      <p>The dot product between positions m and n becomes:</p>
+      <div class="equation">q<sub>m</sub> · k<sub>n</sub> ∝ cos((m-n)θ)</div>
+      <p>Attention naturally decays with position distance |m-n|.</p>
+
+      <h2>D.3 Locality Exploitation</h2>
+      <p>This creates predictable attention patterns:</p>
+      <ul>
+        <li><strong>Recent tokens</strong> (small distance): High attention probability</li>
+        <li><strong>Distant tokens</strong> (large distance): Lower baseline attention</li>
+        <li><strong>Exception</strong>: Anchor positions (0-100) receive consistent attention</li>
+      </ul>
+      <p>We exploit this for <strong>RoPE-aware prefetching</strong> — tokens near the current decode position are prefetched with higher priority.</p>
+
+      <h2>D.4 Prefetch Window Strategy</h2>
+      <div class="equation">Prefetch_priority(p) ∝ 1 / |current_pos - p|</div>
+      <p>Combined with EMA scores, this achieves 90%+ prefetch hit rates.</p>
+
+      <div class="chapter-nav">
+        <a href="c-kv-cache-math.html" class="chapter-nav-btn prev"><span class="chapter-nav-label">← Previous</span><span class="chapter-nav-title">Appendix C</span></a>
+        <a href="e-head-specialization.html" class="chapter-nav-btn next"><span class="chapter-nav-label">Next →</span><span class="chapter-nav-title">Appendix E</span></a>
+      </div>
+    </div>
+    <footer class="footer">
+      <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-primary);">
+        <p style="font-size: 0.8rem; color: var(--text-muted);">
+          © 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.<br>
+          This document contains proprietary and confidential information.<br>
+          Unauthorized reproduction or distribution is strictly prohibited.
+        </p>
+      </div>
+      <p>Distributed Endpoint Architecture for KV-Cache Offloading in LLM Inference</p>
+      <p style="margin-top: 0.5rem;">Technical Documentation v3.0 — December 2025</p>
+    </footer>
+  </div>
+</body>
+</html>

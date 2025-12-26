@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chapter 11: Performance Analysis — KV-Cache Offloading</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <div class="watermark">
+    © 2025 Subramaniyam (Sam) Pooni<br>
+    All Rights Reserved<br>
+    Proprietary & Confidential
+  </div>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="nav-brand"><span class="nav-brand-icon">⚡</span> KV-Cache Architecture</a>
+      <div class="nav-links">
+        <a href="ch10-market.html" class="nav-link">Market</a>
+        <a href="ch11-performance.html" class="nav-link active">Performance</a>
+        <a href="ch12-implementation.html" class="nav-link">Implementation</a>
+        <a href="ch13-conclusion.html" class="nav-link">Conclusion</a>
+        <a href="../appendix/index.html" class="nav-link">Appendix</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="container">
+      <header class="chapter-header">
+        <div class="chapter-label">Chapter 11</div>
+        <h1 class="chapter-title">Performance Analysis</h1>
+        <p class="chapter-subtitle">TTFT improvements, compute vs IO-bound analysis, continuous batching impact, and asymptotic speedup models.</p>
+      </header>
+
+      <h2>11.1 TTFT Improvement</h2>
+
+      <h3>Baseline Comparison</h3>
+
+      <p>Time-To-First-Token for Llama-70B at 128K context:</p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Configuration</th><th>TTFT</th><th>Relative</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Vanilla (recompute)</td><td class="mono">12.5 s</td><td class="mono">1.0×</td></tr>
+            <tr><td>CPU offload</td><td class="mono">8.2 s</td><td class="mono">1.5×</td></tr>
+            <tr><td>SSD offload (naive)</td><td class="mono danger">15.1 s</td><td class="mono">0.8×</td></tr>
+            <tr><td>vLLM + prefix cache</td><td class="mono">3.1 s</td><td class="mono">4.0×</td></tr>
+            <tr style="background: rgba(63,185,80,0.1);"><td><strong>Endpoint architecture</strong></td><td class="mono highlight"><strong>0.8 s</strong></td><td class="mono highlight"><strong>15.6×</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Cache Hit Ratio Impact</h3>
+
+      <div class="equation">
+        TTFT(hit_rate) = (1 - hit_rate) × T<sub>prefill</sub> + hit_rate × T<sub>cache_load</sub>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Hit Rate</th><th>TTFT</th><th>Speedup</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="mono">0%</td><td class="mono">12.5 s</td><td class="mono">1.0×</td></tr>
+            <tr><td class="mono">50%</td><td class="mono">6.4 s</td><td class="mono">2.0×</td></tr>
+            <tr><td class="mono">80%</td><td class="mono">2.8 s</td><td class="mono">4.5×</td></tr>
+            <tr><td class="mono">90%</td><td class="mono">1.5 s</td><td class="mono">8.3×</td></tr>
+            <tr><td class="mono highlight">95%</td><td class="mono highlight">0.9 s</td><td class="mono highlight">13.9×</td></tr>
+            <tr><td class="mono">99%</td><td class="mono">0.4 s</td><td class="mono">31.3×</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>TTFT Sensitivity</h3>
+
+      <div class="equation">
+        ∂TTFT/∂hit_rate = T<sub>cache_load</sub> - T<sub>prefill</sub> = 0.3 s - 12.5 s = <strong>-12.2 s per unit</strong>
+      </div>
+
+      <p><strong>Interpretation:</strong> Each 1% improvement in hit rate reduces TTFT by ~122 ms.</p>
+
+      <h2>11.2 Crossover Analysis</h2>
+
+      <h3>Compute-Bound vs IO-Bound Regimes</h3>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Regime</th><th>Characteristic</th><th>Limiting Factor</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Compute-bound</strong></td><td>GPU fully utilized</td><td>Arithmetic throughput</td></tr>
+            <tr><td><strong>IO-bound</strong></td><td>GPU waiting on memory</td><td>Memory bandwidth</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p><strong>Prefill phase:</strong> Compute-bound (high parallelism)<br>
+      <strong>Decode phase:</strong> IO-bound (low arithmetic intensity)</p>
+
+      <h3>Crossover Point</h3>
+
+      <p>For H100 with decode attention at ~0.5e-3 FLOPs/byte vs machine balance of 0.84e-3:</p>
+
+      <p><strong>Decode is firmly memory-bound</strong> — the decode phase benefits most from our memory optimization.</p>
+
+      <h2>11.3 Continuous Batching Impact</h2>
+
+      <h3>TPOT with Batch Size B</h3>
+
+      <div class="equation">
+        TPOT<sub>batch</sub> = T<sub>single</sub> / B + T<sub>overhead</sub> × (B-1) / B
+      </div>
+
+      <h3>Maximum Batch for SLA</h3>
+
+      <p>Given 100 ms TPOT SLA:</p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Configuration</th><th>T<sub>single</sub></th><th>B<sub>max</sub></th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Baseline</td><td class="mono">50 ms</td><td class="mono">1</td></tr>
+            <tr><td>With endpoints</td><td class="mono">20 ms</td><td class="mono highlight">5</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>TPS Gain</h3>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Metric</th><th>Baseline</th><th>Endpoint</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Batch size</td><td class="mono">2</td><td class="mono">8</td></tr>
+            <tr><td>TPOT</td><td class="mono">100 ms</td><td class="mono">50 ms</td></tr>
+            <tr><td>TPS</td><td class="mono">20</td><td class="mono highlight">160</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p><strong>TPS Gain: 8×</strong></p>
+
+      <h2>11.4 Asymptotic Speedup</h2>
+
+      <h3>Theoretical Maximum</h3>
+
+      <div class="equation">
+        Speedup<sub>max</sub> = T<sub>recompute</sub> / T<sub>cache_access</sub> = 12.5 s / 0.3 s = <strong>41.7×</strong>
+      </div>
+
+      <h3>Practical Bounds</h3>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Factor</th><th>Impact</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Cache capacity limits</td><td>Some misses inevitable</td></tr>
+            <tr><td>Flash access for cold entries</td><td>Adds latency variance</td></tr>
+            <tr><td>Prefetch imperfections</td><td>~90% prefetch hit rate</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p><strong>Practical ceiling: 15-25× speedup</strong> over baseline.</p>
+
+      <h3>Summary: Performance Envelope</h3>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Metric</th><th>Conservative</th><th>Expected</th><th>Optimistic</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Hit Rate</td><td class="mono">85%</td><td class="mono highlight">93%</td><td class="mono">97%</td></tr>
+            <tr><td>TTFT Speedup</td><td class="mono">4×</td><td class="mono highlight">10×</td><td class="mono">20×</td></tr>
+            <tr><td>TPS Improvement</td><td class="mono">5×</td><td class="mono highlight">12×</td><td class="mono">21×</td></tr>
+            <tr><td>Batch Capacity</td><td class="mono">4×</td><td class="mono highlight">8×</td><td class="mono">16×</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-value">15.6×</div>
+          <div class="stat-label">TTFT Speedup</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">8×</div>
+          <div class="stat-label">TPS Gain</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">95%</div>
+          <div class="stat-label">Hit Rate</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">36%</div>
+          <div class="stat-label">Cost Reduction</div>
+        </div>
+      </div>
+
+      <div class="chapter-nav">
+        <a href="ch10-market.html" class="chapter-nav-btn prev">
+          <span class="chapter-nav-label">← Previous</span>
+          <span class="chapter-nav-title">Chapter 10: Market Landscape</span>
+        </a>
+        <a href="ch12-implementation.html" class="chapter-nav-btn next">
+          <span class="chapter-nav-label">Next Chapter →</span>
+          <span class="chapter-nav-title">Chapter 12: Implementation</span>
+        </a>
+      </div>
+    </div>
+    <footer class="footer">
+      <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-primary);">
+        <p style="font-size: 0.8rem; color: var(--text-muted);">
+          © 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.<br>
+          This document contains proprietary and confidential information.<br>
+          Unauthorized reproduction or distribution is strictly prohibited.
+        </p>
+      </div>
+      <p>Distributed Endpoint Architecture for KV-Cache Offloading in LLM Inference</p>
+      <p style="margin-top: 0.5rem;">Technical Documentation v3.0 — December 2025</p>
+    </footer>
+  </div>
+</body>
+</html>

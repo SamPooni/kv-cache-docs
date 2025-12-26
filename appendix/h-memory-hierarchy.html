@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Appendix H: Memory Hierarchy — KV-Cache Offloading</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <div class="watermark">
+    © 2025 Subramaniyam (Sam) Pooni<br>
+    All Rights Reserved<br>
+    Proprietary & Confidential
+  </div>
+
+  <nav class="nav"><div class="nav-inner"><a href="../index.html" class="nav-brand"><span class="nav-brand-icon">⚡</span> KV-Cache Architecture</a></div></nav>
+  <div class="page-wrapper">
+    <div class="container">
+      <header class="chapter-header">
+        <div class="chapter-label">Appendix H</div>
+        <h1 class="chapter-title">Memory Hierarchy and Caching Theory</h1>
+        <p class="chapter-subtitle">Three-tier design, effective latency formulas, and hit rate analysis.</p>
+      </header>
+
+      <h2>H.1 Three-Tier Hierarchy</h2>
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>Tier</th><th>Media</th><th>Capacity</th><th>Latency</th></tr></thead>
+          <tbody>
+            <tr><td>Tier 0: HBM Pinned</td><td>GPU HBM</td><td class="mono">~5 GB</td><td class="mono">100 ns</td></tr>
+            <tr><td>Tier 1: HBM Evictable</td><td>GPU HBM</td><td class="mono">~37 GB</td><td class="mono">100 ns</td></tr>
+            <tr><td>Tier 2: CXL DRAM</td><td>Endpoint DDR5</td><td class="mono">1 TB</td><td class="mono">250 ns</td></tr>
+            <tr><td>Tier 3: Flash</td><td>NVMe SSD</td><td class="mono">16 TB</td><td class="mono">25 μs</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>H.2 Effective Latency</h2>
+      <div class="equation">L<sub>eff</sub> = Σ (hit_rate<sub>i</sub> × latency<sub>i</sub>)</div>
+      <p>With 95% HBM hit rate, 4.5% CXL hit, 0.5% flash:</p>
+      <div class="equation">L<sub>eff</sub> = 0.95×100 + 0.045×250 + 0.005×25000 = 95 + 11.25 + 125 = <strong>231 ns</strong></div>
+
+      <h2>H.3 Hit Rate Breakdown</h2>
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>Technique</th><th>Contribution</th><th>Cumulative</th></tr></thead>
+          <tbody>
+            <tr><td>LRU baseline</td><td>—</td><td class="mono">70%</td></tr>
+            <tr><td>+ Anchor pinning</td><td>+8%</td><td class="mono">78%</td></tr>
+            <tr><td>+ EMA scoring</td><td>+7%</td><td class="mono">85%</td></tr>
+            <tr><td>+ Per-head tracking</td><td>+6%</td><td class="mono">91%</td></tr>
+            <tr><td>+ RoPE prefetch</td><td>+4%</td><td class="mono highlight">95%</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="chapter-nav">
+        <a href="g-ema-algorithm.html" class="chapter-nav-btn prev"><span class="chapter-nav-label">← Previous</span><span class="chapter-nav-title">Appendix G</span></a>
+        <a href="i-bandwidth-calculations.html" class="chapter-nav-btn next"><span class="chapter-nav-label">Next →</span><span class="chapter-nav-title">Appendix I</span></a>
+      </div>
+    </div>
+    <footer class="footer">
+      <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-primary);">
+        <p style="font-size: 0.8rem; color: var(--text-muted);">
+          © 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.<br>
+          This document contains proprietary and confidential information.<br>
+          Unauthorized reproduction or distribution is strictly prohibited.
+        </p>
+      </div>
+      <p>Distributed Endpoint Architecture for KV-Cache Offloading in LLM Inference</p>
+      <p style="margin-top: 0.5rem;">Technical Documentation v3.0 — December 2025</p>
+    </footer>
+  </div>
+</body>
+</html>

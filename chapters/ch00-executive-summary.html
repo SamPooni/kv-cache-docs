@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Executive Summary — KV-Cache Offloading Architecture</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <div class="watermark">
+    © 2025 Subramaniyam (Sam) Pooni<br>
+    All Rights Reserved<br>
+    Proprietary & Confidential
+  </div>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="nav-brand">
+        <span class="nav-brand-icon">⚡</span>
+        KV-Cache Architecture
+      </a>
+      <div class="nav-links">
+        <a href="ch00-executive-summary.html" class="nav-link active"><span class="nav-chapter-num">0</span> Summary</a>
+        <a href="ch01-introduction.html" class="nav-link"><span class="nav-chapter-num">1</span> Introduction</a>
+        <a href="ch02-background.html" class="nav-link"><span class="nav-chapter-num">2</span> Background</a>
+        <a href="ch03-architecture.html" class="nav-link"><span class="nav-chapter-num">3</span> Architecture</a>
+        <a href="ch07-kv-cache.html" class="nav-link"><span class="nav-chapter-num">7</span> KV-Cache</a>
+        <a href="../appendix/index.html" class="nav-link">Appendix</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="container">
+      <header class="chapter-header">
+        <div class="chapter-label">Executive Summary</div>
+        <h1 class="chapter-title">The Memory Crisis in LLM Inference—and How to Solve It</h1>
+        <p class="chapter-subtitle">A distributed endpoint architecture that expands GPU memory capacity 6×, serves 8× more concurrent users, and reduces infrastructure costs by 36% through intelligent CXL-based KV-cache offloading.</p>
+      </header>
+
+      <!-- Key Results Grid -->
+      <div class="stats-grid" style="margin-bottom: 3rem;">
+        <div class="stat-box">
+          <div class="stat-value">6×</div>
+          <div class="stat-label">Memory Expansion</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">8×</div>
+          <div class="stat-label">User Capacity</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">95%</div>
+          <div class="stat-label">HBM Hit Rate</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">7.5%</div>
+          <div class="stat-label">Latency Overhead</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">36%</div>
+          <div class="stat-label">Cost Reduction</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">33</div>
+          <div class="stat-label">Tokens/Sec/User</div>
+        </div>
+      </div>
+
+      <!-- Section 1: The Problem -->
+      <h2>The Problem: Memory Wall in LLM Inference</h2>
+      
+      <p>Large language model inference faces a fundamental constraint: the <strong>Key-Value (KV) cache</strong> that stores attention context grows linearly with sequence length and user count, rapidly exhausting GPU high-bandwidth memory (HBM). For production LLM deployments, this "memory wall" has become the primary bottleneck limiting scalability and economics.</p>
+
+      <h3>Understanding the KV-Cache</h3>
+      
+      <p>During text generation, transformers compute attention over all previous tokens. Rather than recomputing these expensive operations at each step, the model caches the Key and Value projections—hence "KV-cache." This optimization is essential for practical inference speeds, but creates an insatiable memory appetite. See <a href="../appendix/c-kv-cache-math.html">Appendix C: KV-Cache Mathematics</a> for detailed derivations.</p>
+
+      <div class="figure">
+        <div class="figure-label">Figure 0.1 — KV-Cache Size Formula</div>
+        <div class="equation">
+          KV_size = 2 × L × n<sub>kv_heads</sub> × d<sub>head</sub> × S × sizeof(dtype)
+          <span class="equation-label">For Llama-70B: 320 KB per token, 41 GB at 128K context</span>
+        </div>
+        <div class="figure-caption">The KV-cache size grows linearly with sequence length (S). With 80 layers, 8 KV-heads, 128-dim heads, and BF16 precision, each token consumes 320 KB of memory.</div>
+      </div>
+
+      <h3>The Scaling Crisis</h3>
+
+      <p>Consider serving Llama-70B (140 GB model weights in BF16) on an NVIDIA B200 with 192 GB HBM. At first glance, 52 GB of headroom seems comfortable. But KV-cache for just one user at 128K context consumes 41 GB—leaving only 11 GB for additional users.</p>
+
+      <div class="figure">
+        <div class="figure-label">Figure 0.2 — Memory Scaling with Concurrent Users (128K Context)</div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Users</th>
+                <th>Model Weights</th>
+                <th>KV-Cache</th>
+                <th>Total</th>
+                <th>vs B200 (192 GB)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="mono">1</td>
+                <td class="mono">140 GB</td>
+                <td class="mono">41 GB</td>
+                <td class="mono">181 GB</td>
+                <td class="highlight">✓ Fits (11 GB spare)</td>
+              </tr>
+              <tr>
+                <td class="mono">2</td>
+                <td class="mono">140 GB</td>
+                <td class="mono">82 GB</td>
+                <td class="mono">222 GB</td>
+                <td class="warning">30 GB over capacity</td>
+              </tr>
+              <tr>
+                <td class="mono">4</td>
+                <td class="mono">140 GB</td>
+                <td class="mono">164 GB</td>
+                <td class="mono">304 GB</td>
+                <td class="danger">112 GB over capacity</td>
+              </tr>
+              <tr>
+                <td class="mono">8</td>
+                <td class="mono">140 GB</td>
+                <td class="mono">328 GB</td>
+                <td class="mono">468 GB</td>
+                <td class="danger">276 GB over (2.4× capacity)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="figure-caption">Model weights are shared across users, but each user needs their own KV-cache. Even 2 concurrent users exceed B200 capacity at 128K context.</div>
+      </div>
+
+      <p>The economics are stark: without memory expansion, serving 8 users at 128K context would require 2-3 additional B200 GPUs—adding $50,000+ to infrastructure costs per 8-user slot.</p>
+
+      <div class="figure">
+        <div class="figure-label">Figure 0.3 — KV-Cache Growth by Context Length</div>
+        <div class="bar-chart">
+          <div class="bar-row">
+            <span class="bar-label">4K tokens</span>
+            <div class="bar-container">
+              <div class="bar-fill" style="width: 4%; min-width: 60px; background: var(--accent-green);">1.3 GB</div>
+            </div>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">32K tokens</span>
+            <div class="bar-container">
+              <div class="bar-fill" style="width: 12%; background: var(--accent-cyan);">10 GB</div>
+            </div>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">128K tokens</span>
+            <div class="bar-container">
+              <div class="bar-fill" style="width: 45%; background: var(--accent-cyan);">41 GB</div>
+            </div>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">512K tokens</span>
+            <div class="bar-container">
+              <div class="bar-fill" style="width: 85%; background: var(--accent-orange);">164 GB</div>
+            </div>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">1M tokens</span>
+            <div class="bar-container">
+              <div class="bar-fill" style="width: 100%; background: var(--accent-red);">320 GB</div>
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; gap: 1.5rem; margin-top: 1rem; font-size: 0.9rem; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span style="width: 14px; height: 14px; background: var(--accent-green); border-radius: 3px;"></span>
+            <span style="color: var(--text-muted);">Fits in H100 (80 GB)</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span style="width: 14px; height: 14px; background: var(--accent-cyan); border-radius: 3px;"></span>
+            <span style="color: var(--text-muted);">Fits in B200 (192 GB)</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span style="width: 14px; height: 14px; background: var(--accent-red); border-radius: 3px;"></span>
+            <span style="color: var(--text-muted);">Exceeds B200</span>
+          </div>
+        </div>
+      </div>
+
+      <h3>Why Existing Solutions Fall Short</h3>
+
+      <p>Current approaches to the memory wall each have significant limitations:</p>
+
+      <div class="comparison-grid">
+        <div class="card">
+          <h4 style="margin-top: 0; color: var(--accent-orange);">CPU/SSD Offload</h4>
+          <p style="font-size: 0.95rem; margin-bottom: 0;">Traditional offloading moves KV-cache to system RAM or NVMe SSDs. However, PCIe DMA latency (5-10 μs) is 50-100× slower than HBM access (100 ns), causing unacceptable generation delays.</p>
+        </div>
+        <div class="card">
+          <h4 style="margin-top: 0; color: var(--accent-orange);">Tensor Parallelism</h4>
+          <p style="font-size: 0.95rem; margin-bottom: 0;">Distributing the model across multiple GPUs increases aggregate memory, but at $20,000+ per GPU, this is economically prohibitive. Inter-GPU communication also adds latency.</p>
+        </div>
+        <div class="card">
+          <h4 style="margin-top: 0; color: var(--accent-orange);">vLLM / PagedAttention</h4>
+          <p style="font-size: 0.95rem; margin-bottom: 0;">Efficient memory management through paging reduces fragmentation but doesn't expand total capacity. The fundamental memory limit remains unchanged.</p>
+        </div>
+        <div class="card">
+          <h4 style="margin-top: 0; color: var(--accent-orange);">KV-Cache Compression</h4>
+          <p style="font-size: 0.95rem; margin-bottom: 0;">Quantization (INT8, INT4) reduces cache size 2-4× but degrades output quality and still cannot address the multi-user scaling problem.</p>
+        </div>
+      </div>
+
+      <!-- Section 2: The Solution -->
+      <h2>The Solution: Intelligent Endpoint Architecture</h2>
+
+      <p>This document presents a <strong>distributed endpoint architecture</strong> that fundamentally changes the memory economics of LLM inference. Rather than treating external memory as passive storage, we deploy intelligent CXL-attached endpoints that make autonomous caching decisions, predict access patterns, and prefetch data before the GPU needs it.</p>
+
+      <h3>Core Innovation: Hardware-Accelerated Cache Intelligence</h3>
+
+      <p>The key insight is that attention patterns in transformers are highly predictable. Through analysis of the attention mechanism and RoPE (Rotary Position Embedding), we discovered that:</p>
+
+      <div class="callout insight">
+        <div class="callout-title">🔬 Key Discovery</div>
+        <p><strong>80% of attention concentrates on just 10% of tokens</strong>—primarily recent context and anchor positions (system prompts). This locality enables aggressive caching with minimal performance impact. See <a href="../appendix/d-rope-encoding.html">Appendix D: RoPE Position Encoding</a> for the mathematical basis of this locality.</p>
+      </div>
+
+      <p>We exploit this property through three innovations:</p>
+
+      <ol>
+        <li><strong>Per-Head Attention Tracking</strong> — Different attention heads exhibit distinct access patterns (recency-focused, anchor-focused, retrieval-focused). We track importance scores independently per head. See <a href="../appendix/e-head-specialization.html">Appendix E: Attention Head Types</a>.</li>
+        <li><strong>EMA-Based Scoring</strong> — Exponential Moving Average scoring identifies tokens receiving sustained attention vs. transient access, enabling smarter eviction than LRU. See <a href="../appendix/g-ema-algorithm.html">Appendix G: EMA Scoring Algorithm</a>.</li>
+        <li><strong>RoPE-Aware Prefetch</strong> — Position encoding creates distance-dependent attention decay. We prefetch tokens likely to be accessed based on their RoPE-relative position to the current query.</li>
+      </ol>
+
+      <h3>System Architecture Overview</h3>
+
+      <div class="figure">
+        <div class="figure-label">Figure 0.4 — Distributed Endpoint Architecture</div>
+        <div style="display: flex; flex-direction: column; gap: 1.5rem; padding: 1rem;">
+          <!-- Host System -->
+          <div style="background: rgba(88, 166, 255, 0.08); border: 2px solid var(--accent-cyan); border-radius: 12px; padding: 1.5rem;">
+            <div style="font-size: 0.85rem; color: var(--accent-cyan); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1rem;">Host System</div>
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;">
+              <div style="padding: 0.75rem 1.5rem; background: rgba(139,148,158,0.15); border: 1px solid var(--text-muted); border-radius: 8px; text-align: center;">
+                <div style="font-size: 0.9rem; color: var(--text-secondary);">CPU</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">(control plane)</div>
+              </div>
+              <div style="padding: 0.75rem 1.5rem; background: rgba(63, 185, 80, 0.15); border: 2px solid var(--accent-green); border-radius: 8px; text-align: center;">
+                <div style="font-size: 0.9rem; font-weight: 600; color: var(--accent-green);">B200 GPU</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">192 GB HBM3e</div>
+              </div>
+              <div style="padding: 0.75rem 1.5rem; background: rgba(88, 166, 255, 0.15); border: 2px solid var(--accent-cyan); border-radius: 8px; text-align: center;">
+                <div style="font-size: 0.9rem; font-weight: 600; color: var(--accent-cyan);">CXL Root Port</div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">×16 Gen5</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Arrow -->
+          <div style="text-align: center; color: var(--text-muted);">
+            <div style="font-size: 1.5rem;">↓</div>
+            <div style="font-size: 0.8rem;">CXL.mem (64 GB/s per link)</div>
+          </div>
+
+          <!-- CXL Switch -->
+          <div style="background: rgba(163, 113, 247, 0.08); border: 2px solid var(--accent-purple); border-radius: 12px; padding: 1rem; text-align: center;">
+            <div style="font-size: 0.9rem; font-weight: 600; color: var(--accent-purple);">CXL 3.0 Switch</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">Non-Blocking Fabric • 8× Ports</div>
+          </div>
+
+          <!-- Arrow -->
+          <div style="text-align: center; color: var(--text-muted); font-size: 1.5rem;">↓</div>
+
+          <!-- Endpoints -->
+          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+            <div style="background: rgba(210, 153, 34, 0.1); border: 2px solid var(--accent-orange); border-radius: 10px; padding: 1rem; text-align: center;">
+              <div style="font-size: 0.85rem; font-weight: 600; color: var(--accent-orange);">Endpoint 0</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">256 GB DDR5</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">4 TB NVMe</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">ARM A78 × 4</div>
+            </div>
+            <div style="background: rgba(210, 153, 34, 0.1); border: 2px solid var(--accent-orange); border-radius: 10px; padding: 1rem; text-align: center;">
+              <div style="font-size: 0.85rem; font-weight: 600; color: var(--accent-orange);">Endpoint 1</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">256 GB DDR5</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">4 TB NVMe</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">ARM A78 × 4</div>
+            </div>
+            <div style="background: rgba(210, 153, 34, 0.1); border: 2px solid var(--accent-orange); border-radius: 10px; padding: 1rem; text-align: center;">
+              <div style="font-size: 0.85rem; font-weight: 600; color: var(--accent-orange);">Endpoint 2</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">256 GB DDR5</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">4 TB NVMe</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">ARM A78 × 4</div>
+            </div>
+            <div style="background: rgba(210, 153, 34, 0.1); border: 2px solid var(--accent-orange); border-radius: 10px; padding: 1rem; text-align: center;">
+              <div style="font-size: 0.85rem; font-weight: 600; color: var(--accent-orange);">Endpoint 3</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">256 GB DDR5</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">4 TB NVMe</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">ARM A78 × 4</div>
+            </div>
+          </div>
+
+          <!-- Totals -->
+          <div style="display: flex; justify-content: center; gap: 2rem; padding-top: 1rem; border-top: 1px solid var(--border-primary);">
+            <div style="text-align: center;">
+              <div style="font-family: var(--font-mono); font-size: 1.5rem; color: var(--accent-cyan);">1 TB</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted);">Aggregate DRAM</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-family: var(--font-mono); font-size: 1.5rem; color: var(--accent-cyan);">256 GB/s</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted);">Aggregate Bandwidth</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-family: var(--font-mono); font-size: 1.5rem; color: var(--accent-cyan);">16 TB</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted);">Flash Capacity</div>
+            </div>
+          </div>
+        </div>
+        <div class="figure-caption">Four CXL Type-3 endpoints provide 1 TB of additional DRAM at 256 GB/s aggregate bandwidth. Each endpoint contains ARM cores for intelligent cache management, EMA scoring, and prefetch decisions.</div>
+      </div>
+
+      <h3>Three-Tier Memory Hierarchy</h3>
+
+      <p>The architecture implements a carefully designed three-tier memory hierarchy that balances capacity, latency, and cost:</p>
+
+      <div class="figure">
+        <div class="figure-label">Figure 0.5 — Memory Tier Architecture</div>
+        <div style="display: flex; flex-direction: column; gap: 0.75rem; max-width: 700px; margin: 0 auto;">
+          <div style="padding: 1rem 1.5rem; background: linear-gradient(90deg, rgba(88, 166, 255, 0.2) 0%, rgba(88, 166, 255, 0.05) 100%); border: 2px solid var(--accent-cyan); border-radius: 10px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-size: 1.1rem; font-weight: 600; color: var(--accent-cyan);">Tier 0 — HBM Pinned</div>
+              <div style="font-size: 0.9rem; color: var(--text-muted);">Anchor zone (positions 0-100) + critical tokens</div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-family: var(--font-mono); color: var(--text-primary);">~5 GB</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted);">100 ns • Never evicted</div>
+            </div>
+          </div>
+          <div style="padding: 1rem 1.5rem; background: linear-gradient(90deg, rgba(56, 139, 253, 0.2) 0%, rgba(56, 139, 253, 0.05) 100%); border: 2px solid var(--accent-blue); border-radius: 10px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-size: 1.1rem; font-weight: 600; color: var(--accent-blue);">Tier 1 — HBM Evictable</div>
+              <div style="font-size: 0.9rem; color: var(--text-muted);">Recent tokens + high-EMA positions</div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-family: var(--font-mono); color: var(--text-primary);">~37 GB</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted);">100 ns • EMA-managed</div>
+            </div>
+          </div>
+          <div style="padding: 1rem 1.5rem; background: linear-gradient(90deg, rgba(163, 113, 247, 0.2) 0%, rgba(163, 113, 247, 0.05) 100%); border: 2px solid var(--accent-purple); border-radius: 10px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-size: 1.1rem; font-weight: 600; color: var(--accent-purple);">Tier 2 — CXL DRAM</div>
+              <div style="font-size: 0.9rem; color: var(--text-muted);">Cold tokens, low-EMA positions</div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-family: var(--font-mono); color: var(--text-primary);">~280 GB</div>
+              <div style="font-size: 0.8rem; color: var(--text-muted);">250 ns • Prefetchable</div>
+            </div>
+          </div>
+        </div>
+        <div class="figure-caption">The three-tier hierarchy keeps frequently-accessed data in fast HBM while cold data resides in CXL DRAM. With 95% HBM hit rate, effective latency is only 107.5 ns—a 7.5% overhead vs pure HBM.</div>
+      </div>
+
+      <!-- Section 3: Key Results -->
+      <h2>Key Results</h2>
+
+      <h3>Dramatic Cost Reduction</h3>
+
+      <p>The architecture transforms the economics of long-context LLM serving:</p>
+
+      <div class="figure">
+        <div class="figure-label">Figure 0.6 — Infrastructure Cost Comparison (8 Users × 128K Context)</div>
+        <div class="comparison-grid">
+          <div class="comparison-box negative">
+            <div class="comparison-title" style="color: var(--accent-red);">Without CXL Expansion</div>
+            <ul style="margin-bottom: 0;">
+              <li>192 GB HBM capacity</li>
+              <li>1 user at 128K context</li>
+              <li>8 users requires 2× B200 GPUs</li>
+              <li><strong>Cost: ~$70,000</strong></li>
+            </ul>
+          </div>
+          <div class="comparison-box positive">
+            <div class="comparison-title" style="color: var(--accent-green);">With CXL Endpoints</div>
+            <ul style="margin-bottom: 0;">
+              <li>1.2 TB effective capacity</li>
+              <li>8+ users at 128K context</li>
+              <li>1× B200 + 4× CXL endpoints</li>
+              <li><strong>Cost: ~$45,000</strong></li>
+            </ul>
+          </div>
+        </div>
+        <div class="figure-caption">CXL memory costs approximately $5/GB versus $50/GB for HBM—a 10× cost advantage. The 4-endpoint configuration adds $5,000 while enabling $25,000+ in GPU savings.</div>
+      </div>
+
+      <h3>Performance Metrics</h3>
+
+      <div class="figure">
+        <div class="figure-label">Figure 0.7 — Hit Rate Progression with Algorithm Improvements</div>
+        <div class="bar-chart">
+          <div class="bar-row">
+            <span class="bar-label">LRU baseline</span>
+            <div class="bar-container">
+              <div class="bar-fill" style="width: 70%; background: var(--accent-red);">70%</div>
+            </div>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">+ Anchor pinning</span>
+            <div class="bar-container">
+              <div class="bar-fill" style="width: 78%; background: var(--accent-orange);">78% (+8%)</div>
+            </div>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">+ EMA scoring</span>
+            <div class="bar-container">
+              <div class="bar-fill" style="width: 85%; background: var(--accent-yellow);">85% (+7%)</div>
+            </div>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">+ Per-head tracking</span>
+            <div class="bar-container">
+              <div class="bar-fill" style="width: 91%; background: var(--accent-cyan);">91% (+6%)</div>
+            </div>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">+ Prefetching</span>
+            <div class="bar-container">
+              <div class="bar-fill" style="width: 95%; background: var(--accent-green);">95% (+4%)</div>
+            </div>
+          </div>
+        </div>
+        <div class="figure-caption">Each algorithmic improvement contributes incrementally to the final 95% HBM hit rate. The combination of anchor pinning, EMA scoring, per-head tracking, and prefetching achieves near-HBM performance.</div>
+      </div>
+
+      <h3>Latency Analysis</h3>
+
+      <div class="callout note">
+        <div class="callout-title">📊 Effective Latency Calculation</div>
+        <div class="equation" style="background: transparent; border: none; padding: 0.5rem 0; margin: 0.5rem 0;">
+          L<sub>eff</sub> = 0.95 × 100ns + 0.05 × 250ns = 95ns + 12.5ns = <strong>107.5 ns</strong>
+        </div>
+        <p style="margin-bottom: 0;">With 95% of accesses hitting HBM (100 ns) and only 5% going to CXL DRAM (250 ns), the effective latency overhead is just 7.5% compared to pure HBM operation.</p>
+      </div>
+
+      <h3>Summary Comparison</h3>
+
+      <div class="figure">
+        <div class="figure-label">Figure 0.8 — Before/After Comparison</div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Metric</th>
+                <th>Without CXL</th>
+                <th>With Endpoint Architecture</th>
+                <th>Improvement</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Memory Capacity</td>
+                <td class="mono">192 GB</td>
+                <td class="mono">1.2 TB</td>
+                <td class="highlight">6× expansion</td>
+              </tr>
+              <tr>
+                <td>Users (128K context)</td>
+                <td class="mono">1</td>
+                <td class="mono">8+</td>
+                <td class="highlight">8× capacity</td>
+              </tr>
+              <tr>
+                <td>Cost per 8-user slot</td>
+                <td class="mono">$70,000</td>
+                <td class="mono">$45,000</td>
+                <td class="highlight">36% reduction</td>
+              </tr>
+              <tr>
+                <td>Tokens/sec/user</td>
+                <td class="mono">20</td>
+                <td class="mono">33</td>
+                <td class="highlight">65% faster</td>
+              </tr>
+              <tr>
+                <td>Latency overhead</td>
+                <td class="mono">—</td>
+                <td class="mono">7.5%</td>
+                <td>Minimal impact</td>
+              </tr>
+              <tr>
+                <td>HBM hit rate</td>
+                <td class="mono">100%</td>
+                <td class="mono">95%</td>
+                <td>Near-native</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Document Roadmap -->
+      <h2>Document Roadmap</h2>
+
+      <p>This technical reference is organized into progressive chapters, each building on previous concepts:</p>
+
+      <div style="display: grid; gap: 1rem; margin: 1.5rem 0;">
+        <div class="card" style="display: grid; grid-template-columns: 80px 1fr; gap: 1rem; align-items: start;">
+          <div style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--accent-purple); padding-top: 0.25rem;">CH 1-2</div>
+          <div>
+            <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;">Foundation</div>
+            <div style="font-size: 0.95rem; color: var(--text-muted);">Introduction to the memory wall problem, LLM inference fundamentals, and analysis of current solutions.</div>
+          </div>
+        </div>
+        <div class="card" style="display: grid; grid-template-columns: 80px 1fr; gap: 1rem; align-items: start;">
+          <div style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--accent-purple); padding-top: 0.25rem;">CH 3-5</div>
+          <div>
+            <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;">Architecture</div>
+            <div style="font-size: 0.95rem; color: var(--text-muted);">System topology, CXL technology stack, latency analysis, and bandwidth aggregation strategies.</div>
+          </div>
+        </div>
+        <div class="card" style="display: grid; grid-template-columns: 80px 1fr; gap: 1rem; align-items: start;">
+          <div style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--accent-purple); padding-top: 0.25rem;">CH 6-8</div>
+          <div>
+            <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;">Intelligence</div>
+            <div style="font-size: 0.95rem; color: var(--text-muted);">Preprocessing offload, intelligent KV-cache management (EMA, per-head tracking), and MoE support.</div>
+          </div>
+        </div>
+        <div class="card" style="display: grid; grid-template-columns: 80px 1fr; gap: 1rem; align-items: start;">
+          <div style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--accent-purple); padding-top: 0.25rem;">CH 9-11</div>
+          <div>
+            <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;">Integration</div>
+            <div style="font-size: 0.95rem; color: var(--text-muted);">GPU integration details, market landscape analysis, and comprehensive performance benchmarks.</div>
+          </div>
+        </div>
+        <div class="card" style="display: grid; grid-template-columns: 80px 1fr; gap: 1rem; align-items: start;">
+          <div style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--accent-purple); padding-top: 0.25rem;">CH 12-13</div>
+          <div>
+            <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;">Implementation</div>
+            <div style="font-size: 0.95rem; color: var(--text-muted);">Hardware requirements, software stack, deployment scenarios, and conclusions with future directions.</div>
+          </div>
+        </div>
+        <div class="card" style="display: grid; grid-template-columns: 80px 1fr; gap: 1rem; align-items: start;">
+          <div style="font-family: var(--font-mono); font-size: 0.85rem; color: var(--accent-purple); padding-top: 0.25rem;">APPENDIX</div>
+          <div>
+            <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 0.25rem;">Technical Reference</div>
+            <div style="font-size: 0.95rem; color: var(--text-muted);">Deep dives into transformer architecture, attention mechanisms, RoPE encoding, CXL protocols, and implementation code.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Chapter Navigation -->
+      <div class="chapter-nav">
+        <div></div>
+        <a href="ch01-introduction.html" class="chapter-nav-btn next">
+          <span class="chapter-nav-label">Next Chapter →</span>
+          <span class="chapter-nav-title">Chapter 1: Introduction</span>
+        </a>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-primary);">
+        <p style="font-size: 0.8rem; color: var(--text-muted);">
+          © 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.<br>
+          This document contains proprietary and confidential information.<br>
+          Unauthorized reproduction or distribution is strictly prohibited.
+        </p>
+      </div>
+      <p>Distributed Endpoint Architecture for KV-Cache Offloading in LLM Inference</p>
+      <p style="margin-top: 0.5rem;">Technical Documentation v3.0 — December 2025</p>
+    </footer>
+  </div>
+</body>
+</html>

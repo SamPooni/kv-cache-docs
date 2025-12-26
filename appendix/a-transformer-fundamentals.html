@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Appendix A: Transformer Fundamentals — KV-Cache Offloading</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <div class="watermark">
+    © 2025 Subramaniyam (Sam) Pooni<br>
+    All Rights Reserved<br>
+    Proprietary & Confidential
+  </div>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="nav-brand"><span class="nav-brand-icon">⚡</span> KV-Cache Architecture</a>
+      <div class="nav-links">
+        <a href="index.html" class="nav-link">Appendix Index</a>
+        <a href="a-transformer-fundamentals.html" class="nav-link active">A</a>
+        <a href="b-attention-mechanism.html" class="nav-link">B</a>
+        <a href="c-kv-cache-math.html" class="nav-link">C</a>
+        <a href="d-rope-encoding.html" class="nav-link">D</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="container">
+      <header class="chapter-header">
+        <div class="chapter-label">Appendix A</div>
+        <h1 class="chapter-title">Transformer Architecture Fundamentals</h1>
+        <p class="chapter-subtitle">Layer structure, parameter counts, and memory footprint analysis for Llama-class models.</p>
+      </header>
+
+      <h2>A.1 Layer Structure</h2>
+
+      <p>A transformer decoder block consists of two main components executed sequentially:</p>
+
+      <div class="figure">
+        <div class="figure-label">Figure A.1 — Transformer Layer Structure</div>
+        <div style="display: flex; flex-direction: column; gap: 1rem; max-width: 300px; margin: 1.5rem auto;">
+          <div style="padding: 1rem; background: rgba(139,148,158,0.1); border: 2px solid var(--text-muted); border-radius: 8px; text-align: center;">Input (d<sub>model</sub> = 8192)</div>
+          <div style="text-align: center; color: var(--text-muted);">↓</div>
+          <div style="padding: 1rem; background: rgba(88,166,255,0.1); border: 2px solid var(--accent-cyan); border-radius: 8px; text-align: center; color: var(--accent-cyan); font-weight: 500;">Self-Attention</div>
+          <div style="text-align: center; color: var(--text-muted);">↓ + residual</div>
+          <div style="padding: 1rem; background: rgba(163,113,247,0.1); border: 2px solid var(--accent-purple); border-radius: 8px; text-align: center; color: var(--accent-purple); font-weight: 500;">Feed-Forward Network</div>
+          <div style="text-align: center; color: var(--text-muted);">↓ + residual</div>
+          <div style="padding: 1rem; background: rgba(139,148,158,0.1); border: 2px solid var(--text-muted); border-radius: 8px; text-align: center;">Output (d<sub>model</sub> = 8192)</div>
+        </div>
+        <div style="text-align: center; margin-top: 1rem; font-size: 0.9rem; color: var(--text-muted);">× 80 layers for Llama-70B</div>
+      </div>
+
+      <h2>A.2 Model Dimensions</h2>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Parameter</th><th>Llama-7B</th><th>Llama-70B</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Layers (L)</td><td class="mono">32</td><td class="mono">80</td></tr>
+            <tr><td>Hidden dim (d<sub>model</sub>)</td><td class="mono">4096</td><td class="mono">8192</td></tr>
+            <tr><td>FFN dim (d<sub>ffn</sub>)</td><td class="mono">11008</td><td class="mono">28672</td></tr>
+            <tr><td>Query heads (n<sub>heads</sub>)</td><td class="mono">32</td><td class="mono">64</td></tr>
+            <tr><td>KV heads (n<sub>kv</sub>)</td><td class="mono">32</td><td class="mono">8</td></tr>
+            <tr><td>Head dim (d<sub>head</sub>)</td><td class="mono">128</td><td class="mono">128</td></tr>
+            <tr><td>Vocab size</td><td class="mono">32000</td><td class="mono">32000</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>A.3 Parameter Count Derivation</h2>
+
+      <h3>Per-Layer Parameters</h3>
+
+      <div class="derivation">
+        <div class="derivation-step">
+          <div class="step-num">Attention:</div>
+          <div class="step-content">
+            <div class="step-eq">W<sub>Q</sub>: d × (n_heads × d_head) = 8192 × 8192 = 67M</div>
+            <div class="step-eq">W<sub>K</sub>: d × (n_kv × d_head) = 8192 × 1024 = 8.4M</div>
+            <div class="step-eq">W<sub>V</sub>: d × (n_kv × d_head) = 8192 × 1024 = 8.4M</div>
+            <div class="step-eq">W<sub>O</sub>: (n_heads × d_head) × d = 8192 × 8192 = 67M</div>
+          </div>
+        </div>
+        <div class="derivation-step">
+          <div class="step-num">FFN:</div>
+          <div class="step-content">
+            <div class="step-eq">W<sub>gate</sub>: d × d_ffn = 8192 × 28672 = 235M</div>
+            <div class="step-eq">W<sub>up</sub>: d × d_ffn = 8192 × 28672 = 235M</div>
+            <div class="step-eq">W<sub>down</sub>: d_ffn × d = 28672 × 8192 = 235M</div>
+          </div>
+        </div>
+        <div class="derivation-step">
+          <div class="step-num">Total:</div>
+          <div class="step-content">
+            <div class="step-eq">Per layer: 67 + 8.4 + 8.4 + 67 + 235 + 235 + 235 = <strong>856M</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <h3>Total Model Parameters</h3>
+
+      <div class="derivation">
+        <div class="derivation-step">
+          <div class="step-num">Embedding:</div>
+          <div class="step-content">
+            <div class="step-eq">vocab × d = 32000 × 8192 = 262M</div>
+          </div>
+        </div>
+        <div class="derivation-step">
+          <div class="step-num">Layers:</div>
+          <div class="step-content">
+            <div class="step-eq">80 × 856M = 68.5B</div>
+          </div>
+        </div>
+        <div class="derivation-step">
+          <div class="step-num">Total:</div>
+          <div class="step-content">
+            <div class="step-eq">262M + 68.5B ≈ <strong>69B parameters</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <h2>A.4 Memory Footprint by Precision</h2>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Precision</th><th>Bytes/Param</th><th>Model Size</th><th>Notes</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>FP32</td><td class="mono">4</td><td class="mono">280 GB</td><td>Training</td></tr>
+            <tr><td>BF16/FP16</td><td class="mono">2</td><td class="mono highlight">140 GB</td><td>Inference (typical)</td></tr>
+            <tr><td>INT8</td><td class="mono">1</td><td class="mono">70 GB</td><td>Quantized</td></tr>
+            <tr><td>INT4</td><td class="mono">0.5</td><td class="mono">35 GB</td><td>Aggressive quantization</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="chapter-nav">
+        <a href="index.html" class="chapter-nav-btn prev">
+          <span class="chapter-nav-label">← Back to</span>
+          <span class="chapter-nav-title">Appendix Index</span>
+        </a>
+        <a href="b-attention-mechanism.html" class="chapter-nav-btn next">
+          <span class="chapter-nav-label">Next →</span>
+          <span class="chapter-nav-title">Appendix B: Attention</span>
+        </a>
+      </div>
+    </div>
+    <footer class="footer">
+      <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-primary);">
+        <p style="font-size: 0.8rem; color: var(--text-muted);">
+          © 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.<br>
+          This document contains proprietary and confidential information.<br>
+          Unauthorized reproduction or distribution is strictly prohibited.
+        </p>
+      </div>
+      <p>Distributed Endpoint Architecture for KV-Cache Offloading in LLM Inference</p>
+      <p style="margin-top: 0.5rem;">Technical Documentation v3.0 — December 2025</p>
+    </footer>
+  </div>
+</body>
+</html>

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Appendix G: EMA Scoring Algorithm — KV-Cache Offloading</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <div class="watermark">
+    © 2025 Subramaniyam (Sam) Pooni<br>
+    All Rights Reserved<br>
+    Proprietary & Confidential
+  </div>
+
+  <nav class="nav"><div class="nav-inner"><a href="../index.html" class="nav-brand"><span class="nav-brand-icon">⚡</span> KV-Cache Architecture</a></div></nav>
+  <div class="page-wrapper">
+    <div class="container">
+      <header class="chapter-header">
+        <div class="chapter-label">Appendix G</div>
+        <h1 class="chapter-title">EMA Scoring Algorithm</h1>
+        <p class="chapter-subtitle">Mathematical foundation, α parameter selection, and comparison to LRU.</p>
+      </header>
+
+      <h2>G.1 EMA Update Rule</h2>
+      <div class="equation">score<sub>t</sub>(p) = α × attention<sub>t</sub>(p) + (1 - α) × score<sub>t-1</sub>(p)</div>
+      <p>This creates a "memory" of attention importance that decays gradually.</p>
+
+      <h2>G.2 Properties</h2>
+      <ul>
+        <li><strong>Half-life:</strong> t<sub>1/2</sub> = -ln(2) / ln(1-α)</li>
+        <li><strong>Steady state:</strong> For constant attention a, score → a</li>
+        <li><strong>Decay:</strong> Without attention, score → 0 exponentially</li>
+      </ul>
+
+      <h2>G.3 α Selection</h2>
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>α</th><th>Half-Life (steps)</th><th>Use Case</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">0.05</td><td class="mono">13.5</td><td>Very stable, long memory</td></tr>
+            <tr><td class="mono highlight">0.1</td><td class="mono highlight">6.6</td><td>Recommended default</td></tr>
+            <tr><td class="mono">0.2</td><td class="mono">3.1</td><td>Faster adaptation</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>G.4 EMA vs LRU</h2>
+      <ul>
+        <li><strong>LRU problem:</strong> System prompt at position 5 evicted after 100 steps despite receiving 4% attention every step</li>
+        <li><strong>EMA solution:</strong> Stable 0.04 score keeps it cached</li>
+      </ul>
+      <p><strong>Result: +15% hit rate improvement over LRU</strong></p>
+
+      <div class="chapter-nav">
+        <a href="f-cxl-technology.html" class="chapter-nav-btn prev"><span class="chapter-nav-label">← Previous</span><span class="chapter-nav-title">Appendix F</span></a>
+        <a href="h-memory-hierarchy.html" class="chapter-nav-btn next"><span class="chapter-nav-label">Next →</span><span class="chapter-nav-title">Appendix H</span></a>
+      </div>
+    </div>
+    <footer class="footer">
+      <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-primary);">
+        <p style="font-size: 0.8rem; color: var(--text-muted);">
+          © 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.<br>
+          This document contains proprietary and confidential information.<br>
+          Unauthorized reproduction or distribution is strictly prohibited.
+        </p>
+      </div>
+      <p>Distributed Endpoint Architecture for KV-Cache Offloading in LLM Inference</p>
+      <p style="margin-top: 0.5rem;">Technical Documentation v3.0 — December 2025</p>
+    </footer>
+  </div>
+</body>
+</html>

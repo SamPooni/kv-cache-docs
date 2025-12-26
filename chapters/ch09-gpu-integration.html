@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chapter 9: GPU Integration — KV-Cache Offloading</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <div class="watermark">
+    © 2025 Subramaniyam (Sam) Pooni<br>
+    All Rights Reserved<br>
+    Proprietary & Confidential
+  </div>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="nav-brand"><span class="nav-brand-icon">⚡</span> KV-Cache Architecture</a>
+      <div class="nav-links">
+        <a href="ch08-moe.html" class="nav-link">MoE</a>
+        <a href="ch09-gpu-integration.html" class="nav-link active">GPU</a>
+        <a href="ch10-market.html" class="nav-link">Market</a>
+        <a href="ch11-performance.html" class="nav-link">Performance</a>
+        <a href="../appendix/index.html" class="nav-link">Appendix</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="container">
+      <header class="chapter-header">
+        <div class="chapter-label">Chapter 9</div>
+        <h1 class="chapter-title">GPU Integration</h1>
+        <p class="chapter-subtitle">Memory mapping, hint interfaces, driver-to-firmware translation, and fault handling for seamless GPU access to CXL memory.</p>
+      </header>
+
+      <h2>9.1 Memory Mapping</h2>
+
+      <h3>Unified Virtual Address Space</h3>
+
+      <p>CXL memory appears in GPU virtual address space alongside HBM:</p>
+
+      <pre><code>GPU Virtual Address Space
+├── 0x0000_0000_0000 - 0x0000_FFFF_FFFF: HBM (192 GB)
+├── 0x0001_0000_0000 - 0x0004_FFFF_FFFF: CXL Region 0 (256 GB)
+├── 0x0005_0000_0000 - 0x0008_FFFF_FFFF: CXL Region 1 (256 GB)
+├── 0x0009_0000_0000 - 0x000C_FFFF_FFFF: CXL Region 2 (256 GB)
+└── 0x000D_0000_0000 - 0x0010_FFFF_FFFF: CXL Region 3 (256 GB)</code></pre>
+
+      <h3>CXL.mem Region Mapping</h3>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Property</th><th>Configuration</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Mapping granularity</td><td class="mono">2 MB huge pages</td></tr>
+            <tr><td>Access permissions</td><td class="mono">Read/Write</td></tr>
+            <tr><td>Cacheability</td><td class="mono">Non-cacheable (NC)</td></tr>
+            <tr><td>Coherence</td><td class="mono">Hardware-managed</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Load/Store Semantics</h3>
+
+      <p>GPU kernels access CXL memory via standard load/store instructions:</p>
+
+      <pre><code>__global__ void read_kv_cache(
+    float* kv_cache,    // May point to CXL region
+    float* output,      // HBM output buffer
+    int n
+) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < n) {
+        // Standard load - hardware handles CXL protocol
+        output[idx] = kv_cache[idx];
+    }
+}</code></pre>
+
+      <div class="callout insight">
+        <div class="callout-title">🔧 Key Benefit</div>
+        <p style="margin-bottom: 0;"><strong>No explicit copy commands required</strong> — hardware handles CXL protocol translation transparently. Existing CUDA code works unchanged.</p>
+      </div>
+
+      <h2>9.2 Hint Interface</h2>
+
+      <h3>Allocation Hints Structure</h3>
+
+      <pre><code>typedef struct {
+    uint64_t flags;           // PREFETCHABLE, EVICTABLE, etc.
+    uint32_t data_type;       // KV_CACHE, WEIGHTS, ACTIVATIONS
+    uint32_t access_pattern;  // SEQUENTIAL, RANDOM, STRIDED
+    uint32_t priority;        // 0-255, higher = more important
+    uint32_t prefetch_depth;  // Layers to prefetch ahead
+    uint64_t lifetime_hint;   // Expected access duration (μs)
+} AllocationHints;</code></pre>
+
+      <h3>KV-Cache Specific Fields</h3>
+
+      <pre><code>typedef struct {
+    uint64_t sequence_id;     // Unique sequence identifier
+    uint32_t num_layers;      // Total model layers
+    uint32_t num_heads;       // KV heads per layer
+    uint32_t head_dim;        // Dimension per head
+    uint32_t max_seq_len;     // Maximum sequence length
+    uint32_t current_pos;     // Current decode position
+    float    attention_ema;   // EMA attention score
+} KVCacheMetadata;</code></pre>
+
+      <h2>9.3 Driver to Firmware Translation</h2>
+
+      <div class="figure">
+        <div class="figure-label">Figure 9.1 — Translation Flow</div>
+        <div style="display: flex; flex-direction: column; gap: 1rem; max-width: 500px; margin: 1rem auto;">
+          <div style="padding: 0.75rem; background: rgba(88,166,255,0.1); border: 1px solid var(--accent-cyan); border-radius: 8px; text-align: center;">
+            <div style="font-weight: 500; color: var(--accent-cyan);">1. GPU Runtime Call</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">Application invokes allocation API</div>
+          </div>
+          <div style="text-align: center; color: var(--text-muted);">↓</div>
+          <div style="padding: 0.75rem; background: rgba(63,185,80,0.1); border: 1px solid var(--accent-green); border-radius: 8px; text-align: center;">
+            <div style="font-weight: 500; color: var(--accent-green);">2. Driver Processing</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">Validate hints, determine target endpoint</div>
+          </div>
+          <div style="text-align: center; color: var(--text-muted);">↓</div>
+          <div style="padding: 0.75rem; background: rgba(163,113,247,0.1); border: 1px solid var(--accent-purple); border-radius: 8px; text-align: center;">
+            <div style="font-weight: 500; color: var(--accent-purple);">3. Mailbox Command</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">Format CXL.io mailbox payload</div>
+          </div>
+          <div style="text-align: center; color: var(--text-muted);">↓</div>
+          <div style="padding: 0.75rem; background: rgba(210,153,34,0.1); border: 1px solid var(--accent-orange); border-radius: 8px; text-align: center;">
+            <div style="font-weight: 500; color: var(--accent-orange);">4. Firmware Execution</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">Endpoint controller processes command</div>
+          </div>
+          <div style="text-align: center; color: var(--text-muted);">↓</div>
+          <div style="padding: 0.75rem; background: rgba(139,148,158,0.1); border: 1px solid var(--text-muted); border-radius: 8px; text-align: center;">
+            <div style="font-weight: 500; color: var(--text-secondary);">5. Response Return</div>
+            <div style="font-size: 0.85rem; color: var(--text-muted);">Success/failure + allocated address</div>
+          </div>
+        </div>
+      </div>
+
+      <h2>9.4 Fault Handling</h2>
+
+      <h3>Latency Breakdown (DRAM Resident)</h3>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Component</th><th>Latency</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>GPU MMU fault detection</td><td class="mono">50 ns</td></tr>
+            <tr><td>PCIe message to endpoint</td><td class="mono">100 ns</td></tr>
+            <tr><td>Endpoint page table lookup</td><td class="mono">20 ns</td></tr>
+            <tr><td>DRAM access</td><td class="mono">100 ns</td></tr>
+            <tr><td>PCIe response</td><td class="mono">100 ns</td></tr>
+            <tr><td>GPU TLB update</td><td class="mono">30 ns</td></tr>
+            <tr style="background: rgba(63,185,80,0.1);"><td><strong>Total</strong></td><td class="mono highlight"><strong>~400 ns</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Comparison to Alternatives</h3>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Fault Path</th><th>Latency</th><th>Notes</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>GPU HBM (no fault)</td><td class="mono highlight">100 ns</td><td>Baseline</td></tr>
+            <tr><td>CXL DRAM fault</td><td class="mono">400 ns</td><td>4× HBM</td></tr>
+            <tr><td>CXL Flash fault</td><td class="mono warning">15-55 μs</td><td>Masked by prefetch</td></tr>
+            <tr><td>CPU-mediated PCIe</td><td class="mono danger">5-10 μs</td><td>Traditional swap</td></tr>
+            <tr><td>Full recompute</td><td class="mono danger">10-100 ms</td><td>Last resort</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>9.5 Integration Summary</h2>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Capability</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Transparent access</td><td class="highlight">✓ Load/store semantics</td></tr>
+            <tr><td>Hint propagation</td><td class="highlight">✓ Application → firmware</td></tr>
+            <tr><td>Efficient faults</td><td class="highlight">✓ Sub-μs for DRAM</td></tr>
+            <tr><td>Graceful degradation</td><td class="highlight">✓ Flash and recompute fallbacks</td></tr>
+            <tr><td>Async prefetch</td><td class="highlight">✓ Non-blocking API</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="chapter-nav">
+        <a href="ch08-moe.html" class="chapter-nav-btn prev">
+          <span class="chapter-nav-label">← Previous</span>
+          <span class="chapter-nav-title">Chapter 8: MoE Routing</span>
+        </a>
+        <a href="ch10-market.html" class="chapter-nav-btn next">
+          <span class="chapter-nav-label">Next Chapter →</span>
+          <span class="chapter-nav-title">Chapter 10: Market Landscape</span>
+        </a>
+      </div>
+    </div>
+    <footer class="footer">
+      <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-primary);">
+        <p style="font-size: 0.8rem; color: var(--text-muted);">
+          © 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.<br>
+          This document contains proprietary and confidential information.<br>
+          Unauthorized reproduction or distribution is strictly prohibited.
+        </p>
+      </div>
+      <p>Distributed Endpoint Architecture for KV-Cache Offloading in LLM Inference</p>
+      <p style="margin-top: 0.5rem;">Technical Documentation v3.0 — December 2025</p>
+    </footer>
+  </div>
+</body>
+</html>

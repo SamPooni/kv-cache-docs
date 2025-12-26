@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chapter 6: Preprocessing Offload — KV-Cache Offloading</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <div class="watermark">
+    © 2025 Subramaniyam (Sam) Pooni<br>
+    All Rights Reserved<br>
+    Proprietary & Confidential
+  </div>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="nav-brand"><span class="nav-brand-icon">⚡</span> KV-Cache Architecture</a>
+      <div class="nav-links">
+        <a href="ch05-bandwidth.html" class="nav-link">Bandwidth</a>
+        <a href="ch06-preprocessing.html" class="nav-link active">Preprocessing</a>
+        <a href="ch07-kv-cache.html" class="nav-link">KV-Cache</a>
+        <a href="ch08-moe.html" class="nav-link">MoE</a>
+        <a href="../appendix/index.html" class="nav-link">Appendix</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="container">
+      <header class="chapter-header">
+        <div class="chapter-label">Chapter 6</div>
+        <h1 class="chapter-title">Preprocessing Offload</h1>
+        <p class="chapter-subtitle">Offloading tokenization, image processing, and format conversion to ARM cores in endpoints for reduced GPU load and latency.</p>
+      </header>
+
+      <h2>6.1 Traditional Path</h2>
+
+      <p>In conventional LLM serving, preprocessing runs on the host CPU before data reaches the GPU:</p>
+
+      <div class="figure">
+        <div class="figure-label">Figure 6.1 — Traditional Preprocessing Pipeline</div>
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 0.5rem; margin: 1.5rem 0;">
+          <div style="padding: 0.75rem 1.25rem; background: rgba(139,148,158,0.1); border: 2px solid var(--text-muted); border-radius: 8px; text-align: center;">
+            <div style="font-size: 0.9rem; color: var(--text-secondary);">Raw Input</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">Text/Images</div>
+          </div>
+          <span style="color: var(--text-muted);">→</span>
+          <div style="padding: 0.75rem 1.25rem; background: rgba(248,81,73,0.1); border: 2px solid var(--accent-red); border-radius: 8px; text-align: center;">
+            <div style="font-size: 0.9rem; color: var(--accent-red);">CPU</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">Tokenize/Decode</div>
+          </div>
+          <span style="color: var(--text-muted);">→</span>
+          <div style="padding: 0.75rem 1.25rem; background: rgba(248,81,73,0.1); border: 2px solid var(--accent-red); border-radius: 8px; text-align: center;">
+            <div style="font-size: 0.9rem; color: var(--accent-red);">CPU</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">Format Convert</div>
+          </div>
+          <span style="color: var(--text-muted);">→</span>
+          <div style="padding: 0.75rem 1.25rem; background: rgba(210,153,34,0.1); border: 2px solid var(--accent-orange); border-radius: 8px; text-align: center;">
+            <div style="font-size: 0.9rem; color: var(--accent-orange);">PCIe</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">Transfer</div>
+          </div>
+          <span style="color: var(--text-muted);">→</span>
+          <div style="padding: 0.75rem 1.25rem; background: rgba(63,185,80,0.1); border: 2px solid var(--accent-green); border-radius: 8px; text-align: center;">
+            <div style="font-size: 0.9rem; color: var(--accent-green);">GPU</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">Inference</div>
+          </div>
+        </div>
+        <div class="figure-caption">Traditional path: CPU performs all preprocessing, then transfers results to GPU via PCIe. This adds latency and consumes CPU resources.</div>
+      </div>
+
+      <p><strong>Problems with traditional approach:</strong></p>
+      <ul>
+        <li>CPU becomes bottleneck at high request rates</li>
+        <li>PCIe transfer adds latency</li>
+        <li>Context switches between preprocessing and transfer</li>
+        <li>CPU resources shared with system tasks</li>
+      </ul>
+
+      <h2>6.2 Endpoint Path</h2>
+
+      <p>Our architecture offloads preprocessing to the ARM cores in each endpoint:</p>
+
+      <div class="figure">
+        <div class="figure-label">Figure 6.2 — Endpoint Preprocessing Pipeline</div>
+        <div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 0.5rem; margin: 1.5rem 0;">
+          <div style="padding: 0.75rem 1.25rem; background: rgba(139,148,158,0.1); border: 2px solid var(--text-muted); border-radius: 8px; text-align: center;">
+            <div style="font-size: 0.9rem; color: var(--text-secondary);">Raw Input</div>
+          </div>
+          <span style="color: var(--text-muted);">→</span>
+          <div style="padding: 0.75rem 1.25rem; background: rgba(63,185,80,0.1); border: 2px solid var(--accent-green); border-radius: 8px; text-align: center;">
+            <div style="font-size: 0.9rem; color: var(--accent-green);">Endpoint ARM</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">All preprocessing</div>
+          </div>
+          <span style="color: var(--text-muted);">→</span>
+          <div style="padding: 0.75rem 1.25rem; background: rgba(88,166,255,0.1); border: 2px solid var(--accent-cyan); border-radius: 8px; text-align: center;">
+            <div style="font-size: 0.9rem; color: var(--accent-cyan);">CXL.mem</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">Direct access</div>
+          </div>
+          <span style="color: var(--text-muted);">→</span>
+          <div style="padding: 0.75rem 1.25rem; background: rgba(63,185,80,0.1); border: 2px solid var(--accent-green); border-radius: 8px; text-align: center;">
+            <div style="font-size: 0.9rem; color: var(--accent-green);">GPU</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">Inference</div>
+          </div>
+        </div>
+        <div class="figure-caption">Endpoint path: ARM cores in endpoints handle all preprocessing. Data is placed directly in CXL memory for GPU access—no CPU involvement.</div>
+      </div>
+
+      <h2>6.3 Offloadable Tasks</h2>
+
+      <h3>Tokenization (SentencePiece, BPE)</h3>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Metric</th><th>CPU (x86)</th><th>Endpoint (ARM)</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Throughput</td><td class="mono">50K tokens/s</td><td class="mono">40K tokens/s</td></tr>
+            <tr><td>Latency (1K tokens)</td><td class="mono">20 ms</td><td class="mono">25 ms</td></tr>
+            <tr><td>CPU load</td><td class="mono danger">100%</td><td class="mono highlight">0%</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Image Decode and Normalization</h3>
+
+      <p>For multimodal models, image preprocessing is compute-intensive:</p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Operation</th><th>CPU Time</th><th>ARM Time</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>JPEG decode (1024×1024)</td><td class="mono">15 ms</td><td class="mono">20 ms</td></tr>
+            <tr><td>Resize to 336×336</td><td class="mono">5 ms</td><td class="mono">8 ms</td></tr>
+            <tr><td>Normalize (mean/std)</td><td class="mono">2 ms</td><td class="mono">3 ms</td></tr>
+            <tr><td>Convert to BF16</td><td class="mono">1 ms</td><td class="mono">2 ms</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Data Format Conversion</h3>
+
+      <ul>
+        <li><strong>FP32 → FP16/BF16</strong>: 2× memory reduction</li>
+        <li><strong>INT8 quantization</strong>: 4× reduction for activations</li>
+        <li><strong>Layout transposition</strong>: Row-major to column-major for optimal GPU access</li>
+      </ul>
+
+      <h3>Batching and Padding</h3>
+
+      <p>Dynamic batching with sequence padding handled at endpoint:</p>
+      <ul>
+        <li>Variable-length inputs padded to batch maximum</li>
+        <li>Attention masks generated</li>
+        <li>Position IDs computed</li>
+      </ul>
+
+      <h2>6.4 ARM Core Performance</h2>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Specification</th><th>Value</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Processor</td><td class="mono">ARM Cortex-A78</td></tr>
+            <tr><td>Cores</td><td class="mono">4-8 per endpoint</td></tr>
+            <tr><td>Frequency</td><td class="mono">3.0 GHz</td></tr>
+            <tr><td>SIMD</td><td class="mono">NEON (128-bit)</td></tr>
+            <tr><td>Memory BW</td><td class="mono">89.6 GB/s (DDR5)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout insight">
+        <div class="callout-title">💡 Benefit Summary</div>
+        <ul style="margin-bottom: 0;">
+          <li><strong>5-10× latency reduction</strong> by eliminating CPU→GPU transfer</li>
+          <li><strong>0% CPU utilization</strong> for preprocessing</li>
+          <li><strong>Parallel preprocessing</strong> across 4 endpoints</li>
+          <li><strong>Direct CXL placement</strong> — data ready for GPU access</li>
+        </ul>
+      </div>
+
+      <div class="chapter-nav">
+        <a href="ch05-bandwidth.html" class="chapter-nav-btn prev">
+          <span class="chapter-nav-label">← Previous</span>
+          <span class="chapter-nav-title">Chapter 5: Bandwidth</span>
+        </a>
+        <a href="ch07-kv-cache.html" class="chapter-nav-btn next">
+          <span class="chapter-nav-label">Next Chapter →</span>
+          <span class="chapter-nav-title">Chapter 7: KV-Cache Management</span>
+        </a>
+      </div>
+    </div>
+    <footer class="footer">
+      <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-primary);">
+        <p style="font-size: 0.8rem; color: var(--text-muted);">
+          © 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.<br>
+          This document contains proprietary and confidential information.<br>
+          Unauthorized reproduction or distribution is strictly prohibited.
+        </p>
+      </div>
+      <p>Distributed Endpoint Architecture for KV-Cache Offloading in LLM Inference</p>
+      <p style="margin-top: 0.5rem;">Technical Documentation v3.0 — December 2025</p>
+    </footer>
+  </div>
+</body>
+</html>

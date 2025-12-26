@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Appendix I: Bandwidth Calculations — KV-Cache Offloading</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <div class="watermark">
+    © 2025 Subramaniyam (Sam) Pooni<br>
+    All Rights Reserved<br>
+    Proprietary & Confidential
+  </div>
+
+  <nav class="nav"><div class="nav-inner"><a href="../index.html" class="nav-brand"><span class="nav-brand-icon">⚡</span> KV-Cache Architecture</a></div></nav>
+  <div class="page-wrapper">
+    <div class="container">
+      <header class="chapter-header">
+        <div class="chapter-label">Appendix I</div>
+        <h1 class="chapter-title">Bandwidth and Latency Calculations</h1>
+        <p class="chapter-subtitle">Decode bandwidth requirements and prefetch window sizing.</p>
+      </header>
+
+      <h2>I.1 Decode Bandwidth Requirement</h2>
+      <p>For Llama-70B generating 20 tokens/second:</p>
+      <div class="equation">BW = (Model + KV) / time_per_token = (140 + 41) GB / 50 ms = <strong>3.62 TB/s</strong></div>
+
+      <h2>I.2 Per-Layer Transfer</h2>
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>Component</th><th>Size</th></tr></thead>
+          <tbody>
+            <tr><td>Attention weights</td><td class="mono">536 MB</td></tr>
+            <tr><td>FFN weights</td><td class="mono">1.2 GB</td></tr>
+            <tr><td>KV-cache slice</td><td class="mono">512 MB</td></tr>
+            <tr style="background: rgba(88,166,255,0.1);"><td><strong>Total per layer</strong></td><td class="mono highlight"><strong>2.27 GB</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>I.3 Prefetch Window Sizing</h2>
+      <p>With 2-layer prefetch depth and 625 μs per layer:</p>
+      <div class="equation">Prefetch_time = 2 × 625 μs = 1.25 ms</div>
+      <div class="equation">Prefetchable_data = 1.25 ms × 256 GB/s = <strong>320 MB</strong></div>
+      <p>This covers ~0.14× one layer—enough to hide most CXL latency through overlap.</p>
+
+      <h2>I.4 Endpoint Count Trade-offs</h2>
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>Endpoints</th><th>BW</th><th>Capacity</th><th>Cost</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">2</td><td class="mono">128 GB/s</td><td class="mono">512 GB</td><td class="mono">$2,500</td></tr>
+            <tr><td class="mono highlight">4</td><td class="mono highlight">256 GB/s</td><td class="mono highlight">1 TB</td><td class="mono highlight">$5,000</td></tr>
+            <tr><td class="mono">8</td><td class="mono">512 GB/s</td><td class="mono">2 TB</td><td class="mono">$10,000</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><strong>4 endpoints is optimal</strong> for cost/performance balance.</p>
+
+      <div class="chapter-nav">
+        <a href="h-memory-hierarchy.html" class="chapter-nav-btn prev"><span class="chapter-nav-label">← Previous</span><span class="chapter-nav-title">Appendix H</span></a>
+        <a href="j-implementation-reference.html" class="chapter-nav-btn next"><span class="chapter-nav-label">Next →</span><span class="chapter-nav-title">Appendix J</span></a>
+      </div>
+    </div>
+    <footer class="footer">
+      <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-primary);">
+        <p style="font-size: 0.8rem; color: var(--text-muted);">
+          © 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.<br>
+          This document contains proprietary and confidential information.<br>
+          Unauthorized reproduction or distribution is strictly prohibited.
+        </p>
+      </div>
+      <p>Distributed Endpoint Architecture for KV-Cache Offloading in LLM Inference</p>
+      <p style="margin-top: 0.5rem;">Technical Documentation v3.0 — December 2025</p>
+    </footer>
+  </div>
+</body>
+</html>

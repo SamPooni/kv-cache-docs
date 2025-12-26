@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chapter 7: Intelligent KV-Cache Management — KV-Cache Offloading</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <div class="watermark">
+    © 2025 Subramaniyam (Sam) Pooni<br>
+    All Rights Reserved<br>
+    Proprietary & Confidential
+  </div>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="nav-brand"><span class="nav-brand-icon">⚡</span> KV-Cache Architecture</a>
+      <div class="nav-links">
+        <a href="ch06-preprocessing.html" class="nav-link">Preprocessing</a>
+        <a href="ch07-kv-cache.html" class="nav-link active">KV-Cache</a>
+        <a href="ch08-moe.html" class="nav-link">MoE</a>
+        <a href="ch09-gpu-integration.html" class="nav-link">GPU Integration</a>
+        <a href="../appendix/index.html" class="nav-link">Appendix</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="container">
+      <header class="chapter-header">
+        <div class="chapter-label">Chapter 7</div>
+        <h1 class="chapter-title">Intelligent KV-Cache Management</h1>
+        <p class="chapter-subtitle">Per-head tracking, EMA-based attention scoring, RoPE-aware prefetch, and the eviction priority function that achieves 97% hit rates.</p>
+      </header>
+
+      <p>This chapter describes the core algorithmic innovations that enable efficient KV-cache offloading. Unlike simple LRU caching, our approach leverages deep understanding of transformer attention patterns to predict which cache entries will be needed.</p>
+
+      <h2>7.1 Per-Head Tracking</h2>
+
+      <p>A key insight is that different attention heads serve different functions and exhibit distinct access patterns. Treating all heads identically leaves significant optimization on the table.</p>
+
+      <h3>GQA Head Structure</h3>
+
+      <p>Llama-70B uses Grouped-Query Attention (GQA) with 64 query heads sharing 8 KV heads:</p>
+
+      <div class="figure">
+        <div class="figure-label">Figure 7.1 — GQA Head Mapping</div>
+        <div style="display: flex; justify-content: center; gap: 2rem; margin: 1.5rem 0; flex-wrap: wrap;">
+          <div style="text-align: center;">
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">Query Heads (64)</div>
+            <div style="display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px;">
+              <div style="width: 24px; height: 24px; background: var(--accent-cyan); border-radius: 4px; font-size: 0.65rem; display: flex; align-items: center; justify-content: center; color: #fff;">0</div>
+              <div style="width: 24px; height: 24px; background: var(--accent-cyan); border-radius: 4px;"></div>
+              <div style="width: 24px; height: 24px; background: var(--accent-cyan); border-radius: 4px;"></div>
+              <div style="width: 24px; height: 24px; background: var(--accent-cyan); border-radius: 4px;"></div>
+              <div style="width: 24px; height: 24px; background: var(--accent-cyan); border-radius: 4px;"></div>
+              <div style="width: 24px; height: 24px; background: var(--accent-cyan); border-radius: 4px;"></div>
+              <div style="width: 24px; height: 24px; background: var(--accent-cyan); border-radius: 4px;"></div>
+              <div style="width: 24px; height: 24px; background: var(--accent-cyan); border-radius: 4px; font-size: 0.65rem; display: flex; align-items: center; justify-content: center; color: #fff;">7</div>
+              <div style="width: 24px; height: 24px; background: var(--accent-green); border-radius: 4px; font-size: 0.65rem; display: flex; align-items: center; justify-content: center; color: #fff;">8</div>
+              <div style="width: 24px; height: 24px; background: var(--accent-green); border-radius: 4px;"></div>
+              <div style="width: 24px; height: 24px; background: var(--accent-green); border-radius: 4px;"></div>
+              <div style="width: 24px; height: 24px; background: var(--accent-green); border-radius: 4px;"></div>
+              <div style="width: 24px; height: 24px; background: var(--accent-green); border-radius: 4px;"></div>
+              <div style="width: 24px; height: 24px; background: var(--accent-green); border-radius: 4px;"></div>
+              <div style="width: 24px; height: 24px; background: var(--accent-green); border-radius: 4px;"></div>
+              <div style="width: 24px; height: 24px; background: var(--accent-green); border-radius: 4px;"></div>
+              <div style="width: 24px; height: 24px; background: var(--accent-purple); border-radius: 4px;"></div>
+              <div style="width: 24px; height: 24px; background: var(--accent-purple); border-radius: 4px;"></div>
+              <div style="width: 24px; height: 24px; background: var(--accent-purple); border-radius: 4px;"></div>
+              <div style="width: 24px; height: 24px; background: var(--accent-purple); border-radius: 4px;"></div>
+              <div style="width: 24px; height: 24px; background: var(--accent-purple); border-radius: 4px;"></div>
+              <div style="width: 24px; height: 24px; background: var(--accent-purple); border-radius: 4px;"></div>
+              <div style="width: 24px; height: 24px; background: var(--accent-purple); border-radius: 4px;"></div>
+              <div style="width: 24px; height: 24px; background: var(--accent-purple); border-radius: 4px;"></div>
+              <div style="width: 24px; height: 24px; background: var(--accent-orange); border-radius: 4px;"></div>
+              <div style="width: 24px; height: 24px; background: var(--accent-orange); border-radius: 4px;"></div>
+              <div style="width: 24px; height: 24px; background: var(--accent-orange); border-radius: 4px;"></div>
+              <div style="width: 24px; height: 24px; background: var(--accent-orange); border-radius: 4px;"></div>
+              <div style="width: 24px; height: 24px; background: var(--accent-orange); border-radius: 4px;"></div>
+              <div style="width: 24px; height: 24px; background: var(--accent-orange); border-radius: 4px;"></div>
+              <div style="width: 24px; height: 24px; background: var(--accent-orange); border-radius: 4px;"></div>
+              <div style="width: 24px; height: 24px; background: var(--accent-orange); border-radius: 4px;"></div>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; font-size: 1.5rem; color: var(--text-muted);">→</div>
+          <div style="text-align: center;">
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem;">KV Heads (8)</div>
+            <div style="display: flex; gap: 8px;">
+              <div style="width: 40px; height: 40px; background: var(--accent-cyan); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 600;">0</div>
+              <div style="width: 40px; height: 40px; background: var(--accent-green); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 600;">1</div>
+              <div style="width: 40px; height: 40px; background: var(--accent-purple); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 600;">2</div>
+              <div style="width: 40px; height: 40px; background: var(--accent-orange); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 600;">3</div>
+            </div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">... (8 total)</div>
+          </div>
+        </div>
+        <div class="figure-caption">8 query heads share each KV head, reducing KV-cache by 8× vs MHA while maintaining model quality.</div>
+      </div>
+
+      <h3>Head Specialization Types</h3>
+
+      <p>Research reveals that attention heads specialize into distinct functional roles. See <a href="../appendix/e-head-specialization.html">Appendix E</a> for detailed analysis.</p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Head Type</th><th>% of Heads</th><th>Attention Pattern</th><th>Cache Strategy</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="color: var(--accent-cyan);"><strong>Recency</strong></td>
+              <td class="mono">~40%</td>
+              <td>Last 50-200 tokens</td>
+              <td>Keep recent context hot</td>
+            </tr>
+            <tr>
+              <td style="color: var(--accent-green);"><strong>Anchor</strong></td>
+              <td class="mono">~15%</td>
+              <td>System prompt + recent</td>
+              <td>Pin positions 0-100</td>
+            </tr>
+            <tr>
+              <td style="color: var(--accent-purple);"><strong>Retrieval</strong></td>
+              <td class="mono">~25%</td>
+              <td>Content-based search</td>
+              <td>Use EMA scoring</td>
+            </tr>
+            <tr>
+              <td style="color: var(--accent-orange);"><strong>Syntactic</strong></td>
+              <td class="mono">~20%</td>
+              <td>Grammar dependencies</td>
+              <td>Sparse, position-based</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Head-Granularity Eviction</h3>
+
+      <p>Instead of evicting entire token positions, we track importance <strong>per head</strong>:</p>
+
+      <div class="equation">
+        P<sub>aggregate</sub>(position) = max<sub>h</sub>(P<sub>h</sub>(position))
+        <span class="equation-label">Position survives if ANY head needs it</span>
+      </div>
+
+      <p>This prevents evicting tokens that are cold for most heads but critical for retrieval heads.</p>
+
+      <h2>7.2 EMA-Based Attention Scoring</h2>
+
+      <p>Simple LRU eviction fails for LLMs because important tokens (like system prompts) may not be recently accessed but are critical for every query. We use Exponential Moving Average (EMA) scoring.</p>
+
+      <h3>Score Accumulation Formula</h3>
+
+      <div class="equation">
+        score<sub>t</sub>(p) = α × attention<sub>t</sub>(p) + (1 - α) × score<sub>t-1</sub>(p)
+        <span class="equation-label">EMA update rule for position p at step t</span>
+      </div>
+
+      <p>This creates a "memory" of attention importance that decays gradually. Tokens receiving consistent attention maintain high scores; tokens with sporadic access decay. See <a href="../appendix/g-ema-algorithm.html">Appendix G</a> for mathematical derivation.</p>
+
+      <h3>Alpha Parameter Selection</h3>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>α Value</th><th>Half-Life (steps)</th><th>Use Case</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="mono">0.1</td><td class="mono">6.6</td><td>Long-term stability (recommended)</td></tr>
+            <tr><td class="mono">0.2</td><td class="mono">3.1</td><td>Moderate adaptation</td></tr>
+            <tr><td class="mono">0.3</td><td class="mono">1.9</td><td>Fast response to changes</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout insight">
+        <div class="callout-title">🔬 EMA vs LRU Comparison</div>
+        <div class="comparison-grid" style="margin-top: 1rem;">
+          <div style="background: rgba(248,81,73,0.08); border: 1px solid var(--accent-red); border-radius: 8px; padding: 1rem;">
+            <div style="font-weight: 600; color: var(--accent-red); margin-bottom: 0.5rem;">LRU (Least Recently Used)</div>
+            <ul style="font-size: 0.9rem; margin-bottom: 0;">
+              <li>Evicts oldest access</li>
+              <li>Ignores access frequency</li>
+              <li>System prompt evicted quickly</li>
+              <li>~70% hit rate</li>
+            </ul>
+          </div>
+          <div style="background: rgba(63,185,80,0.08); border: 1px solid var(--accent-green); border-radius: 8px; padding: 1rem;">
+            <div style="font-weight: 600; color: var(--accent-green); margin-bottom: 0.5rem;">EMA Scoring</div>
+            <ul style="font-size: 0.9rem; margin-bottom: 0;">
+              <li>Tracks attention intensity</li>
+              <li>Weighs recency + frequency</li>
+              <li>System prompt stays hot</li>
+              <li>~85% hit rate (+15%)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <h3>Practical Example</h3>
+
+      <p>Consider a system instruction at position 5 receiving 4% attention every step:</p>
+
+      <div class="derivation">
+        <div class="derivation-step">
+          <div class="step-num">Initial:</div>
+          <div class="step-content">
+            <div class="step-eq">score<sub>0</sub> = 0.04 (first attention)</div>
+          </div>
+        </div>
+        <div class="derivation-step">
+          <div class="step-num">Step 1:</div>
+          <div class="step-content">
+            <div class="step-eq">score<sub>1</sub> = 0.1 × 0.04 + 0.9 × 0.04 = 0.04</div>
+          </div>
+        </div>
+        <div class="derivation-step">
+          <div class="step-num">Steady:</div>
+          <div class="step-content">
+            <div class="step-eq">score<sub>∞</sub> = <strong>0.04</strong> (stable, never evicted)</div>
+          </div>
+        </div>
+      </div>
+
+      <p>Meanwhile, a generic token at position 5000 receiving 0.1% attention once then never again:</p>
+
+      <div class="derivation">
+        <div class="derivation-step">
+          <div class="step-num">Initial:</div>
+          <div class="step-content">
+            <div class="step-eq">score<sub>0</sub> = 0.001</div>
+          </div>
+        </div>
+        <div class="derivation-step">
+          <div class="step-num">Step 100:</div>
+          <div class="step-content">
+            <div class="step-eq">score<sub>100</sub> = 0.001 × 0.9<sup>100</sup> ≈ <strong>0.00001</strong> (eviction candidate)</div>
+          </div>
+        </div>
+      </div>
+
+      <h2>7.3 RoPE-Aware Prefetch</h2>
+
+      <p>Rotary Position Embeddings (RoPE) create <strong>distance-dependent attention decay</strong>. Tokens closer to the query position receive stronger attention. We exploit this for prefetching.</p>
+
+      <h3>Position Encoding Locality</h3>
+
+      <p>RoPE applies rotation matrices based on position difference:</p>
+
+      <div class="equation">
+        Attention(q, k) ∝ exp(q · R<sub>θ</sub><sup>(m-n)</sup> · k)
+        <span class="equation-label">Attention decays with position distance |m-n|</span>
+      </div>
+
+      <p>See <a href="../appendix/d-rope-encoding.html">Appendix D</a> for complete RoPE mathematics.</p>
+
+      <div class="figure">
+        <div class="figure-label">Figure 7.2 — Attention vs Position Distance</div>
+        <div class="bar-chart">
+          <div class="bar-row">
+            <span class="bar-label">Distance 1</span>
+            <div class="bar-container">
+              <div class="bar-fill" style="width: 99%; background: var(--accent-green);">cos ≈ 0.99</div>
+            </div>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">Distance 10</span>
+            <div class="bar-container">
+              <div class="bar-fill" style="width: 90%; background: var(--accent-green);">cos ≈ 0.90</div>
+            </div>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">Distance 100</span>
+            <div class="bar-container">
+              <div class="bar-fill" style="width: 60%; background: var(--accent-cyan);">cos ≈ 0.60</div>
+            </div>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">Distance 1K</span>
+            <div class="bar-container">
+              <div class="bar-fill" style="width: 35%; background: var(--accent-orange);">cos ≈ 0.35</div>
+            </div>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">Distance 10K</span>
+            <div class="bar-container">
+              <div class="bar-fill" style="width: 11%; background: var(--accent-red);">cos ≈ 0.11</div>
+            </div>
+          </div>
+        </div>
+        <div class="figure-caption">Attention naturally concentrates on nearby positions due to RoPE's rotation mechanics. ~80% of attention goes to the nearest 10% of tokens.</div>
+      </div>
+
+      <h3>Prefetch Window Strategy</h3>
+
+      <p>Given current decode position P, we prefetch:</p>
+
+      <div class="equation">
+        Prefetch window: [P - W, P + W]
+        <span class="equation-label">W chosen based on cache tier capacity</span>
+      </div>
+
+      <p>Typical values:</p>
+      <ul>
+        <li><strong>HBM tier:</strong> W = 2000 (very hot)</li>
+        <li><strong>CXL DRAM tier:</strong> W = 10000 (warm)</li>
+        <li><strong>Flash tier:</strong> Rest of context (cold)</li>
+      </ul>
+
+      <h2>7.4 Eviction Priority Function</h2>
+
+      <p>The final eviction decision combines all signals:</p>
+
+      <div class="equation">
+        Priority(p, h) = w<sub>1</sub> × Recency(p) + w<sub>2</sub> × EMA(p, h) + w<sub>3</sub> × Anchor(p)
+        <span class="equation-label">Weighted priority score per position per head</span>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Component</th><th>Weight</th><th>Range</th><th>Purpose</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Recency</td><td class="mono">0.25</td><td>[0, 1]</td><td>Recent access bonus</td></tr>
+            <tr><td>EMA Score</td><td class="mono">0.55</td><td>[0, 1]</td><td>Sustained importance</td></tr>
+            <tr><td>Anchor Zone</td><td class="mono">0.20</td><td>{0, 1}</td><td>Protect system prompt</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Eviction Algorithm</h3>
+
+      <pre><code>def select_eviction_candidates(cache, num_to_evict):
+    candidates = []
+    for position in cache.positions:
+        # Aggregate across heads - keep if ANY head needs it
+        priority = max(cache.priority[position, h] for h in heads)
+        candidates.append((position, priority))
+    
+    # Sort by priority ascending (lowest = evict first)
+    candidates.sort(key=lambda x: x[1])
+    
+    return candidates[:num_to_evict]</code></pre>
+
+      <h3>Hit Rate Results</h3>
+
+      <div class="figure">
+        <div class="figure-label">Figure 7.3 — Hit Rate Improvement by Technique</div>
+        <div class="bar-chart">
+          <div class="bar-row">
+            <span class="bar-label">LRU baseline</span>
+            <div class="bar-container">
+              <div class="bar-fill" style="width: 70%; background: var(--accent-red);">70%</div>
+            </div>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">+ Anchor zone</span>
+            <div class="bar-container">
+              <div class="bar-fill" style="width: 78%; background: var(--accent-orange);">78%</div>
+            </div>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">+ EMA scoring</span>
+            <div class="bar-container">
+              <div class="bar-fill" style="width: 85%; background: var(--accent-yellow);">85%</div>
+            </div>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">+ Per-head tracking</span>
+            <div class="bar-container">
+              <div class="bar-fill" style="width: 91%; background: var(--accent-cyan);">91%</div>
+            </div>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">+ RoPE prefetch</span>
+            <div class="bar-container">
+              <div class="bar-fill" style="width: 95%; background: var(--accent-green);">95%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-value">95%</div>
+          <div class="stat-label">Final Hit Rate</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">+25%</div>
+          <div class="stat-label">vs LRU</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">7.5%</div>
+          <div class="stat-label">Latency Overhead</div>
+        </div>
+      </div>
+
+      <div class="chapter-nav">
+        <a href="ch06-preprocessing.html" class="chapter-nav-btn prev">
+          <span class="chapter-nav-label">← Previous</span>
+          <span class="chapter-nav-title">Chapter 6: Preprocessing</span>
+        </a>
+        <a href="ch08-moe.html" class="chapter-nav-btn next">
+          <span class="chapter-nav-label">Next Chapter →</span>
+          <span class="chapter-nav-title">Chapter 8: MoE Routing</span>
+        </a>
+      </div>
+    </div>
+    <footer class="footer">
+      <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-primary);">
+        <p style="font-size: 0.8rem; color: var(--text-muted);">
+          © 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.<br>
+          This document contains proprietary and confidential information.<br>
+          Unauthorized reproduction or distribution is strictly prohibited.
+        </p>
+      </div>
+      <p>Distributed Endpoint Architecture for KV-Cache Offloading in LLM Inference</p>
+      <p style="margin-top: 0.5rem;">Technical Documentation v3.0 — December 2025</p>
+    </footer>
+  </div>
+</body>
+</html>

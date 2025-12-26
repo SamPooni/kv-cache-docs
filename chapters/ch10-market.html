@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chapter 10: Market Landscape — KV-Cache Offloading</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <div class="watermark">
+    © 2025 Subramaniyam (Sam) Pooni<br>
+    All Rights Reserved<br>
+    Proprietary & Confidential
+  </div>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="nav-brand"><span class="nav-brand-icon">⚡</span> KV-Cache Architecture</a>
+      <div class="nav-links">
+        <a href="ch09-gpu-integration.html" class="nav-link">GPU</a>
+        <a href="ch10-market.html" class="nav-link active">Market</a>
+        <a href="ch11-performance.html" class="nav-link">Performance</a>
+        <a href="ch12-implementation.html" class="nav-link">Implementation</a>
+        <a href="../appendix/index.html" class="nav-link">Appendix</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="container">
+      <header class="chapter-header">
+        <div class="chapter-label">Chapter 10</div>
+        <h1 class="chapter-title">Market Landscape</h1>
+        <p class="chapter-subtitle">Analysis of commercial CXL products, software frameworks, recent research, and competitive differentiation.</p>
+      </header>
+
+      <h2>10.1 Commercial Products (Available Today)</h2>
+
+      <h3>Samsung CMM-D/CMM-B</h3>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Product</th><th>Protocol</th><th>Capacities</th><th>Interface</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>CMM-D</strong> (DRAM Expander)</td><td class="mono">CXL 2.0</td><td class="mono">128/256/512 GB</td><td class="mono">×8 Gen5</td></tr>
+            <tr><td><strong>CMM-B</strong> (Buffered)</td><td class="mono">CXL 2.0</td><td>Enhanced RAS</td><td>Enterprise</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><strong>Limitations:</strong> No computational element, passive memory only.</p>
+
+      <h3>XConn Apollo + MemVerge GISMO</h3>
+
+      <ul>
+        <li><strong>Apollo:</strong> Multi-port CXL 2.0 switch (16 ports)</li>
+        <li><strong>GISMO:</strong> Memory tiering software, Kubernetes integration</li>
+      </ul>
+      <p><strong>Limitations:</strong> Software-managed tiering, no hardware intelligence.</p>
+
+      <h3>Astera Labs Niagara</h3>
+
+      <p>CXL memory controller IP for vendor integration.</p>
+      <p><strong>Limitations:</strong> Silicon IP only; system intelligence depends on implementation.</p>
+
+      <h2>10.2 Software Frameworks</h2>
+
+      <h3>vLLM / LMCache</h3>
+
+      <ul>
+        <li><strong>vLLM:</strong> PagedAttention, continuous batching, speculative decoding</li>
+        <li><strong>LMCache:</strong> Multi-tier caching (GPU/CPU/SSD), prefix caching</li>
+      </ul>
+      <p><strong>Limitations:</strong> Software-only, no hardware prefetch integration.</p>
+
+      <h3>Mooncake</h3>
+
+      <p>Moonshot AI's disaggregated serving: separate prefill and decode clusters with network-based KV transfer.</p>
+      <p><strong>Limitations:</strong> Relies on network transfer rather than CXL.</p>
+
+      <h2>10.3 Recent Research (Oct–Dec 2025)</h2>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Paper</th><th>Innovation</th><th>Result</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>PNM-KV</strong></td><td>ARM cores in DIMM for local attention</td><td class="mono highlight">21.9× throughput</td></tr>
+            <tr><td><strong>CXL-SpecKV</strong></td><td>Speculative prefetch over CXL</td><td class="mono">4-8× memory expansion</td></tr>
+            <tr><td><strong>TraCT</strong></td><td>Rack-scale KV sharing via similarity</td><td class="mono">Multi-tenant reuse</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>10.4 The Gap</h2>
+
+      <p>Existing solutions lack critical capabilities that our architecture provides:</p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Capability</th><th>Current State</th><th>Our Approach</th><th>Impact</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Per-KV-Head Tracking</td>
+              <td>Sequence/token-level</td>
+              <td class="highlight">Head-granularity</td>
+              <td>+10-20% hit rate</td>
+            </tr>
+            <tr>
+              <td>Attention Scoring</td>
+              <td>Static LRU</td>
+              <td class="highlight">Dynamic EMA</td>
+              <td>Preserves important tokens</td>
+            </tr>
+            <tr>
+              <td>Prefetch Strategy</td>
+              <td>Generic</td>
+              <td class="highlight">RoPE-aware</td>
+              <td>+15-25% prefetch hit rate</td>
+            </tr>
+            <tr>
+              <td>Intelligence Location</td>
+              <td>Host CPU</td>
+              <td class="highlight">Endpoint-resident</td>
+              <td>40× latency reduction</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>10.5 Differentiation</h2>
+
+      <h3>Feature Comparison Matrix</h3>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Feature</th><th>Samsung</th><th>XConn</th><th>vLLM</th><th>Mooncake</th><th style="color: var(--accent-cyan);">Ours</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>CXL.mem access</td><td>✓</td><td>✓</td><td>✗</td><td>✗</td><td class="highlight"><strong>✓</strong></td></tr>
+            <tr><td>Hardware intelligence</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td><td class="highlight"><strong>✓</strong></td></tr>
+            <tr><td>Per-head tracking</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td><td class="highlight"><strong>✓</strong></td></tr>
+            <tr><td>EMA scoring</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td><td class="highlight"><strong>✓</strong></td></tr>
+            <tr><td>RoPE prefetch</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td><td class="highlight"><strong>✓</strong></td></tr>
+            <tr><td>MoE histogram</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td><td class="highlight"><strong>✓</strong></td></tr>
+            <tr><td>Preprocessing offload</td><td>✗</td><td>Partial</td><td>✗</td><td>✗</td><td class="highlight"><strong>Full</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Target Performance vs Competition</h3>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Metric</th><th>Best Current</th><th>Our Target</th><th>Improvement</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>TTFT (128K)</td><td class="mono">3.1 s (vLLM)</td><td class="mono">0.8 s</td><td class="highlight"><strong>3.9×</strong></td></tr>
+            <tr><td>Hit Rate</td><td class="mono">70% (LRU)</td><td class="mono">97%</td><td class="highlight"><strong>+27%</strong></td></tr>
+            <tr><td>Latency</td><td class="mono">16 μs (PCIe)</td><td class="mono">250 ns</td><td class="highlight"><strong>65×</strong></td></tr>
+            <tr><td>Throughput</td><td class="mono">1× (baseline)</td><td class="mono">21×</td><td class="highlight"><strong>21×</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="chapter-nav">
+        <a href="ch09-gpu-integration.html" class="chapter-nav-btn prev">
+          <span class="chapter-nav-label">← Previous</span>
+          <span class="chapter-nav-title">Chapter 9: GPU Integration</span>
+        </a>
+        <a href="ch11-performance.html" class="chapter-nav-btn next">
+          <span class="chapter-nav-label">Next Chapter →</span>
+          <span class="chapter-nav-title">Chapter 11: Performance Analysis</span>
+        </a>
+      </div>
+    </div>
+    <footer class="footer">
+      <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-primary);">
+        <p style="font-size: 0.8rem; color: var(--text-muted);">
+          © 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.<br>
+          This document contains proprietary and confidential information.<br>
+          Unauthorized reproduction or distribution is strictly prohibited.
+        </p>
+      </div>
+      <p>Distributed Endpoint Architecture for KV-Cache Offloading in LLM Inference</p>
+      <p style="margin-top: 0.5rem;">Technical Documentation v3.0 — December 2025</p>
+    </footer>
+  </div>
+</body>
+</html>

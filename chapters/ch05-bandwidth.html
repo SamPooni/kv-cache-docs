@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chapter 5: Bandwidth Aggregation — KV-Cache Offloading</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <div class="watermark">
+    © 2025 Subramaniyam (Sam) Pooni<br>
+    All Rights Reserved<br>
+    Proprietary & Confidential
+  </div>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="../index.html" class="nav-brand"><span class="nav-brand-icon">⚡</span> KV-Cache Architecture</a>
+      <div class="nav-links">
+        <a href="ch04-latency.html" class="nav-link">Latency</a>
+        <a href="ch05-bandwidth.html" class="nav-link active">Bandwidth</a>
+        <a href="ch06-preprocessing.html" class="nav-link">Preprocessing</a>
+        <a href="ch07-kv-cache.html" class="nav-link">KV-Cache</a>
+        <a href="../appendix/index.html" class="nav-link">Appendix</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="page-wrapper">
+    <div class="container">
+      <header class="chapter-header">
+        <div class="chapter-label">Chapter 5</div>
+        <h1 class="chapter-title">Bandwidth Aggregation</h1>
+        <p class="chapter-subtitle">CXL switch topology for linear bandwidth scaling, layer prefetch strategies, and practical bandwidth calculations for Llama-70B.</p>
+      </header>
+
+      <h2>5.1 Single Endpoint Limitation</h2>
+
+      <p>A single CXL endpoint provides 64 GB/s bandwidth via PCIe Gen5 ×16. While sufficient for some workloads, LLM decode requires significantly more:</p>
+
+      <div class="derivation">
+        <div class="derivation-step">
+          <div class="step-num">Given:</div>
+          <div class="step-content">
+            <div class="step-eq">Llama-70B layer size: 2.27 GB (weights + KV-cache slice)</div>
+          </div>
+        </div>
+        <div class="derivation-step">
+          <div class="step-num">Required:</div>
+          <div class="step-content">
+            <div class="step-eq">Target decode latency: 50 ms per token</div>
+            <div class="step-explain">80 layers × 50 ms / 80 = 625 μs per layer</div>
+          </div>
+        </div>
+        <div class="derivation-step">
+          <div class="step-num">Bandwidth:</div>
+          <div class="step-content">
+            <div class="step-eq">2.27 GB / 625 μs = <strong>3.63 TB/s</strong></div>
+            <div class="step-explain">This exceeds single endpoint capacity by 57×</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout warning">
+        <div class="callout-title">⚠️ Bandwidth Gap</div>
+        <p style="margin-bottom: 0;">Single endpoint: 64 GB/s<br>Required for 20 tok/s: 3.63 TB/s<br><strong>Gap: 57×</strong></p>
+      </div>
+
+      <h2>5.2 CXL 3.0 Switch Topology</h2>
+
+      <p>CXL 3.0 introduces fabric switching that enables <strong>linear bandwidth aggregation</strong> across multiple endpoints.</p>
+
+      <div class="figure">
+        <div class="figure-label">Figure 5.1 — Bandwidth Scaling with Endpoints</div>
+        <div class="bar-chart">
+          <div class="bar-row">
+            <span class="bar-label">1 Endpoint</span>
+            <div class="bar-container">
+              <div class="bar-fill" style="width: 25%; background: var(--accent-cyan);">64 GB/s</div>
+            </div>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">2 Endpoints</span>
+            <div class="bar-container">
+              <div class="bar-fill" style="width: 50%; background: var(--accent-cyan);">128 GB/s</div>
+            </div>
+          </div>
+          <div class="bar-row">
+            <span class="bar-label">4 Endpoints</span>
+            <div class="bar-container">
+              <div class="bar-fill" style="width: 100%; background: var(--accent-green);">256 GB/s</div>
+            </div>
+          </div>
+        </div>
+        <div class="figure-caption">Non-blocking CXL switches provide linear bandwidth scaling up to switch saturation limits.</div>
+      </div>
+
+      <h3>Switch Architecture</h3>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Component</th><th>Specification</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Switch Ports</td><td class="mono">8-16 ports</td></tr>
+            <tr><td>Per-Port Bandwidth</td><td class="mono">64 GB/s (Gen5 ×16)</td></tr>
+            <tr><td>Backplane Capacity</td><td class="mono">Non-blocking (full bisection)</td></tr>
+            <tr><td>Switching Latency</td><td class="mono">~50 ns</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>5.3 Layer Prefetch Strategy</h2>
+
+      <p>Transformer execution is <strong>layer-sequential</strong>: layer N must complete before layer N+1 begins. This predictability enables prefetching.</p>
+
+      <h3>Execution Trace Prediction</h3>
+
+      <p>During decode, the access pattern is deterministic:</p>
+
+      <ol>
+        <li>Layer 0 attention weights</li>
+        <li>Layer 0 KV-cache (all positions)</li>
+        <li>Layer 0 FFN weights</li>
+        <li>Layer 1 attention weights</li>
+        <li>... and so on for all 80 layers</li>
+      </ol>
+
+      <div class="callout insight">
+        <div class="callout-title">🎯 Prefetch Window</div>
+        <p style="margin-bottom: 0;">We can prefetch layer N+2's data while layer N executes, providing a <strong>2-layer prefetch window</strong> to hide transfer latency.</p>
+      </div>
+
+      <h3>Overlap Efficiency</h3>
+
+      <p>Prefetch effectiveness depends on compute/transfer overlap:</p>
+
+      <div class="equation">
+        Overlap Efficiency = min(T<sub>compute</sub>, T<sub>transfer</sub>) / max(T<sub>compute</sub>, T<sub>transfer</sub>)
+      </div>
+
+      <p>For effective prefetching, transfer time must be less than or equal to compute time of preceding layers.</p>
+
+      <h2>5.4 Bandwidth Math</h2>
+
+      <h3>Llama-70B Layer Size</h3>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Component</th><th>Size (BF16)</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Attention weights (Q, K, V, O)</td><td class="mono">536 MB</td></tr>
+            <tr><td>FFN weights (gate, up, down)</td><td class="mono">1.2 GB</td></tr>
+            <tr><td>LayerNorm parameters</td><td class="mono">32 KB</td></tr>
+            <tr><td>KV-cache slice (128K ctx)</td><td class="mono">512 MB</td></tr>
+            <tr style="background: rgba(88,166,255,0.1);"><td><strong>Total per layer</strong></td><td class="mono highlight"><strong>~2.27 GB</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Required Bandwidth Calculation</h3>
+
+      <div class="derivation">
+        <div class="derivation-step">
+          <div class="step-num">1.</div>
+          <div class="step-content">
+            <div class="step-eq">Total data per token = 80 layers × 2.27 GB = 181.6 GB</div>
+          </div>
+        </div>
+        <div class="derivation-step">
+          <div class="step-num">2.</div>
+          <div class="step-content">
+            <div class="step-eq">Target: 20 tokens/second → 50 ms per token</div>
+          </div>
+        </div>
+        <div class="derivation-step">
+          <div class="step-num">3.</div>
+          <div class="step-content">
+            <div class="step-eq">Required bandwidth = 181.6 GB / 50 ms = <strong>3.63 TB/s</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <h3>Endpoint Count Analysis</h3>
+
+      <p>With layer prefetch hiding most transfer latency, the effective bandwidth requirement reduces:</p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Endpoints</th><th>Raw Bandwidth</th><th>Efficiency</th><th>Effective BW</th><th>Achievable tok/s</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="mono">1</td><td class="mono">64 GB/s</td><td class="mono">100%</td><td class="mono">64 GB/s</td><td class="mono danger">0.4</td></tr>
+            <tr><td class="mono">2</td><td class="mono">128 GB/s</td><td class="mono">99%</td><td class="mono">127 GB/s</td><td class="mono warning">0.7</td></tr>
+            <tr><td class="mono">4</td><td class="mono">256 GB/s</td><td class="mono">98%</td><td class="mono">251 GB/s</td><td class="mono">1.4</td></tr>
+            <tr><td class="mono highlight">4 + prefetch</td><td class="mono">256 GB/s</td><td class="mono">95%</td><td class="mono">3.6 TB/s*</td><td class="mono highlight">20+</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p style="font-size: 0.9rem; color: var(--text-muted);">*With 2-layer prefetch overlap, effective bandwidth is compute-limited rather than transfer-limited.</p>
+
+      <h2>5.5 Llama-70B Example Configuration</h2>
+
+      <div class="stats-grid">
+        <div class="stat-box">
+          <div class="stat-value">4</div>
+          <div class="stat-label">Endpoints</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">256 GB/s</div>
+          <div class="stat-label">Aggregate BW</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">2</div>
+          <div class="stat-label">Prefetch Layers</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">20+</div>
+          <div class="stat-label">Tokens/sec</div>
+        </div>
+      </div>
+
+      <div class="chapter-nav">
+        <a href="ch04-latency.html" class="chapter-nav-btn prev">
+          <span class="chapter-nav-label">← Previous</span>
+          <span class="chapter-nav-title">Chapter 4: Latency Analysis</span>
+        </a>
+        <a href="ch06-preprocessing.html" class="chapter-nav-btn next">
+          <span class="chapter-nav-label">Next Chapter →</span>
+          <span class="chapter-nav-title">Chapter 6: Preprocessing Offload</span>
+        </a>
+      </div>
+    </div>
+    <footer class="footer">
+      <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-primary);">
+        <p style="font-size: 0.8rem; color: var(--text-muted);">
+          © 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.<br>
+          This document contains proprietary and confidential information.<br>
+          Unauthorized reproduction or distribution is strictly prohibited.
+        </p>
+      </div>
+      <p>Distributed Endpoint Architecture for KV-Cache Offloading in LLM Inference</p>
+      <p style="margin-top: 0.5rem;">Technical Documentation v3.0 — December 2025</p>
+    </footer>
+  </div>
+</body>
+</html>
