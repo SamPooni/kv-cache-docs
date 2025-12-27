@@ -1,0 +1,23 @@
+================================================================================
+CH11 - PERFORMANCE - FIGURE INDEX
+================================================================================
+
+Fig 11.1: Algorithm Contribution
+      Source: figure-5-1-performance-benchmarks.tsx
+
+Fig 11.2: Effective Latency Results
+      Source: figure-5-1-performance-benchmarks.tsx
+
+Fig 11.3: System Comparison
+      Source: figure-4-1-full-architecture.tsx
+
+Fig 11.4: Key Metrics
+      Source: figure-5-1-performance-benchmarks.tsx
+
+Fig 11.5: Performance Sensitivity to Cache Hit Rate
+      Source: figure-5-1-performance-benchmarks.tsx
+
+Fig 11.6: Summary: Key Results
+      Source: figure-5-1-performance-benchmarks.tsx
+
+TOTAL: 6 figures

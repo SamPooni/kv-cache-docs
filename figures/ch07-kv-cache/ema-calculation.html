@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EMA Calculation</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: #ffffff;
+  min-height: 100vh;
+  color: #1a1a1a;
+  padding: 2rem;
+}
+.container { max-width: 900px; margin: 0 auto; }
+h1 {
+  text-align: center;
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+.subtitle {
+  text-align: center;
+  color: #555;
+  font-size: 1.1rem;
+  margin-bottom: 2rem;
+}
+.section {
+  background: #fafafa;
+  border-radius: 16px;
+  padding: 1.75rem;
+  border: 2px solid #e8e8e8;
+  margin-bottom: 1.5rem;
+}
+.section-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 1.25rem;
+  color: #333;
+}
+.param-row {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+.param {
+  background: #fff;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  flex: 1;
+  min-width: 150px;
+}
+.param-label {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 0.25rem;
+}
+.param-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  font-family: 'Fira Code', monospace;
+}
+.param-value.alpha { color: #e67700; }
+.param-value.score { color: #007bff; }
+.param-value.ema { color: #28a745; }
+.calc-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+.calc-table th, .calc-table td {
+  padding: 1rem;
+  text-align: center;
+  border-bottom: 2px solid #e8e8e8;
+  font-size: 1.05rem;
+}
+.calc-table th {
+  background: #f0f0f0;
+  font-weight: 700;
+  font-size: 1rem;
+}
+.calc-table tr:last-child td {
+  border-bottom: none;
+}
+.calc-detail {
+  font-family: 'Fira Code', monospace;
+  font-size: 0.9rem;
+  color: #555;
+  background: #f8f9fa;
+  padding: 0.5rem;
+  border-radius: 6px;
+  margin-top: 0.5rem;
+}
+.ema-result {
+  font-weight: 700;
+  color: #28a745;
+  font-family: 'Fira Code', monospace;
+}
+.priority-section {
+  margin-top: 1rem;
+}
+.formula-box {
+  background: #2d3748;
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin: 1rem 0;
+}
+.formula {
+  font-family: 'Fira Code', monospace;
+  font-size: 1.15rem;
+  color: #fff;
+  text-align: center;
+}
+.formula .comment {
+  color: #68d391;
+  font-size: 0.95rem;
+}
+.example-calc {
+  background: #fff;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-top: 1rem;
+}
+.example-title {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.token-badge {
+  background: #007bff;
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+}
+.calc-line {
+  font-family: 'Fira Code', monospace;
+  font-size: 1rem;
+  margin: 0.75rem 0;
+  padding: 0.5rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border-left: 4px solid #ddd;
+}
+.calc-line.highlight {
+  background: #e7f3ff;
+  border-left-color: #007bff;
+}
+.calc-line.result {
+  background: #d4edda;
+  border-left-color: #28a745;
+  font-weight: 600;
+}
+.calc-line.evict {
+  background: #f8d7da;
+  border-left-color: #dc3545;
+}
+.compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.compare-card {
+  background: #fff;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+.compare-card.keep {
+  border-color: #28a745;
+  background: #f8fff8;
+}
+.compare-card.evict {
+  border-color: #dc3545;
+  background: #fff8f8;
+}
+.compare-title {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 0.75rem;
+}
+.compare-card.keep .compare-title { color: #155724; }
+.compare-card.evict .compare-title { color: #721c24; }
+.metric-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #eee;
+  font-size: 1rem;
+}
+.metric-row:last-child { border-bottom: none; }
+.metric-label { color: #666; }
+.metric-value { 
+  font-weight: 600; 
+  font-family: 'Fira Code', monospace;
+}
+.final-verdict {
+  text-align: center;
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-top: 0.75rem;
+}
+.compare-card.keep .final-verdict {
+  background: #28a745;
+  color: white;
+}
+.compare-card.evict .final-verdict {
+  background: #dc3545;
+  color: white;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>EMA + Eviction Priority</h1>
+  <p class="subtitle">Step-by-step calculation with concrete numbers</p>
+
+  <div class="section">
+    <div class="section-title">1. EMA Update (per decode step)</div>
+    
+    <div class="param-row">
+      <div class="param">
+        <div class="param-label">Î± (smoothing factor)</div>
+        <div class="param-value alpha">0.2</div>
+      </div>
+      <div class="param">
+        <div class="param-label">Token Position</div>
+        <div class="param-value">1024</div>
+      </div>
+      <div class="param">
+        <div class="param-label">Initial EMA</div>
+        <div class="param-value ema">0.0</div>
+      </div>
+    </div>
+
+    <table class="calc-table">
+      <tr>
+        <th>Step</th>
+        <th>new_score</th>
+        <th>Calculation</th>
+        <th>score_ema</th>
+      </tr>
+      <tr>
+        <td>tâ‚</td>
+        <td>0.45</td>
+        <td class="calc-detail">0.3 Ã— 0.45 + 0.7 Ã— 0.00</td>
+        <td class="ema-result">0.135</td>
+      </tr>
+      <tr>
+        <td>tâ‚‚</td>
+        <td>0.12</td>
+        <td class="calc-detail">0.3 Ã— 0.12 + 0.7 Ã— 0.135</td>
+        <td class="ema-result">0.131</td>
+      </tr>
+      <tr>
+        <td>tâ‚ƒ</td>
+        <td>0.30</td>
+        <td class="calc-detail">0.3 Ã— 0.30 + 0.7 Ã— 0.131</td>
+        <td class="ema-result">0.182</td>
+      </tr>
+      <tr>
+        <td>tâ‚„</td>
+        <td>0.08</td>
+        <td class="calc-detail">0.3 Ã— 0.08 + 0.7 Ã— 0.182</td>
+        <td class="ema-result">0.151</td>
+      </tr>
+      <tr>
+        <td>tâ‚…</td>
+        <td>0.35</td>
+        <td class="calc-detail">0.3 Ã— 0.35 + 0.7 Ã— 0.151</td>
+        <td class="ema-result">0.211</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="section-title">2. Eviction Priority Function</div>
+    
+    <div class="formula-box">
+      <div class="formula">
+        priority = (1 - score_ema) Ã— recency_decay<br>
+        <span class="comment"># Higher priority = evict sooner</span>
+      </div>
+    </div>
+    
+    <div class="formula-box">
+      <div class="formula">
+        recency_decay = 1 - exp(-Î² Ã— steps_since_access)<br>
+        <span class="comment"># Î² = 0.001, decays over ~1000 steps</span>
+      </div>
+    </div>
+
+    <div class="example-calc">
+      <div class="example-title">
+        <span class="token-badge">Token A</span> pos=1024, accessed 50 steps ago
+      </div>
+      <div class="calc-line">score_ema = 0.211</div>
+      <div class="calc-line">steps_since_access = 50</div>
+      <div class="calc-line highlight">recency_decay = 1 - exp(-0.001 Ã— 50) = 0.049</div>
+      <div class="calc-line result">priority = (1 - 0.211) Ã— 0.049 = 0.039</div>
+    </div>
+
+    <div class="example-calc">
+      <div class="example-title">
+        <span class="token-badge">Token B</span> pos=45678, accessed 2000 steps ago
+      </div>
+      <div class="calc-line">score_ema = 0.08</div>
+      <div class="calc-line">steps_since_access = 2000</div>
+      <div class="calc-line highlight">recency_decay = 1 - exp(-0.001 Ã— 2000) = 0.865</div>
+      <div class="calc-line evict">priority = (1 - 0.08) Ã— 0.865 = 0.796</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">3. Eviction Decision</div>
+    
+    <div class="compare-grid">
+      <div class="compare-card keep">
+        <div class="compare-title">Token A (pos 1024)</div>
+        <div class="metric-row">
+          <span class="metric-label">score_ema</span>
+          <span class="metric-value">0.211</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">steps_since_access</span>
+          <span class="metric-value">50</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">recency_decay</span>
+          <span class="metric-value">0.049</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">eviction_priority</span>
+          <span class="metric-value">0.039</span>
+        </div>
+        <div class="final-verdict">âœ“ KEEP (low priority)</div>
+      </div>
+      
+      <div class="compare-card evict">
+        <div class="compare-title">Token B (pos 45678)</div>
+        <div class="metric-row">
+          <span class="metric-label">score_ema</span>
+          <span class="metric-value">0.08</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">steps_since_access</span>
+          <span class="metric-value">2000</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">recency_decay</span>
+          <span class="metric-value">0.865</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">eviction_priority</span>
+          <span class="metric-value">0.796</span>
+        </div>
+        <div class="final-verdict">ðŸ—‘ EVICT (high priority)</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Distributed Endpoint Architecture</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0a0a0f;
+            min-height: 100vh;
+            color: #e0e0e0;
+            padding: 40px;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 8px;
+            background: linear-gradient(90deg, #a855f7, #6366f1, #22d3ee);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 50px;
+        }
+        
+        /* Architecture Diagram */
+        .architecture {
+            position: relative;
+            padding: 40px 0;
+        }
+        
+        /* Host System */
+        .host-system {
+            background: linear-gradient(180deg, rgba(99,102,241,0.1), rgba(99,102,241,0.02));
+            border: 2px solid rgba(99,102,241,0.3);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 40px;
+            position: relative;
+        }
+        
+        .host-label {
+            position: absolute;
+            top: -12px;
+            left: 30px;
+            background: #0a0a0f;
+            padding: 0 15px;
+            color: #6366f1;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .host-components {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            align-items: center;
+        }
+        
+        .component {
+            background: rgba(0,0,0,0.4);
+            border-radius: 16px;
+            padding: 25px 35px;
+            text-align: center;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .component:hover {
+            transform: translateY(-5px);
+        }
+        
+        .component.cpu {
+            border: 2px solid #64748b;
+        }
+        
+        .component.gpu {
+            border: 2px solid #22c55e;
+            box-shadow: 0 0 30px rgba(34,197,94,0.2);
+        }
+        
+        .component.cxl-root {
+            border: 2px solid #a855f7;
+            box-shadow: 0 0 30px rgba(168,85,247,0.2);
+        }
+        
+        .component-icon {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .component-name {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+        }
+        
+        .component.cpu .component-name { color: #94a3b8; }
+        .component.gpu .component-name { color: #22c55e; }
+        .component.cxl-root .component-name { color: #a855f7; }
+        
+        .component-spec {
+            font-size: 0.8rem;
+            color: #666;
+        }
+        
+        /* Connector lines */
+        .connector {
+            width: 60px;
+            height: 4px;
+            background: linear-gradient(90deg, #4b5563, #6b7280);
+            position: relative;
+        }
+        
+        .connector::after {
+            content: 'â†’';
+            position: absolute;
+            right: -8px;
+            top: -10px;
+            color: #6b7280;
+        }
+        
+        /* CXL Fabric */
+        .cxl-fabric {
+            position: relative;
+            margin: 20px 0;
+        }
+        
+        .cxl-line {
+            height: 60px;
+            width: 4px;
+            background: linear-gradient(180deg, #a855f7, #7c3aed);
+            margin: 0 auto;
+            position: relative;
+        }
+        
+        .cxl-line::before {
+            content: 'CXL.mem';
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #a855f7;
+            font-size: 0.85rem;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+        
+        .cxl-line::after {
+            content: '64 GB/s per lane';
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #666;
+            font-size: 0.8rem;
+            white-space: nowrap;
+        }
+        
+        /* Switch */
+        .switch-container {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        
+        .switch {
+            background: linear-gradient(135deg, rgba(168,85,247,0.2), rgba(124,58,237,0.1));
+            border: 2px solid #a855f7;
+            border-radius: 16px;
+            padding: 20px 60px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .switch-name {
+            color: #a855f7;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+        
+        .switch-spec {
+            color: #888;
+            font-size: 0.85rem;
+            margin-top: 5px;
+        }
+        
+        /* Switch lines to endpoints */
+        .switch-lines {
+            display: flex;
+            justify-content: center;
+            gap: 0;
+            margin: 20px 0;
+            position: relative;
+        }
+        
+        .switch-line {
+            width: 4px;
+            height: 50px;
+            background: linear-gradient(180deg, #a855f7, #7c3aed);
+            margin: 0 75px;
+        }
+        
+        /* Endpoints */
+        .endpoints {
+            display: flex;
+            justify-content: center;
+            gap: 25px;
+            margin-top: 20px;
+        }
+        
+        .endpoint {
+            width: 220px;
+            background: linear-gradient(180deg, rgba(251,146,60,0.1), rgba(251,146,60,0.02));
+            border: 2px solid rgba(251,146,60,0.4);
+            border-radius: 20px;
+            padding: 25px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .endpoint:hover {
+            transform: translateY(-8px);
+            border-color: #fb923c;
+            box-shadow: 0 20px 40px rgba(251,146,60,0.15);
+        }
+        
+        .endpoint-header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(251,146,60,0.2);
+        }
+        
+        .endpoint-name {
+            color: #fb923c;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+        
+        .endpoint-type {
+            color: #888;
+            font-size: 0.8rem;
+        }
+        
+        .endpoint-component {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+            padding: 10px 12px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+        }
+        
+        .ep-icon {
+            font-size: 1.2rem;
+        }
+        
+        .ep-details {
+            flex: 1;
+        }
+        
+        .ep-name {
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        
+        .ep-spec {
+            font-size: 0.75rem;
+            color: #666;
+        }
+        
+        /* Aggregate Stats */
+        .aggregate-stats {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-top: 50px;
+            padding: 30px;
+            background: rgba(255,255,255,0.02);
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2.2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #a855f7, #6366f1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .stat-label {
+            color: #888;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+        
+        /* Data Flow Indicators */
+        .flow-indicator {
+            position: absolute;
+            background: rgba(168,85,247,0.3);
+            border-radius: 50%;
+            width: 8px;
+            height: 8px;
+            animation: flow 2s infinite;
+        }
+        
+        @keyframes flow {
+            0%, 100% { transform: translateY(0); opacity: 1; }
+            50% { transform: translateY(20px); opacity: 0.3; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Distributed Endpoint Architecture</h1>
+        <p class="subtitle">Single-Node Configuration: GPU + CXL Switch + 4 Type-3 Endpoints</p>
+        
+        <div class="architecture">
+            <!-- Host System -->
+            <div class="host-system">
+                <div class="host-label">HOST SYSTEM</div>
+                <div class="host-components">
+                    <div class="component cpu">
+                        <div class="component-icon">ðŸ–¥ï¸</div>
+                        <div class="component-name">CPU</div>
+                        <div class="component-spec">Control Plane</div>
+                    </div>
+                    
+                    <div class="connector"></div>
+                    
+                    <div class="component gpu">
+                        <div class="component-icon">âš¡</div>
+                        <div class="component-name">B200 GPU</div>
+                        <div class="component-spec">80 GiB HBM3</div>
+                        <div class="component-spec">8 TB/s</div>
+                    </div>
+                    
+                    <div class="connector"></div>
+                    
+                    <div class="component cxl-root">
+                        <div class="component-icon">ðŸ”—</div>
+                        <div class="component-name">CXL Root</div>
+                        <div class="component-spec">x16 Gen5</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- CXL Fabric Line -->
+            <div class="cxl-fabric">
+                <div class="cxl-line"></div>
+            </div>
+            
+            <!-- Switch -->
+            <div class="switch-container">
+                <div class="switch">
+                    <div class="switch-name">CXL 3.0 Switch</div>
+                    <div class="switch-spec">Non-Blocking Fabric â€¢ 2 TB/s Backplane</div>
+                </div>
+            </div>
+            
+            <!-- Switch Lines -->
+            <div class="switch-lines">
+                <div class="switch-line"></div>
+                <div class="switch-line"></div>
+                <div class="switch-line"></div>
+                <div class="switch-line"></div>
+            </div>
+            
+            <!-- Endpoints -->
+            <div class="endpoints">
+                <div class="endpoint">
+                    <div class="endpoint-header">
+                        <div class="endpoint-name">Endpoint 0</div>
+                        <div class="endpoint-type">CXL Type-3</div>
+                    </div>
+                    <div class="endpoint-component">
+                        <div class="ep-icon">ðŸ§ </div>
+                        <div class="ep-details">
+                            <div class="ep-name">ARM Cores</div>
+                            <div class="ep-spec">8Ã— Cortex-A78</div>
+                        </div>
+                    </div>
+                    <div class="endpoint-component">
+                        <div class="ep-icon">ðŸ’¾</div>
+                        <div class="ep-details">
+                            <div class="ep-name">DDR5 DRAM</div>
+                            <div class="ep-spec">256 GiB @ 250ns</div>
+                        </div>
+                    </div>
+                    <div class="endpoint-component">
+                        <div class="ep-icon">ðŸ’¿</div>
+                        <div class="ep-details">
+                            <div class="ep-name">NVMe Flash</div>
+                            <div class="ep-spec">4 TiB @ 15Î¼s</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="endpoint">
+                    <div class="endpoint-header">
+                        <div class="endpoint-name">Endpoint 1</div>
+                        <div class="endpoint-type">CXL Type-3</div>
+                    </div>
+                    <div class="endpoint-component">
+                        <div class="ep-icon">ðŸ§ </div>
+                        <div class="ep-details">
+                            <div class="ep-name">ARM Cores</div>
+                            <div class="ep-spec">8Ã— Cortex-A78</div>
+                        </div>
+                    </div>
+                    <div class="endpoint-component">
+                        <div class="ep-icon">ðŸ’¾</div>
+                        <div class="ep-details">
+                            <div class="ep-name">DDR5 DRAM</div>
+                            <div class="ep-spec">256 GiB @ 250ns</div>
+                        </div>
+                    </div>
+                    <div class="endpoint-component">
+                        <div class="ep-icon">ðŸ’¿</div>
+                        <div class="ep-details">
+                            <div class="ep-name">NVMe Flash</div>
+                            <div class="ep-spec">4 TiB @ 15Î¼s</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="endpoint">
+                    <div class="endpoint-header">
+                        <div class="endpoint-name">Endpoint 2</div>
+                        <div class="endpoint-type">CXL Type-3</div>
+                    </div>
+                    <div class="endpoint-component">
+                        <div class="ep-icon">ðŸ§ </div>
+                        <div class="ep-details">
+                            <div class="ep-name">ARM Cores</div>
+                            <div class="ep-spec">8Ã— Cortex-A78</div>
+                        </div>
+                    </div>
+                    <div class="endpoint-component">
+                        <div class="ep-icon">ðŸ’¾</div>
+                        <div class="ep-details">
+                            <div class="ep-name">DDR5 DRAM</div>
+                            <div class="ep-spec">256 GiB @ 250ns</div>
+                        </div>
+                    </div>
+                    <div class="endpoint-component">
+                        <div class="ep-icon">ðŸ’¿</div>
+                        <div class="ep-details">
+                            <div class="ep-name">NVMe Flash</div>
+                            <div class="ep-spec">4 TiB @ 15Î¼s</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="endpoint">
+                    <div class="endpoint-header">
+                        <div class="endpoint-name">Endpoint 3</div>
+                        <div class="endpoint-type">CXL Type-3</div>
+                    </div>
+                    <div class="endpoint-component">
+                        <div class="ep-icon">ðŸ§ </div>
+                        <div class="ep-details">
+                            <div class="ep-name">ARM Cores</div>
+                            <div class="ep-spec">8Ã— Cortex-A78</div>
+                        </div>
+                    </div>
+                    <div class="endpoint-component">
+                        <div class="ep-icon">ðŸ’¾</div>
+                        <div class="ep-details">
+                            <div class="ep-name">DDR5 DRAM</div>
+                            <div class="ep-spec">256 GiB @ 250ns</div>
+                        </div>
+                    </div>
+                    <div class="endpoint-component">
+                        <div class="ep-icon">ðŸ’¿</div>
+                        <div class="ep-details">
+                            <div class="ep-name">NVMe Flash</div>
+                            <div class="ep-spec">4 TiB @ 15Î¼s</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Aggregate Stats -->
+            <div class="aggregate-stats">
+                <div class="stat">
+                    <div class="stat-value">1 TiB</div>
+                    <div class="stat-label">Total DRAM</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">16 TiB</div>
+                    <div class="stat-label">Total Flash</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">240 GB/s</div>
+                    <div class="stat-label">Aggregate BW</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value">250 ns</div>
+                    <div class="stat-label">DRAM Latency</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

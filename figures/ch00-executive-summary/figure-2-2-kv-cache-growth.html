@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Figure 2.2 — KV-Cache Growth</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, sans-serif; background: linear-gradient(135deg, #0f172a, #1e293b); min-height: 100vh; color: #e2e8f0; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState } = React;
+
+function KVCacheGrowth() {
+  const [model, setModel] = useState('llama70b');
+  
+  const models = {
+    llama70b: { name: 'Llama-70B', layers: 80, kvHeads: 8, dHead: 128, bytesPerToken: 327680 },
+    llama405b: { name: 'Llama-405B', layers: 126, kvHeads: 8, dHead: 128, bytesPerToken: 516096 },
+    gpt4: { name: 'GPT-4 (est)', layers: 120, kvHeads: 16, dHead: 128, bytesPerToken: 983040 }
+  };
+  
+  const m = models[model];
+  const contexts = [4096, 8192, 16384, 32768, 65536, 131072];
+  
+  const formatBytes = (bytes) => {
+    if (bytes >= 1e9) return (bytes / 1e9).toFixed(1) + ' GB';
+    if (bytes >= 1e6) return (bytes / 1e6).toFixed(1) + ' MB';
+    return (bytes / 1e3).toFixed(1) + ' KB';
+  };
+
+  const styles = {
+    container: { maxWidth: '900px', margin: '0 auto', padding: '2rem' },
+    header: { textAlign: 'center', marginBottom: '2rem' },
+    badge: { display: 'inline-block', padding: '0.25rem 0.75rem', background: 'rgba(59,130,246,0.2)', color: '#60a5fa', fontSize: '0.75rem', fontFamily: 'monospace', borderRadius: '20px', marginBottom: '0.5rem' },
+    title: { fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.5rem' },
+    subtitle: { color: '#94a3b8' },
+    modelSelect: { display: 'flex', justifyContent: 'center', gap: '0.5rem', marginBottom: '2rem' },
+    modelBtn: (active) => ({ padding: '0.5rem 1rem', background: active ? '#3b82f6' : '#334155', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: active ? 600 : 400 }),
+    formula: { background: '#0f172a', borderRadius: '12px', padding: '1.5rem', marginBottom: '2rem', textAlign: 'center' },
+    formulaText: { fontFamily: 'monospace', fontSize: '1.1rem', color: '#60a5fa' },
+    chartContainer: { background: '#1e293b', borderRadius: '16px', padding: '1.5rem' },
+    barRow: { display: 'flex', alignItems: 'center', marginBottom: '1rem' },
+    barLabel: { width: '80px', fontSize: '0.875rem', color: '#94a3b8', fontFamily: 'monospace' },
+    barOuter: { flex: 1, height: '32px', background: '#0f172a', borderRadius: '8px', overflow: 'hidden', marginRight: '1rem' },
+    barInner: (pct, danger) => ({ width: `${Math.min(pct, 100)}%`, height: '100%', background: danger ? 'linear-gradient(90deg, #ef4444, #dc2626)' : 'linear-gradient(90deg, #3b82f6, #60a5fa)', transition: 'width 0.5s' }),
+    barValue: { width: '80px', fontSize: '0.875rem', fontFamily: 'monospace', textAlign: 'right' },
+    warning: { color: '#ef4444', fontSize: '0.75rem' },
+    statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginTop: '1.5rem' },
+    statBox: { background: '#0f172a', borderRadius: '12px', padding: '1rem', textAlign: 'center' },
+    statValue: { fontSize: '1.5rem', fontWeight: 700, color: '#60a5fa' },
+    statLabel: { fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }
+  };
+
+  const maxSize = m.bytesPerToken * 131072;
+  const hbmLimit = 192e9; // 192GB B200 HBM
+
+  return (
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <div style={styles.badge}>FIGURE 2.2</div>
+        <h1 style={styles.title}>KV-Cache Size Growth</h1>
+        <p style={styles.subtitle}>Linear growth with context length</p>
+      </div>
+
+      <div style={styles.modelSelect}>
+        {Object.entries(models).map(([key, val]) => (
+          <button key={key} style={styles.modelBtn(model === key)} onClick={() => setModel(key)}>{val.name}</button>
+        ))}
+      </div>
+
+      <div style={styles.formula}>
+        <div style={styles.formulaText}>
+          KV_size = 2 × {m.layers} layers × {m.kvHeads} kv_heads × {m.dHead} d_head × seq_len × 2 bytes
+        </div>
+        <div style={{color: '#94a3b8', marginTop: '0.5rem', fontSize: '0.875rem'}}>
+          = <span style={{color: '#10b981', fontWeight: 600}}>{formatBytes(m.bytesPerToken)}</span> per token
+        </div>
+      </div>
+
+      <div style={styles.chartContainer}>
+        {contexts.map(ctx => {
+          const size = m.bytesPerToken * ctx;
+          const pct = (size / hbmLimit) * 100;
+          const danger = size > hbmLimit;
+          return (
+            <div key={ctx} style={styles.barRow}>
+              <div style={styles.barLabel}>{(ctx/1000)}K</div>
+              <div style={styles.barOuter}>
+                <div style={styles.barInner(pct, danger)}></div>
+              </div>
+              <div style={styles.barValue}>
+                {formatBytes(size)}
+                {danger && <div style={styles.warning}>⚠️ Exceeds HBM</div>}
+              </div>
+            </div>
+          );
+        })}
+        <div style={{textAlign: 'center', marginTop: '1rem', color: '#64748b', fontSize: '0.875rem'}}>
+          Red line: 192GB B200 HBM limit
+        </div>
+      </div>
+
+      <div style={styles.statsGrid}>
+        <div style={styles.statBox}>
+          <div style={styles.statValue}>{formatBytes(m.bytesPerToken)}</div>
+          <div style={styles.statLabel}>Per Token</div>
+        </div>
+        <div style={styles.statBox}>
+          <div style={styles.statValue}>{formatBytes(m.bytesPerToken * 32768)}</div>
+          <div style={styles.statLabel}>@ 32K Context</div>
+        </div>
+        <div style={styles.statBox}>
+          <div style={styles.statValue}>{formatBytes(m.bytesPerToken * 131072)}</div>
+          <div style={styles.statLabel}>@ 128K Context</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<KVCacheGrowth />);
+</script>
+</body>
+</html>

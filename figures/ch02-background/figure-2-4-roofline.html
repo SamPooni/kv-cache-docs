@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Figure 2.4 — Roofline Model</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: system-ui, sans-serif; background: linear-gradient(135deg, #0f172a, #1e293b); min-height: 100vh; color: #e2e8f0; }</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+function RooflineModel() {
+  const styles = {
+    container: { maxWidth: '800px', margin: '0 auto', padding: '2rem' },
+    header: { textAlign: 'center', marginBottom: '2rem' },
+    chart: { background: '#1e293b', borderRadius: '16px', padding: '2rem', marginBottom: '1.5rem', position: 'relative', height: 300 },
+    axis: { position: 'absolute', background: '#64748b' },
+    label: { position: 'absolute', fontSize: '0.75rem', color: '#94a3b8' },
+    roof: { position: 'absolute', height: 3, background: '#10b981' },
+    slope: { position: 'absolute', width: 3, background: '#3b82f6', transformOrigin: 'bottom left' },
+    point: (color) => ({ position: 'absolute', width: 12, height: 12, borderRadius: '50%', background: color, transform: 'translate(-50%, -50%)' }),
+    legend: { display: 'flex', justifyContent: 'center', gap: '2rem', marginBottom: '1.5rem' },
+    legendItem: { display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem' },
+    dot: (color) => ({ width: 12, height: 12, borderRadius: '50%', background: color }),
+    insight: { background: '#0f172a', borderRadius: '12px', padding: '1rem' }
+  };
+  return (
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <div style={{display: 'inline-block', padding: '0.25rem 0.75rem', background: 'rgba(59,130,246,0.2)', color: '#60a5fa', fontSize: '0.75rem', fontFamily: 'monospace', borderRadius: '20px', marginBottom: '0.5rem'}}>FIGURE 2.4</div>
+        <h1 style={{fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.5rem'}}>Roofline Model</h1>
+        <p style={{color: '#94a3b8'}}>Compute vs Memory-bound operations</p>
+      </div>
+      <div style={styles.chart}>
+        <div style={{...styles.axis, bottom: 40, left: 60, right: 20, height: 2}}></div>
+        <div style={{...styles.axis, bottom: 40, left: 60, top: 20, width: 2}}></div>
+        <div style={{...styles.label, bottom: 10, left: '50%', transform: 'translateX(-50%)'}}>Arithmetic Intensity (FLOPs/Byte)</div>
+        <div style={{...styles.label, left: 10, top: '50%', transform: 'rotate(-90deg) translateX(-50%)', transformOrigin: 'left'}}>Performance</div>
+        <div style={{...styles.roof, top: 60, left: 200, right: 40}}></div>
+        <div style={{...styles.slope, bottom: 40, left: 60, height: 160, transform: 'rotate(-50deg)'}}></div>
+        <div style={styles.label}>Compute Ceiling</div>
+        <div style={{...styles.point('#10b981'), top: 100, left: 500}}></div>
+        <div style={{...styles.label, top: 80, left: 510, color: '#10b981'}}>Prefill (compute-bound)</div>
+        <div style={{...styles.point('#f59e0b'), top: 180, left: 120}}></div>
+        <div style={{...styles.label, top: 160, left: 130, color: '#f59e0b'}}>Decode (memory-bound)</div>
+      </div>
+      <div style={styles.legend}>
+        <div style={styles.legendItem}><div style={styles.dot('#10b981')}></div>Prefill: High arithmetic intensity</div>
+        <div style={styles.legendItem}><div style={styles.dot('#f59e0b')}></div>Decode: Low arithmetic intensity</div>
+      </div>
+      <div style={styles.insight}>
+        <div style={{fontWeight: 600, color: '#60a5fa', marginBottom: '0.5rem'}}>💡 Key Insight</div>
+        <div style={{color: '#94a3b8', fontSize: '0.875rem'}}>Decode phase is memory-bound because it reads the entire KV-cache to generate just one token. This is why KV-cache offloading matters—we need more memory bandwidth, not more compute.</div>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<RooflineModel />);
+</script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+================================================================================
+CH00 - EXECUTIVE SUMMARY - FIGURE INDEX
+================================================================================
+
+Fig 0.1: Layer Structure (Transformer Architecture)
+      Source: visual-appendix.html -> Diagram 1.1
+
+Fig 0.2: Q, K, V Projections  
+      Source: visual-appendix.html -> Diagram 2.1
+
+Fig 0.3: Attention Score Computation
+      Source: visual-appendix.html -> Diagram 2.2
+
+Fig 0.4: KV-Cache Organization
+      Source: visual-appendix.html -> Diagram 3.1
+
+Fig 0.5: Prefill vs Decode Phase Comparison
+      Source: figure-2-1-inference-phases.tsx
+
+Fig 0.6: KV-Cache Size Growth
+      Source: figure-2-2-kv-cache-growth.tsx
+
+Fig 0.7: The Memory Wall Problem
+      Source: visual-appendix.html -> Diagram 5.1, 5.2
+
+Fig 0.8: System Topology (CXL Architecture)
+      Source: visual-appendix.html -> Diagram 9.1
+
+Fig 0.9: Three-Tier Architecture
+      Source: visual-appendix.html -> Diagram 10.1
+
+Fig 0.10: Attention Distribution / Locality
+      Source: figure-3-3-attention-locality.tsx
+
+Fig 0.11: RoPE Distance Decay
+      Source: visual-appendix.html -> Diagram 7.2
+
+Fig 0.12: EMA Update Rule
+      Source: figure-4-2-ema-eviction.tsx
+
+Fig 0.13: Per-Head Score Matrix
+      Source: figure-3-4-gqa-structure.tsx
+
+Fig 0.14: Key Results Summary
+      Source: visual-appendix.html -> Diagram 16.2
+
+TOTAL: 14 figures

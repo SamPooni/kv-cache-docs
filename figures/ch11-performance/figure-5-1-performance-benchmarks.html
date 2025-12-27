@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Figure 5.1 — Performance Benchmarks</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: system-ui, sans-serif; background: linear-gradient(135deg, #0f172a, #1e293b); min-height: 100vh; color: #e2e8f0; }</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+function PerformanceBenchmarks() {
+  const benchmarks = [
+    { metric: 'Memory Capacity', baseline: '192 GB (HBM)', ours: '1.2 TB (HBM+CXL)', improvement: '6×', color: '#10b981' },
+    { metric: 'Max Users @ 128K', baseline: '2 users', ours: '32+ users', improvement: '16×+', color: '#3b82f6' },
+    { metric: 'HBM Hit Rate', baseline: '70% (LRU)', ours: '95% (EMA+RoPE)', improvement: '+25%', color: '#8b5cf6' },
+    { metric: 'Latency Overhead', baseline: '100 ns (HBM only)', ours: '107.5 ns', improvement: '7.5%', color: '#f59e0b' },
+    { metric: 'Cost (8 users @ 128K)', baseline: '$70K (2×B200)', ours: '$45K (1×B200+CXL)', improvement: '-36%', color: '#ef4444' }
+  ];
+  const styles = {
+    container: { maxWidth: '800px', margin: '0 auto', padding: '2rem' },
+    header: { textAlign: 'center', marginBottom: '2rem' },
+    table: { background: '#1e293b', borderRadius: '16px', overflow: 'hidden' },
+    headerRow: { display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr', background: '#0f172a', padding: '1rem', fontWeight: 600 },
+    row: (color) => ({ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr', padding: '1rem', borderTop: '1px solid #334155', borderLeft: `3px solid ${color}` }),
+    improvement: (color) => ({ fontWeight: 700, color }),
+    hero: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginTop: '2rem' },
+    heroStat: { background: 'linear-gradient(135deg, #10b981, #059669)', borderRadius: '16px', padding: '1.5rem', textAlign: 'center' },
+    heroVal: { fontSize: '2.5rem', fontWeight: 700, color: 'white' },
+    heroLabel: { color: 'rgba(255,255,255,0.8)', fontSize: '0.875rem' }
+  };
+  return (
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <div style={{display: 'inline-block', padding: '0.25rem 0.75rem', background: 'rgba(16,185,129,0.2)', color: '#34d399', fontSize: '0.75rem', fontFamily: 'monospace', borderRadius: '20px', marginBottom: '0.5rem'}}>FIGURE 5.1</div>
+        <h1 style={{fontSize: '1.5rem', fontWeight: 700}}>Performance Benchmarks</h1>
+        <p style={{color: '#94a3b8', fontSize: '0.875rem'}}>Llama-70B on B200 @ 128K context</p>
+      </div>
+      <div style={styles.table}>
+        <div style={styles.headerRow}>
+          <div>Metric</div><div>Baseline</div><div>Our System</div><div>Improvement</div>
+        </div>
+        {benchmarks.map((b, i) => (
+          <div key={i} style={styles.row(b.color)}>
+            <div>{b.metric}</div>
+            <div style={{color: '#94a3b8'}}>{b.baseline}</div>
+            <div style={{color: '#60a5fa', fontWeight: 600}}>{b.ours}</div>
+            <div style={styles.improvement(b.color)}>{b.improvement}</div>
+          </div>
+        ))}
+      </div>
+      <div style={styles.hero}>
+        <div style={styles.heroStat}><div style={styles.heroVal}>6×</div><div style={styles.heroLabel}>Memory Expansion</div></div>
+        <div style={styles.heroStat}><div style={styles.heroVal}>16×</div><div style={styles.heroLabel}>User Capacity</div></div>
+        <div style={styles.heroStat}><div style={styles.heroVal}>36%</div><div style={styles.heroLabel}>Cost Reduction</div></div>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<PerformanceBenchmarks />);
+</script>
+</body>
+</html>

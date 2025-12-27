@@ -1,0 +1,163 @@
+================================================================================
+CHAPTER-TO-DIAGRAM MAPPING (CORRECTED - 114 FIGURES)
+================================================================================
+
+CH00 - EXECUTIVE SUMMARY (Overview of everything) - 14 FIGURES
+--------------------------------------------------------------
+Fig 0.1: Layer Structure (Transformer Architecture)
+Fig 0.2: Q, K, V Projections  
+Fig 0.3: Attention Score Computation
+Fig 0.4: KV-Cache Organization
+Fig 0.5: Prefill vs Decode Phase Comparison
+Fig 0.6: KV-Cache Size Growth
+Fig 0.7: The Memory Wall Problem
+Fig 0.8: System Topology (CXL Architecture)
+Fig 0.9: Three-Tier Architecture
+Fig 0.10: Attention Distribution / Locality
+Fig 0.11: RoPE Distance Decay
+Fig 0.12: EMA Update Rule
+Fig 0.13: Per-Head Score Matrix
+Fig 0.14: Key Results Summary
+
+CH01 - INTRODUCTION - 5 FIGURES
+-------------------------------
+Fig 1.1: The Memory Wall Problem (H100 Specs)
+Fig 1.2: KV-Cache Size vs Context Length
+Fig 1.3: Bandwidth-Compute Gap
+Fig 1.4: Single User Memory Layout
+Fig 1.5: Multi-User Memory Explosion
+
+CH02 - BACKGROUND - 8 FIGURES
+-----------------------------
+Fig 2.1: Prefill Phase
+Fig 2.2: Decode Phase
+Fig 2.3: Phase Comparison
+Fig 2.4: Why KV-Cache Exists (With vs Without)
+Fig 2.5: KV-Cache Growth Chart
+Fig 2.6: Decode Memory Access Pattern
+Fig 2.7: Roofline Model
+Fig 2.8: Current Approaches Comparison Matrix
+
+CH03 - ARCHITECTURE (CXL/Endpoint) - 11 FIGURES
+-----------------------------------------------
+Fig 3.1: System Topology
+Fig 3.2: CXL Endpoint Architecture
+Fig 3.3: Endpoint Internal Components
+Fig 3.4: CXL Controller
+Fig 3.5: Compute Chiplet
+Fig 3.6: Memory Subsystem
+Fig 3.7: CXL 3.0 Coherency Protocol
+Fig 3.8: Three-Tier Architecture
+Fig 3.9: Tiered Memory Layout
+Fig 3.10: Bandwidth Hierarchy
+Fig 3.11: HBM vs CXL Comparison
+
+CH04 - LATENCY - 9 FIGURES
+--------------------------
+Fig 4.1: Effective Latency Formula
+Fig 4.2: Example Calculation
+Fig 4.3: PCIe vs CXL.mem Comparison
+Fig 4.4: CXL.mem vs PCIe Latency Paths
+Fig 4.5: Access Timeline (Waterfall)
+Fig 4.6: CXL.mem Access Breakdown
+Fig 4.7: PCIe DMA: Why CPU in Path
+Fig 4.8: Degradation Under Load
+Fig 4.9: The Numbers Summary
+
+CH05 - BANDWIDTH - 5 FIGURES
+----------------------------
+Fig 5.1: Single Endpoint Limitation
+Fig 5.2: Layer Prefetch Pipeline
+Fig 5.3: Overlap Execution & Transfer
+Fig 5.4: Multi-GPU Scaling
+Fig 5.5: Bandwidth Aggregation
+
+CH06 - PREPROCESSING - 3 FIGURES
+--------------------------------
+Fig 6.1: Traditional Path (CPU Bound)
+Fig 6.2: Endpoint Path (Direct to GPU)
+Fig 6.3: ARM Core Performance
+
+CH07 - KV-CACHE MANAGEMENT - 27 FIGURES
+---------------------------------------
+Fig 7.1: Head Specialization (4 Types)
+Fig 7.2: Positional Head Pattern
+Fig 7.3: Syntactic Head Pattern
+Fig 7.4: Semantic Head Pattern
+Fig 7.5: Induction Head Pattern
+Fig 7.6: GQA Structure (How it Works)
+Fig 7.7: Why GQA Matters
+Fig 7.8: MHA vs GQA vs MQA
+Fig 7.9: 640 Independent LRU Queues
+Fig 7.10: What Each Queue Tracks
+Fig 7.11: Per-Head Score Matrix
+Fig 7.12: EMA Update Rule
+Fig 7.13: EMA Evolution Example
+Fig 7.14: Observe Attention Scores
+Fig 7.15: Smooth with EMA
+Fig 7.16: Step-by-Step Calculation (alpha=0.3)
+Fig 7.17: Eviction Priority Function
+Fig 7.18: Decision Matrix
+Fig 7.19: Scoring Components
+Fig 7.20: Tier Assignment Thresholds
+Fig 7.21: RoPE Creates Distance-Dependent Attention
+Fig 7.22: Prefetch Window Strategy
+Fig 7.23: Empirical Window Size Selection
+Fig 7.24: Prefetch Targets
+Fig 7.25: Prefetch Timing Budget
+Fig 7.26: Prefetch Execution Timeline
+Fig 7.27: Attention Pattern & Prefetch Coverage
+
+CH08 - MOE ROUTING - 5 FIGURES
+------------------------------
+Fig 8.1: MoE Architecture Overview
+Fig 8.2: Routing Challenge
+Fig 8.3: Routing Histogram
+Fig 8.4: Expert Prefetch Strategy
+Fig 8.5: Cache Sizing Strategy
+
+CH09 - GPU INTEGRATION - 7 FIGURES
+----------------------------------
+Fig 9.1: Memory Mapping
+Fig 9.2: Hint Interface
+Fig 9.3: Mailbox Protocol
+Fig 9.4: Fault Handling
+Fig 9.5: GPU-CXL KV-Cache Integration
+Fig 9.6: Endpoint Cache Policy (Per KV-Head)
+Fig 9.7: Tiered Capacity (3 Endpoints)
+
+CH10 - MARKET LANDSCAPE - 6 FIGURES
+-----------------------------------
+Fig 10.1: Commercial Hardware Comparison
+Fig 10.2: Software Frameworks Comparison
+Fig 10.3: Academic Papers Overview
+Fig 10.4: The Innovation Gap
+Fig 10.5: The Gap We Fill
+Fig 10.6: The Opportunity
+
+CH11 - PERFORMANCE - 6 FIGURES
+------------------------------
+Fig 11.1: Algorithm Contribution
+Fig 11.2: Effective Latency Results
+Fig 11.3: System Comparison
+Fig 11.4: Key Metrics
+Fig 11.5: Performance Sensitivity to Cache Hit Rate
+Fig 11.6: Summary: Key Results
+
+CH12 - IMPLEMENTATION - 5 FIGURES
+---------------------------------
+Fig 12.1: Software Integration Stack
+Fig 12.2: Cache Management Placement Options
+Fig 12.3: KV-Cache Quantization Support
+Fig 12.4: Power & Thermal Analysis
+Fig 12.5: Total Cost of Ownership (3-Year)
+
+CH13 - CONCLUSION - 3 FIGURES
+-----------------------------
+Fig 13.1: Cover Page / Title
+Fig 13.2: Final System Comparison
+Fig 13.3: Key Takeaways
+
+================================================================================
+VERIFICATION: 14+5+8+11+9+5+3+27+5+7+6+6+5+3 = 114 FIGURES ✓
+================================================================================

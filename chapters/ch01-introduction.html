@@ -9,25 +9,16 @@
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
-  <div class="watermark">
-    © 2025 Subramaniyam (Sam) Pooni<br>
-    All Rights Reserved<br>
-    Proprietary & Confidential
-  </div>
+  <div class="watermark">© 2025 Subramaniyam (Sam) Pooni<br>All Rights Reserved<br>Proprietary & Confidential</div>
 
   <nav class="nav">
     <div class="nav-inner">
-      <a href="../index.html" class="nav-brand">
-        <span class="nav-brand-icon">⚡</span>
-        KV-Cache Architecture
-      </a>
+      <a href="../index.html" class="nav-brand"><span class="nav-brand-icon">⚡</span> KV-Cache Architecture</a>
       <div class="nav-links">
         <a href="ch00-executive-summary.html" class="nav-link"><span class="nav-chapter-num">0</span> Summary</a>
         <a href="ch01-introduction.html" class="nav-link active"><span class="nav-chapter-num">1</span> Introduction</a>
-        <a href="ch02-background.html" class="nav-link"><span class="nav-chapter-num">2</span> Background</a>
-        <a href="ch03-architecture.html" class="nav-link"><span class="nav-chapter-num">3</span> Architecture</a>
         <a href="ch07-kv-cache.html" class="nav-link"><span class="nav-chapter-num">7</span> KV-Cache</a>
-        <a href="../appendix/index.html" class="nav-link">Appendix</a>
+        <a href="../figures/index.html" class="nav-link">📊 Figures</a>
       </div>
     </div>
   </nav>
@@ -36,389 +27,53 @@
     <div class="container">
       <header class="chapter-header">
         <div class="chapter-label">Chapter 1</div>
-        <h1 class="chapter-title">Introduction</h1>
-        <p class="chapter-subtitle">The von Neumann bottleneck, the centrality of KV-cache in modern LLM serving, and the scope of this technical reference.</p>
+        <h1 class="chapter-title">Introduction: The Memory Wall Problem</h1>
+        <p class="chapter-subtitle">Why KV-cache is the critical bottleneck in LLM inference and what it costs the industry.</p>
       </header>
 
-      <!-- Section 1.1: The von Neumann Bottleneck -->
-      <h2>1.1 The von Neumann Bottleneck</h2>
-
-      <p>In 1945, John von Neumann outlined the architecture that would dominate computing for the next eight decades: a central processor connected to a unified memory system via a single communication channel. This elegant simplicity contained a fundamental limitation that von Neumann himself acknowledged—the "bottleneck" created when processor speeds outpace memory bandwidth.</p>
-
-      <p>For most of computing history, this bottleneck remained manageable. Cache hierarchies, out-of-order execution, and speculative prefetching masked memory latency for typical workloads. But the emergence of Large Language Models (LLMs) has created a computational pattern that breaks these assumptions entirely.</p>
-
-      <h3>Why LLMs Are Different</h3>
-
-      <p>Traditional applications exhibit <strong>temporal and spatial locality</strong>—they repeatedly access nearby memory locations, making caches effective. LLM inference during the decode phase has a radically different pattern:</p>
-
-      <div class="figure">
-        <div class="figure-label">Figure 1.1 — Memory Access Pattern Comparison</div>
-        <div class="comparison-grid">
-          <div class="card">
-            <h4 style="margin-top: 0; color: var(--accent-cyan);">Traditional Workloads</h4>
-            <ul style="font-size: 0.95rem;">
-              <li><strong>High temporal locality</strong>: Same data accessed repeatedly</li>
-              <li><strong>High spatial locality</strong>: Sequential access patterns</li>
-              <li><strong>Small working set</strong>: Fits in CPU cache</li>
-              <li><strong>Compute-bound</strong>: CPU is the bottleneck</li>
-            </ul>
-            <div style="text-align: center; margin-top: 1rem; color: var(--accent-green);">
-              Cache hit rate: 95-99%
-            </div>
-          </div>
-          <div class="card">
-            <h4 style="margin-top: 0; color: var(--accent-orange);">LLM Decode Phase</h4>
-            <ul style="font-size: 0.95rem;">
-              <li><strong>Low temporal locality</strong>: Each weight used once per token</li>
-              <li><strong>Streaming access</strong>: Full model traversal every token</li>
-              <li><strong>Massive working set</strong>: 140+ GB model weights</li>
-              <li><strong>Memory-bound</strong>: Bandwidth is the bottleneck</li>
-            </ul>
-            <div style="text-align: center; margin-top: 1rem; color: var(--accent-red);">
-              Effective cache hit rate: ~0%
-            </div>
-          </div>
-        </div>
-        <div class="figure-caption">LLM inference during decode phase must read the entire model for each generated token. No amount of traditional caching can help when the working set exceeds cache capacity by 1000×.</div>
+      <div class="stats-grid" style="margin-bottom: 3rem;">
+        <div class="stat-box"><div class="stat-value">5</div><div class="stat-label">Figures in Chapter</div></div>
+        <div class="stat-box"><div class="stat-value">41 GB</div><div class="stat-label">KV-Cache @ 128K</div></div>
+        <div class="stat-box"><div class="stat-value">320 KB</div><div class="stat-label">Per Token</div></div>
       </div>
 
-      <h3>The Arithmetic Intensity Problem</h3>
+      <h2>1.1 The Memory Wall</h2>
+      <p>Modern LLMs face a fundamental constraint: the KV-cache grows linearly with context length, rapidly exhausting GPU memory.</p>
 
-      <p>The severity of the bottleneck can be quantified through <strong>arithmetic intensity</strong>—the ratio of compute operations to memory bytes transferred. Operations with low arithmetic intensity are "memory-bound," limited by data transfer speed rather than computational throughput.</p>
-
-      <div class="callout definition">
-        <div class="callout-title">📐 Definition: Arithmetic Intensity</div>
-        <div class="equation" style="background: transparent; border: none; padding: 0.5rem 0; margin: 0.5rem 0;">
-          Arithmetic Intensity (α) = FLOPs / Bytes Transferred
+      <div class="figure-embed" style="margin: 2rem 0;">
+        <div class="figure-embed-header">
+          <span class="figure-embed-label">Visual Appendix — Introduction Figures</span>
+          <a href="../figures/ch01-introduction/visual-appendix.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
         </div>
-        <p style="margin-bottom: 0;">When α is below the system's "machine balance" (compute throughput / memory bandwidth), the workload is memory-bound. For H100: machine balance ≈ 600 FLOPs/byte.</p>
+        <iframe src="../figures/ch01-introduction/visual-appendix.html" style="width:100%;height:700px;border:none;"></iframe>
       </div>
 
-      <p>Consider the decode phase of Llama-70B:</p>
+      <h2>1.2 Distributed Endpoint Solution</h2>
 
-      <div class="derivation">
-        <div class="derivation-step">
-          <div class="step-num">Given:</div>
-          <div class="step-content">
-            <div class="step-eq">Model size: 140 GB (BF16), generating 1 token at batch size 1</div>
-            <div class="step-explain">We must read all model weights to produce one output token</div>
-          </div>
+      <div class="figure-embed" style="margin: 2rem 0;">
+        <div class="figure-embed-header">
+          <span class="figure-embed-label">Figure 1.4-1.5 — Distributed Endpoint Architecture</span>
+          <a href="../figures/ch01-introduction/distributed-endpoint-diagrams.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
         </div>
-        <div class="derivation-step">
-          <div class="step-num">Compute:</div>
-          <div class="step-content">
-            <div class="step-eq">FLOPs per token ≈ 2 × Parameters = 2 × 70B = 140 GFLOP</div>
-            <div class="step-explain">Matrix-vector multiplication requires 2 FLOPs per parameter</div>
-          </div>
-        </div>
-        <div class="derivation-step">
-          <div class="step-num">Transfer:</div>
-          <div class="step-content">
-            <div class="step-eq">Bytes per token = 140 GB (read all weights)</div>
-            <div class="step-explain">Entire model must be streamed through memory</div>
-          </div>
-        </div>
-        <div class="derivation-step">
-          <div class="step-num">Result:</div>
-          <div class="step-content">
-            <div class="step-eq">α = 140 GFLOP / 140 GB = 1 FLOP/byte</div>
-            <div class="step-explain">This is 600× below H100's machine balance!</div>
-          </div>
-        </div>
+        <iframe src="../figures/ch01-introduction/distributed-endpoint-diagrams.html" style="width:100%;height:600px;border:none;"></iframe>
       </div>
 
-      <p>The decode phase operates at <strong>1 FLOP/byte</strong>—making it severely memory-bound. The H100's 2 PFLOPS of compute sits idle while waiting for data. This is the modern manifestation of von Neumann's 80-year-old observation.</p>
+      <h2>1.3 KV-Cache Mathematics</h2>
 
-      <div class="figure">
-        <div class="figure-label">Figure 1.2 — Compute vs Memory Utilization</div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1rem 0;">
-          <div>
-            <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">Prefill Phase (Compute-Bound)</div>
-            <div style="height: 40px; background: var(--bg-primary); border-radius: 6px; overflow: hidden; display: flex;">
-              <div style="width: 95%; background: var(--accent-green); display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 500;">GPU Compute: 95%</div>
-              <div style="width: 5%; background: var(--accent-cyan);"></div>
-            </div>
-            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">High parallelism → compute-limited</div>
-          </div>
-          <div>
-            <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">Decode Phase (Memory-Bound)</div>
-            <div style="height: 40px; background: var(--bg-primary); border-radius: 6px; overflow: hidden; display: flex;">
-              <div style="width: 15%; background: var(--accent-green); display: flex; align-items: center; font-size: 0.75rem; padding-left: 8px;">15%</div>
-              <div style="width: 85%; background: var(--accent-red); display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 500;">Waiting on Memory: 85%</div>
-            </div>
-            <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">Low parallelism → memory-limited</div>
-          </div>
+      <div class="figure-embed" style="margin: 2rem 0;">
+        <div class="figure-embed-header">
+          <span class="figure-embed-label">Interactive KV-Cache Size Calculator</span>
+          <a href="../figures/ch01-introduction/kv-cache-math-explainer.html" target="_blank" class="figure-embed-link">View Source ↗</a>
         </div>
-        <div class="figure-caption">During prefill, the model processes many tokens in parallel, keeping compute units busy. During decode, generating one token at a time leaves GPU compute severely underutilized.</div>
+        <iframe src="../figures/ch01-introduction/kv-cache-math-explainer.html" style="width:100%;height:500px;border:none;background:#1a1a2e;"></iframe>
       </div>
 
-      <h3>The Memory Wall Era</h3>
-
-      <p>The term "memory wall" was coined in 1995 to describe the growing disparity between processor and memory performance. For LLMs, we face a more acute version:</p>
-
-      <div class="figure">
-        <div class="figure-label">Figure 1.3 — The Growing Compute-Memory Gap</div>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Generation</th>
-                <th>GPU Compute (PFLOPS)</th>
-                <th>HBM Bandwidth (TB/s)</th>
-                <th>HBM Capacity (GB)</th>
-                <th>Gap Factor</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>V100 (2017)</td>
-                <td class="mono">0.12</td>
-                <td class="mono">0.9</td>
-                <td class="mono">32</td>
-                <td>1× (baseline)</td>
-              </tr>
-              <tr>
-                <td>A100 (2020)</td>
-                <td class="mono">0.31</td>
-                <td class="mono">2.0</td>
-                <td class="mono">80</td>
-                <td>1.2× wider gap</td>
-              </tr>
-              <tr>
-                <td>H100 (2022)</td>
-                <td class="mono">2.0</td>
-                <td class="mono">3.35</td>
-                <td class="mono">80</td>
-                <td class="warning">3.8× wider gap</td>
-              </tr>
-              <tr>
-                <td>B200 (2024)</td>
-                <td class="mono">4.5</td>
-                <td class="mono">8.0</td>
-                <td class="mono">192</td>
-                <td class="danger">5.2× wider gap</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="figure-caption">Compute performance has grown 37× from V100 to B200, while memory bandwidth grew only 9×. Each generation makes the memory wall more severe for memory-bound workloads.</div>
-      </div>
-
-      <p>This asymmetric scaling means the memory bottleneck will only intensify. Architectural solutions—not just faster memory—are required.</p>
-
-      <!-- Section 1.2: Why KV-Cache Matters -->
-      <h2>1.2 Why KV-Cache Matters</h2>
-
-      <p>While model weights create a bandwidth bottleneck, the <strong>KV-cache</strong> creates a capacity bottleneck. Understanding why this cache exists—and why it grows so rapidly—is essential to appreciating the problem we're solving.</p>
-
-      <h3>The Attention Mechanism</h3>
-
-      <p>Transformer models use <strong>self-attention</strong> to allow each token to "attend to" information from all other tokens in the sequence. This is what enables LLMs to understand context, maintain coherence, and perform in-context learning.</p>
-
-      <p>For each token, attention involves three projections (see <a href="../appendix/b-attention-mechanism.html">Appendix B</a> for full mathematical treatment):</p>
-
-      <ul>
-        <li><strong>Query (Q)</strong>: "What am I looking for?"</li>
-        <li><strong>Key (K)</strong>: "What information do I contain?"</li>
-        <li><strong>Value (V)</strong>: "What should I contribute to the output?"</li>
-      </ul>
-
-      <p>The attention score between any two positions is computed as the dot product of their Q and K vectors, determining how much each position influences the other.</p>
-
-      <div class="figure">
-        <div class="figure-label">Figure 1.4 — Attention Computation Flow</div>
-        <div class="arch-flow" style="flex-wrap: wrap; gap: 0.5rem;">
-          <div class="arch-box" style="background: rgba(139,148,158,0.1); border-color: var(--text-muted); color: var(--text-secondary);">Input Token<br><span style="font-size: 0.75rem;">8192-dim</span></div>
-          <span class="arch-arrow">→</span>
-          <div style="display: flex; gap: 0.5rem;">
-            <div class="arch-box" style="background: rgba(88, 166, 255, 0.15); border-color: var(--accent-cyan); color: var(--accent-cyan);">W<sub>Q</sub><br><span style="font-size: 0.75rem;">Query</span></div>
-            <div class="arch-box" style="background: rgba(63, 185, 80, 0.15); border-color: var(--accent-green); color: var(--accent-green);">W<sub>K</sub><br><span style="font-size: 0.75rem;">Key</span></div>
-            <div class="arch-box" style="background: rgba(163, 113, 247, 0.15); border-color: var(--accent-purple); color: var(--accent-purple);">W<sub>V</sub><br><span style="font-size: 0.75rem;">Value</span></div>
-          </div>
-          <span class="arch-arrow">→</span>
-          <div class="arch-box" style="background: rgba(210, 153, 34, 0.15); border-color: var(--accent-orange); color: var(--accent-orange);">Attention<br><span style="font-size: 0.75rem;">QK<sup>T</sup> / √d</span></div>
-          <span class="arch-arrow">→</span>
-          <div class="arch-box" style="background: rgba(248, 81, 73, 0.15); border-color: var(--accent-red); color: var(--accent-red);">Output<br><span style="font-size: 0.75rem;">softmax × V</span></div>
-        </div>
-        <div class="figure-caption">Each token is projected through Q, K, V matrices. The attention mechanism computes weighted sums based on Q·K similarity scores.</div>
-      </div>
-
-      <h3>Why Cache K and V?</h3>
-
-      <p>During autoregressive generation, we produce tokens one at a time. Each new token must attend to all previous tokens, requiring their K and V vectors. A critical observation enables optimization:</p>
-
-      <div class="callout insight">
-        <div class="callout-title">🔑 Key Insight: K and V Are Position-Independent</div>
-        <p>The Key and Value projections for a token depend only on that token's embedding—not on any future tokens. Once computed, they never change. This means we can <strong>cache</strong> K and V for all past tokens rather than recomputing them.</p>
-      </div>
-
-      <p>Without KV-caching, generating the N-th token would require N forward passes through the attention layers—O(N²) total operations. With caching, we perform O(N) operations, making long-context generation practical.</p>
-
-      <h3>The Size Explosion</h3>
-
-      <p>The KV-cache grows with every generated token. For Llama-70B with Grouped-Query Attention (GQA), see <a href="../appendix/c-kv-cache-math.html">Appendix C</a> for the complete derivation:</p>
-
-      <div class="figure">
-        <div class="figure-label">Figure 1.5 — KV-Cache Components</div>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Component</th>
-                <th>Formula</th>
-                <th>Llama-70B Value</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Layers</td>
-                <td class="mono">L</td>
-                <td class="mono">80</td>
-              </tr>
-              <tr>
-                <td>KV Heads per layer</td>
-                <td class="mono">n_kv_heads</td>
-                <td class="mono">8 (GQA)</td>
-              </tr>
-              <tr>
-                <td>Head dimension</td>
-                <td class="mono">d_head</td>
-                <td class="mono">128</td>
-              </tr>
-              <tr>
-                <td>K+V tensors</td>
-                <td class="mono">2</td>
-                <td class="mono">2</td>
-              </tr>
-              <tr>
-                <td>Bytes per element</td>
-                <td class="mono">sizeof(BF16)</td>
-                <td class="mono">2</td>
-              </tr>
-              <tr style="background: rgba(88, 166, 255, 0.08);">
-                <td><strong>Per-token size</strong></td>
-                <td class="mono">2 × 80 × 8 × 128 × 2</td>
-                <td class="mono highlight"><strong>320 KB</strong></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="figure-caption">Each token added to the context consumes 320 KB of KV-cache memory. At 128K tokens, this totals 41 GB—just for one user's context.</div>
-      </div>
-
-      <h3>Multi-User Scaling</h3>
-
-      <p>The critical insight for production deployments: <strong>model weights are shared, but KV-caches are not</strong>. Each concurrent user needs their own cache:</p>
-
-      <div class="equation">
-        Total Memory = Model_Weights + (Users × KV_per_user) + Activations
-        <span class="equation-label">KV-cache scales linearly with user count</span>
-      </div>
-
-      <p>This creates the "memory wall" that this document addresses. A single B200 can serve only 1-2 users at 128K context before running out of memory, despite having ample compute capacity for 8+ users.</p>
-
-      <!-- Section 1.3: Document Scope -->
-      <h2>1.3 Document Scope and Audience</h2>
-
-      <h3>What This Document Covers</h3>
-
-      <p>This technical reference presents a complete solution to the KV-cache memory problem through a distributed endpoint architecture. The document covers:</p>
-
-      <div class="two-column" style="margin: 1.5rem 0;">
-        <div class="card">
-          <h4 style="margin-top: 0; color: var(--accent-cyan);">Architecture & Design</h4>
-          <ul style="font-size: 0.95rem; margin-bottom: 0;">
-            <li>CXL 3.0 endpoint topology</li>
-            <li>Memory tier hierarchy</li>
-            <li>Latency and bandwidth analysis</li>
-            <li>System integration patterns</li>
-          </ul>
-        </div>
-        <div class="card">
-          <h4 style="margin-top: 0; color: var(--accent-green);">Algorithms & Intelligence</h4>
-          <ul style="font-size: 0.95rem; margin-bottom: 0;">
-            <li>Per-head attention tracking</li>
-            <li>EMA-based scoring</li>
-            <li>RoPE-aware prefetching</li>
-            <li>MoE routing support</li>
-          </ul>
-        </div>
-        <div class="card">
-          <h4 style="margin-top: 0; color: var(--accent-purple);">Implementation Details</h4>
-          <ul style="font-size: 0.95rem; margin-bottom: 0;">
-            <li>GPU memory mapping</li>
-            <li>Driver and firmware APIs</li>
-            <li>Hardware requirements</li>
-            <li>Deployment scenarios</li>
-          </ul>
-        </div>
-        <div class="card">
-          <h4 style="margin-top: 0; color: var(--accent-orange);">Analysis & Validation</h4>
-          <ul style="font-size: 0.95rem; margin-bottom: 0;">
-            <li>Performance benchmarks</li>
-            <li>Cost-benefit analysis</li>
-            <li>Market comparison</li>
-            <li>Future directions</li>
-          </ul>
-        </div>
-      </div>
-
-      <h3>Target Audience</h3>
-
-      <p>This document is written for technical professionals involved in LLM infrastructure:</p>
-
-      <ul>
-        <li><strong>System Architects</strong> designing inference serving platforms</li>
-        <li><strong>Hardware Engineers</strong> working on memory subsystems and accelerators</li>
-        <li><strong>ML Infrastructure Engineers</strong> optimizing LLM deployment</li>
-        <li><strong>Technical Leaders</strong> evaluating infrastructure investments</li>
-      </ul>
-
-      <p>Readers should be familiar with:</p>
-      <ul>
-        <li>Transformer architecture fundamentals (or see <a href="../appendix/a-transformer-fundamentals.html">Appendix A</a>)</li>
-        <li>GPU memory hierarchy (HBM, caches, bandwidth)</li>
-        <li>Basic PCIe and interconnect concepts</li>
-      </ul>
-
-      <h3>How to Use This Document</h3>
-
-      <p>The document is designed for both linear reading and reference lookup:</p>
-
-      <div class="callout note">
-        <div class="callout-title">📖 Reading Paths</div>
-        <p><strong>Quick Overview:</strong> Executive Summary → Chapter 11 (Performance) → Chapter 13 (Conclusion)</p>
-        <p><strong>Architecture Focus:</strong> Chapters 1-5 cover the core system design</p>
-        <p><strong>Algorithm Deep Dive:</strong> Chapters 6-8 detail the intelligence layer</p>
-        <p style="margin-bottom: 0;"><strong>Implementation Guide:</strong> Chapters 9, 12 provide practical integration details</p>
-      </div>
-
-      <p>The <a href="../appendix/index.html">Technical Appendix</a> provides foundational material referenced throughout—transformer architecture, attention mechanics, CXL protocols, and implementation code. Use it as needed based on your background.</p>
-
-      <!-- Chapter Navigation -->
       <div class="chapter-nav">
-        <a href="ch00-executive-summary.html" class="chapter-nav-btn prev">
-          <span class="chapter-nav-label">← Previous</span>
-          <span class="chapter-nav-title">Executive Summary</span>
-        </a>
-        <a href="ch02-background.html" class="chapter-nav-btn next">
-          <span class="chapter-nav-label">Next Chapter →</span>
-          <span class="chapter-nav-title">Chapter 2: Background</span>
-        </a>
+        <a href="ch00-executive-summary.html" class="chapter-nav-btn prev"><span class="chapter-nav-label">← Previous</span><span class="chapter-nav-title">Executive Summary</span></a>
+        <a href="ch02-background.html" class="chapter-nav-btn next"><span class="chapter-nav-label">Next →</span><span class="chapter-nav-title">Chapter 2: Background</span></a>
       </div>
     </div>
-
-    <footer class="footer">
-      <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-primary);">
-        <p style="font-size: 0.8rem; color: var(--text-muted);">
-          © 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.<br>
-          This document contains proprietary and confidential information.<br>
-          Unauthorized reproduction or distribution is strictly prohibited.
-        </p>
-      </div>
-      <p>Distributed Endpoint Architecture for KV-Cache Offloading in LLM Inference</p>
-      <p style="margin-top: 0.5rem;">Technical Documentation v3.0 — December 2025</p>
-    </footer>
+    <footer class="footer"><p style="font-size: 0.8rem; color: var(--text-muted);">© 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.</p></footer>
   </div>
 </body>
 </html>

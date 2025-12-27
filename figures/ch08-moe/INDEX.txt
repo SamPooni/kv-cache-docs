@@ -1,0 +1,20 @@
+================================================================================
+CH08 - MOE ROUTING - FIGURE INDEX
+================================================================================
+
+Fig 8.1: MoE Architecture Overview
+      Source: moe-routing.html
+
+Fig 8.2: Routing Challenge
+      Source: moe-routing.html
+
+Fig 8.3: Routing Histogram
+      Source: moe-routing.html
+
+Fig 8.4: Expert Prefetch Strategy
+      Source: moe-routing.html
+
+Fig 8.5: Cache Sizing Strategy
+      Source: moe-routing.html
+
+TOTAL: 5 figures

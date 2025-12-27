@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KV Cache Offloading: Market Landscape</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  min-height: 100vh;
+  padding: 2rem;
+  color: #e2e8f0;
+}
+
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+/* Header */
+.header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.section-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.35rem 1rem;
+  border-radius: 50px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+
+h1 {
+  font-size: 2.25rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #f8fafc 0%, #94a3b8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  color: #64748b;
+  font-size: 1.1rem;
+}
+
+/* Category Sections */
+.category {
+  margin-bottom: 2rem;
+}
+
+.category-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.category-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+}
+
+.category-icon.commercial { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+.category-icon.software { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+.category-icon.research { background: linear-gradient(135deg, #f97316, #ea580c); }
+
+.category-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.category-subtitle {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+/* Product Cards */
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.product-card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 14px;
+  padding: 1.25rem;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.product-card:hover {
+  border-color: #475569;
+  transform: translateY(-2px);
+}
+
+.product-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.product-name {
+  font-weight: 700;
+  color: #f8fafc;
+  font-size: 0.95rem;
+}
+
+.product-company {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 0.15rem;
+}
+
+.product-tag {
+  font-size: 0.6rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.product-tag.commercial {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+
+.product-tag.software {
+  background: rgba(139, 92, 246, 0.2);
+  color: #a78bfa;
+}
+
+.product-tag.research {
+  background: rgba(249, 115, 22, 0.2);
+  color: #fb923c;
+}
+
+.product-specs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.spec {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  background: rgba(0,0,0,0.3);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  color: #94a3b8;
+}
+
+.spec.highlight {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+}
+
+.product-desc {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+.product-limitation {
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  color: #fca5a5;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.product-limitation::before {
+  content: "âš ï¸";
+  font-size: 0.7rem;
+}
+
+/* Research Cards - wider */
+.research-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.research-card {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.08), rgba(249, 115, 22, 0.03));
+  border: 1px solid rgba(249, 115, 22, 0.25);
+  border-radius: 14px;
+  padding: 1.25rem;
+}
+
+.research-date {
+  font-size: 0.65rem;
+  color: #f97316;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.research-title {
+  font-weight: 700;
+  color: #fcd34d;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.research-desc {
+  font-size: 0.8rem;
+  color: #cbd5e1;
+  line-height: 1.5;
+  margin-bottom: 0.75rem;
+}
+
+.research-result {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #4ade80;
+  background: rgba(34, 197, 94, 0.15);
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  display: inline-block;
+}
+
+/* Gap Section */
+.gap-section {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(220, 38, 38, 0.05));
+  border: 2px solid rgba(239, 68, 68, 0.4);
+  border-radius: 20px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+}
+
+.gap-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.gap-icon {
+  font-size: 2.5rem;
+}
+
+.gap-title {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #fca5a5;
+}
+
+.gap-subtitle {
+  font-size: 0.9rem;
+  color: #f87171;
+}
+
+.gap-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.gap-item {
+  background: rgba(0,0,0,0.3);
+  border-radius: 12px;
+  padding: 1rem;
+  text-align: center;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.gap-item-icon {
+  font-size: 1.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.gap-item-title {
+  font-weight: 600;
+  color: #f8fafc;
+  font-size: 0.85rem;
+  margin-bottom: 0.25rem;
+}
+
+.gap-item-desc {
+  font-size: 0.7rem;
+  color: #94a3b8;
+}
+
+.gap-closest {
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 10px;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.gap-closest-icon {
+  font-size: 1.25rem;
+}
+
+.gap-closest-text {
+  font-size: 0.85rem;
+  color: #fcd34d;
+  line-height: 1.5;
+}
+
+.gap-closest-text strong {
+  color: #fbbf24;
+}
+
+/* Opportunity Section */
+.opportunity-section {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(16, 185, 129, 0.1));
+  border: 2px solid rgba(34, 197, 94, 0.5);
+  border-radius: 20px;
+  padding: 2rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.opportunity-section::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(34, 197, 94, 0.2) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.opportunity-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.opportunity-badge {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.35rem 0.75rem;
+  border-radius: 50px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.opportunity-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #4ade80;
+}
+
+.opportunity-features {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.feature {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  background: rgba(0,0,0,0.2);
+  border-radius: 12px;
+  padding: 1rem;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+.feature-check {
+  width: 24px;
+  height: 24px;
+  background: #22c55e;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  color: white;
+  flex-shrink: 0;
+}
+
+.feature-content {
+  flex: 1;
+}
+
+.feature-title {
+  font-weight: 600;
+  color: #f8fafc;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+
+.feature-desc {
+  font-size: 0.8rem;
+  color: #86efac;
+}
+
+@media (max-width: 768px) {
+  .products-grid, .opportunity-features { grid-template-columns: 1fr; }
+  .research-grid { grid-template-columns: 1fr; }
+  .gap-grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="section-badge">Market Analysis</div>
+    <h1>KV Cache Offloading Landscape</h1>
+    <p class="subtitle">Commercial products, software frameworks, and recent research</p>
+  </div>
+
+  <!-- Commercial Products -->
+  <div class="category">
+    <div class="category-header">
+      <div class="category-icon commercial">ðŸ¢</div>
+      <div>
+        <div class="category-title">Commercial Products</div>
+        <div class="category-subtitle">Available today</div>
+      </div>
+    </div>
+
+    <div class="products-grid">
+      <div class="product-card">
+        <div class="product-header">
+          <div>
+            <div class="product-name">CMM-D / CMM-B</div>
+            <div class="product-company">Samsung</div>
+          </div>
+          <span class="product-tag commercial">CXL 2.0</span>
+        </div>
+        <div class="product-specs">
+          <span class="spec highlight">16 TB pools</span>
+          <span class="spec">60 GB/s</span>
+          <span class="spec">~600ns latency</span>
+        </div>
+        <div class="product-desc">CXL memory expander with large capacity DRAM pools.</div>
+        <div class="product-limitation">Dumb DRAM â€” no compute, no intelligent caching</div>
+      </div>
+
+      <div class="product-card">
+        <div class="product-header">
+          <div>
+            <div class="product-name">Apollo + GISMO</div>
+            <div class="product-company">XConn + MemVerge</div>
+          </div>
+          <span class="product-tag commercial">CXL 3.0</span>
+        </div>
+        <div class="product-specs">
+          <span class="spec highlight">100 TiB pools</span>
+          <span class="spec">NVIDIA Dynamo</span>
+        </div>
+        <div class="product-desc">CXL memory pooling integrated with NVIDIA's inference stack.</div>
+        <div class="product-limitation">Memory pooling only â€” no attention-aware eviction</div>
+      </div>
+
+      <div class="product-card">
+        <div class="product-header">
+          <div>
+            <div class="product-name">Niagara</div>
+            <div class="product-company">Astera Labs</div>
+          </div>
+          <span class="product-tag commercial">Type-3</span>
+        </div>
+        <div class="product-specs">
+          <span class="spec">CXL Expander</span>
+          <span class="spec">Academic Research</span>
+        </div>
+        <div class="product-desc">CXL Type-3 memory expander used in university research settings.</div>
+        <div class="product-limitation">Expander only â€” no processing capability</div>
+      </div>
+
+      <div class="product-card">
+        <div class="product-header">
+          <div>
+            <div class="product-name">vLLM / LMCache</div>
+            <div class="product-company">Open Source</div>
+          </div>
+          <span class="product-tag software">Framework</span>
+        </div>
+        <div class="product-specs">
+          <span class="spec">PagedAttention</span>
+          <span class="spec">CPU/SSD offload</span>
+        </div>
+        <div class="product-desc">Industry-standard inference framework with memory management.</div>
+        <div class="product-limitation">Coarse-grained, not CXL-optimized</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Research -->
+  <div class="category">
+    <div class="category-header">
+      <div class="category-icon research">ðŸ“š</div>
+      <div>
+        <div class="category-title">Recent Research</div>
+        <div class="category-subtitle">Octâ€“Dec 2025 (arXiv)</div>
+      </div>
+    </div>
+
+    <div class="research-grid">
+      <div class="research-card">
+        <div class="research-date">arXiv 2025</div>
+        <div class="research-title">PNM-KV</div>
+        <div class="research-desc">CXL-enabled processing-near-memory that offloads token page selection to a PNM accelerator.</div>
+        <div class="research-result">21.9Ã— throughput (1M tokens)</div>
+      </div>
+
+      <div class="research-card">
+        <div class="research-date">arXiv 2025</div>
+        <div class="research-title">CXL-SpecKV</div>
+        <div class="research-desc">FPGA-based speculative KV-cache prefetching with compression.</div>
+        <div class="research-result">4â€“8Ã— memory expansion</div>
+      </div>
+
+      <div class="research-card">
+        <div class="research-date">arXiv 2025</div>
+        <div class="research-title">TraCT</div>
+        <div class="research-desc">CXL shared memory as rack-scale KV cache with direct GPU load/store and DMA.</div>
+        <div class="research-result">Rack-scale KV sharing</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- The Gap -->
+  <div class="gap-section">
+    <div class="gap-header">
+      <div class="gap-icon">ðŸŽ¯</div>
+      <div>
+        <div class="gap-title">The Gap: Nobody Has Combined</div>
+        <div class="gap-subtitle">Missing pieces for truly intelligent KV-cache management</div>
+      </div>
+    </div>
+
+    <div class="gap-grid">
+      <div class="gap-item">
+        <div class="gap-item-icon">ðŸ”¢</div>
+        <div class="gap-item-title">Per-KV-Head Tracking</div>
+        <div class="gap-item-desc">Respecting GQA's 640 queues</div>
+      </div>
+      <div class="gap-item">
+        <div class="gap-item-icon">ðŸ“ˆ</div>
+        <div class="gap-item-title">EMA Attention Scoring</div>
+        <div class="gap-item-desc">Smoothed eviction priority</div>
+      </div>
+      <div class="gap-item">
+        <div class="gap-item-icon">ðŸ§­</div>
+        <div class="gap-item-title">RoPE-Aware Prefetch</div>
+        <div class="gap-item-desc">Position locality exploitation</div>
+      </div>
+      <div class="gap-item">
+        <div class="gap-item-icon">ðŸ§ </div>
+        <div class="gap-item-title">Controller-Resident Intelligence</div>
+        <div class="gap-item-desc">Logic in the CXL endpoint</div>
+      </div>
+    </div>
+
+    <div class="gap-closest">
+      <span class="gap-closest-icon">ðŸ’¡</span>
+      <span class="gap-closest-text">
+        <strong>Closest: PNM-KV</strong> â€” but they do token selection, not per-head eviction with attention weighting. 
+        The opportunity is more fine-grained and model-architecture-aware.
+      </span>
+    </div>
+  </div>
+
+  <!-- Opportunity -->
+  <div class="opportunity-section">
+    <div class="opportunity-header">
+      <span class="opportunity-badge">White Space</span>
+      <span class="opportunity-title">CXL Controller-Resident Intelligence</span>
+    </div>
+
+    <div class="opportunity-features">
+      <div class="feature">
+        <div class="feature-check">âœ“</div>
+        <div class="feature-content">
+          <div class="feature-title">Per-KV-Head Eviction</div>
+          <div class="feature-desc">Track 640 GQA queues independently, evict at head granularity</div>
+        </div>
+      </div>
+      <div class="feature">
+        <div class="feature-check">âœ“</div>
+        <div class="feature-content">
+          <div class="feature-title">EMA-Based Scoring</div>
+          <div class="feature-desc">Smooth attention scores over time, prevent thrashing</div>
+        </div>
+      </div>
+      <div class="feature">
+        <div class="feature-check">âœ“</div>
+        <div class="feature-content">
+          <div class="feature-title">RoPE Locality Prefetch</div>
+          <div class="feature-desc">Exploit position encoding structure for predictive fetch</div>
+        </div>
+      </div>
+      <div class="feature">
+        <div class="feature-check">âœ“</div>
+        <div class="feature-content">
+          <div class="feature-title">Model-Architecture Aware</div>
+          <div class="feature-desc">Understands transformer structure, not just memory pages</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

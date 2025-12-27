@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Current Approaches Comparison</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: system-ui, sans-serif; background: linear-gradient(135deg, #0f172a, #1e293b); min-height: 100vh; color: #e2e8f0; }</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+function ApproachesComparison() {
+  const approaches = [
+    { name: 'Quantization', desc: 'Reduce precision (FP16→INT4)', mem: '4×', quality: 'Some loss', latency: 'Same', color: '#8b5cf6' },
+    { name: 'Pruning', desc: 'Drop less important tokens', mem: '2-4×', quality: 'Significant loss', latency: 'Same', color: '#f59e0b' },
+    { name: 'CPU Offload', desc: 'Swap to system RAM', mem: '∞', quality: 'None', latency: '10-100× worse', color: '#ef4444' },
+    { name: 'CXL Offload', desc: 'Our approach', mem: '6×', quality: 'None', latency: '7.5% overhead', color: '#10b981' }
+  ];
+  const styles = {
+    container: { maxWidth: '900px', margin: '0 auto', padding: '2rem' },
+    header: { textAlign: 'center', marginBottom: '2rem' },
+    table: { width: '100%', background: '#1e293b', borderRadius: '16px', overflow: 'hidden' },
+    headerRow: { display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr', background: '#0f172a', padding: '1rem', fontWeight: 600 },
+    row: (color) => ({ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr', padding: '1rem', borderTop: '1px solid #334155', borderLeft: `3px solid ${color}` }),
+    name: { fontWeight: 600 },
+    desc: { fontSize: '0.8rem', color: '#64748b' },
+    good: { color: '#10b981' },
+    bad: { color: '#ef4444' },
+    neutral: { color: '#f59e0b' }
+  };
+  return (
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <div style={{display: 'inline-block', padding: '0.25rem 0.75rem', background: 'rgba(16,185,129,0.2)', color: '#34d399', fontSize: '0.75rem', fontFamily: 'monospace', borderRadius: '20px', marginBottom: '0.5rem'}}>COMPARISON</div>
+        <h1 style={{fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.5rem'}}>Current Approaches</h1>
+      </div>
+      <div style={styles.table}>
+        <div style={styles.headerRow}>
+          <div>Approach</div><div>Memory Savings</div><div>Quality Impact</div><div>Latency</div>
+        </div>
+        {approaches.map((a, i) => (
+          <div key={i} style={styles.row(a.color)}>
+            <div><div style={styles.name}>{a.name}</div><div style={styles.desc}>{a.desc}</div></div>
+            <div style={styles.good}>{a.mem}</div>
+            <div style={a.quality === 'None' ? styles.good : styles.bad}>{a.quality}</div>
+            <div style={a.latency.includes('worse') ? styles.bad : a.latency === 'Same' ? styles.neutral : styles.good}>{a.latency}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<ApproachesComparison />);
+</script>
+</body>
+</html>

@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attention Patterns & RoPE Locality</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0a0a12 0%, #1a1a2e 100%);
+            min-height: 100vh;
+            color: #e0e0e0;
+            padding: 40px 20px;
+        }
+        
+        .container { max-width: 1000px; margin: 0 auto; }
+        
+        h1 {
+            font-size: 1.8rem;
+            text-align: center;
+            margin-bottom: 8px;
+            background: linear-gradient(90deg, #f59e0b, #ec4899, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 0.95rem;
+        }
+        
+        .section {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #a78bfa;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: linear-gradient(180deg, #a78bfa, #6366f1);
+            border-radius: 2px;
+        }
+        
+        /* Attention Heatmap */
+        .heatmap-container {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+        }
+        
+        .heatmap {
+            flex: 1;
+        }
+        
+        .heatmap-grid {
+            display: grid;
+            grid-template-columns: 40px repeat(20, 1fr);
+            gap: 2px;
+            font-size: 0.7rem;
+        }
+        
+        .heatmap-cell {
+            aspect-ratio: 1;
+            border-radius: 3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.6rem;
+            color: rgba(255,255,255,0.7);
+        }
+        
+        .heatmap-label {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 8px;
+            color: #888;
+            font-size: 0.7rem;
+        }
+        
+        .heatmap-header {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: 5px;
+            color: #888;
+            font-size: 0.65rem;
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            transform: rotate(180deg);
+            height: 50px;
+        }
+        
+        .legend {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 20px;
+            background: rgba(0,0,0,0.3);
+            border-radius: 12px;
+            min-width: 200px;
+        }
+        
+        .legend-title {
+            font-size: 0.85rem;
+            color: #888;
+            margin-bottom: 5px;
+        }
+        
+        .legend-gradient {
+            height: 20px;
+            border-radius: 4px;
+            background: linear-gradient(90deg, 
+                rgba(59, 130, 246, 0.1),
+                rgba(59, 130, 246, 0.3),
+                rgba(147, 51, 234, 0.5),
+                rgba(236, 72, 153, 0.7),
+                rgba(248, 113, 113, 0.9)
+            );
+        }
+        
+        .legend-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            color: #666;
+        }
+        
+        .legend-insight {
+            font-size: 0.8rem;
+            color: #a78bfa;
+            padding: 12px;
+            background: rgba(139, 92, 246, 0.1);
+            border-radius: 8px;
+            border-left: 3px solid #8b5cf6;
+            margin-top: 10px;
+        }
+        
+        /* RoPE Visualization */
+        .rope-viz {
+            display: flex;
+            gap: 40px;
+            align-items: center;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        
+        .rope-wave {
+            position: relative;
+            width: 300px;
+            height: 150px;
+        }
+        
+        .rope-wave svg {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .rope-formula {
+            background: rgba(0,0,0,0.4);
+            padding: 20px;
+            border-radius: 12px;
+            font-family: 'SF Mono', monospace;
+            font-size: 0.85rem;
+        }
+        
+        .rope-formula .main {
+            color: #f59e0b;
+            margin-bottom: 10px;
+        }
+        
+        .rope-formula .explanation {
+            color: #888;
+            font-size: 0.75rem;
+            font-family: 'SF Pro Display', sans-serif;
+        }
+        
+        /* Distance decay chart */
+        .decay-chart {
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+        }
+        
+        .decay-bar-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            gap: 15px;
+        }
+        
+        .decay-label {
+            width: 120px;
+            font-size: 0.8rem;
+            color: #888;
+            text-align: right;
+        }
+        
+        .decay-bar-bg {
+            flex: 1;
+            height: 28px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .decay-bar {
+            height: 100%;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: white;
+            transition: width 0.5s ease;
+        }
+        
+        .decay-value {
+            font-size: 0.8rem;
+            color: #888;
+            width: 60px;
+            text-align: right;
+        }
+        
+        /* Insight boxes */
+        .insight-box {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.02));
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .insight-box h3 {
+            color: #22c55e;
+            font-size: 0.95rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .insight-box p {
+            color: #94a3b8;
+            font-size: 0.85rem;
+            line-height: 1.6;
+        }
+        
+        .highlight {
+            color: #fbbf24;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Why Attention Has Locality â€” The RoPE Effect</h1>
+        <p class="subtitle">Understanding why recent tokens receive more attention than distant ones</p>
+        
+        <div class="section">
+            <div class="section-title">Attention Pattern: Token at Position 1000 Looking Back</div>
+            
+            <div class="heatmap-container">
+                <div class="heatmap">
+                    <p style="color: #888; font-size: 0.8rem; margin-bottom: 15px;">
+                        Attention weights when generating the 1000th token:
+                    </p>
+                    <div class="decay-chart">
+                        <div class="decay-bar-container">
+                            <div class="decay-label">Last 10 tokens</div>
+                            <div class="decay-bar-bg">
+                                <div class="decay-bar" style="width: 45%; background: linear-gradient(90deg, #f59e0b, #f97316);">
+                                    45%
+                                </div>
+                            </div>
+                            <div class="decay-value">pos 990-999</div>
+                        </div>
+                        <div class="decay-bar-container">
+                            <div class="decay-label">Tokens 11-100</div>
+                            <div class="decay-bar-bg">
+                                <div class="decay-bar" style="width: 28%; background: linear-gradient(90deg, #a855f7, #8b5cf6);">
+                                    28%
+                                </div>
+                            </div>
+                            <div class="decay-value">pos 900-989</div>
+                        </div>
+                        <div class="decay-bar-container">
+                            <div class="decay-label">Tokens 101-500</div>
+                            <div class="decay-bar-bg">
+                                <div class="decay-bar" style="width: 18%; background: linear-gradient(90deg, #6366f1, #4f46e5);">
+                                    18%
+                                </div>
+                            </div>
+                            <div class="decay-value">pos 500-899</div>
+                        </div>
+                        <div class="decay-bar-container">
+                            <div class="decay-label">Tokens 501-950</div>
+                            <div class="decay-bar-bg">
+                                <div class="decay-bar" style="width: 7%; background: linear-gradient(90deg, #3b82f6, #2563eb);">
+                                    7%
+                                </div>
+                            </div>
+                            <div class="decay-value">pos 50-499</div>
+                        </div>
+                        <div class="decay-bar-container">
+                            <div class="decay-label">First 50 tokens</div>
+                            <div class="decay-bar-bg">
+                                <div class="decay-bar" style="width: 2%; background: linear-gradient(90deg, #22d3ee, #06b6d4);">
+                                </div>
+                            </div>
+                            <div class="decay-value">pos 0-49</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="legend">
+                    <div class="legend-title">Key Observation</div>
+                    <div class="legend-insight">
+                        <strong>73%</strong> of attention goes to the <strong>last 10%</strong> of tokens
+                    </div>
+                    <div class="legend-insight" style="margin-top: 8px; background: rgba(245, 158, 11, 0.1); border-color: #f59e0b;">
+                        This is NOT random â€” it's caused by how positions are encoded (RoPE)
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">How RoPE Creates Locality</div>
+            
+            <div class="rope-viz">
+                <svg viewBox="0 0 300 120" style="max-width: 350px;">
+                    <!-- Axis -->
+                    <line x1="30" y1="90" x2="280" y2="90" stroke="#444" stroke-width="1"/>
+                    <line x1="30" y1="90" x2="30" y2="20" stroke="#444" stroke-width="1"/>
+                    
+                    <!-- Labels -->
+                    <text x="155" y="110" fill="#666" font-size="10" text-anchor="middle">Distance from current token</text>
+                    <text x="15" y="55" fill="#666" font-size="9" text-anchor="middle" transform="rotate(-90, 15, 55)">Attention</text>
+                    
+                    <!-- Decay curve -->
+                    <path d="M 30 25 Q 60 30, 90 45 T 150 65 T 210 80 T 270 88" 
+                          fill="none" stroke="url(#grad1)" stroke-width="3"/>
+                    
+                    <!-- Points -->
+                    <circle cx="50" cy="28" r="4" fill="#f59e0b"/>
+                    <circle cx="90" cy="42" r="4" fill="#a855f7"/>
+                    <circle cx="150" cy="62" r="4" fill="#6366f1"/>
+                    <circle cx="220" cy="78" r="4" fill="#3b82f6"/>
+                    
+                    <!-- Point labels -->
+                    <text x="50" y="18" fill="#f59e0b" font-size="8" text-anchor="middle">d=10</text>
+                    <text x="90" y="35" fill="#a855f7" font-size="8" text-anchor="middle">d=100</text>
+                    <text x="150" y="55" fill="#6366f1" font-size="8" text-anchor="middle">d=500</text>
+                    <text x="220" y="72" fill="#3b82f6" font-size="8" text-anchor="middle">d=1000</text>
+                    
+                    <defs>
+                        <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stop-color="#f59e0b"/>
+                            <stop offset="50%" stop-color="#a855f7"/>
+                            <stop offset="100%" stop-color="#3b82f6"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+                
+                <div class="rope-formula">
+                    <div class="main">attention âˆ cos((m - n) Ã— Î¸)</div>
+                    <div class="explanation">
+                        m = query position<br>
+                        n = key position<br>
+                        Î¸ = rotation frequency<br><br>
+                        When distance (m-n) is small â†’ cos â‰ˆ 1 â†’ high attention<br>
+                        When distance is large â†’ cos oscillates â†’ lower average
+                    </div>
+                </div>
+            </div>
+            
+            <div class="insight-box">
+                <h3>ðŸ’¡ The Caching Implication</h3>
+                <p>
+                    Since <span class="highlight">~80% of attention</span> goes to the most recent <span class="highlight">~10% of tokens</span>, 
+                    we can keep recent tokens in fast HBM memory and move older tokens to slower CXL memory. 
+                    Most accesses will hit the fast tier, keeping average latency low.
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #ffffff;
+  color: #111827;
+  padding: 32px;
+  line-height: 1.4;
+}
+h1 { font-size: 1.875rem; font-weight: 700; text-align: center; margin-bottom: 12px; }
+.subtitle { color: #4b5563; font-size: 1.125rem; text-align: center; margin-bottom: 32px; }
+.stack { display: flex; flex-direction: column; gap: 20px; }
+
+/* Host */
+.host-wrap { display: flex; justify-content: center; }
+.host { background: #047857; border-radius: 12px; padding: 16px 48px; text-align: center; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+.host-title { font-size: 1.25rem; font-weight: 700; color: white; }
+.host-sub { color: #a7f3d0; font-size: 1rem; margin-top: 4px; }
+
+/* PCIe Connection */
+.pcie-conn { display: flex; justify-content: center; align-items: center; gap: 12px; }
+.pcie-bar { width: 8px; height: 40px; background: #1d4ed8; border-radius: 4px; }
+.pcie-label { font-size: 1rem; font-weight: 700; color: #1e40af; }
+
+/* Endpoint Package */
+.endpoint-pkg { border: 4px solid #0e7490; border-radius: 16px; padding: 24px; background: #ecfeff; margin: 0 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
+.endpoint-title { text-align: center; color: #164e63; font-weight: 700; font-size: 1.25rem; margin-bottom: 20px; border-bottom: 4px solid #a5f3fc; padding-bottom: 12px; }
+
+/* CXL Protocol Engine */
+.cxl-engine { display: flex; justify-content: center; margin-bottom: 16px; }
+.cxl-box { background: #1d4ed8; border-radius: 12px; padding: 16px; width: 384px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+.cxl-title { color: white; font-weight: 700; font-size: 1.125rem; text-align: center; margin-bottom: 12px; }
+.cxl-protocols { display: flex; justify-content: space-around; }
+.cxl-proto { background: #1e3a8a; border-radius: 8px; padding: 8px 16px; }
+.cxl-proto-name { color: white; font-weight: 700; font-size: 1rem; }
+.cxl-proto-sub { color: #bfdbfe; font-size: 0.875rem; }
+
+/* UCIe Bar */
+.ucie-bar { background: #7e22ce; border-radius: 8px; height: 32px; margin: 0 24px 16px; display: flex; align-items: center; justify-content: center; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+.ucie-bar span { color: white; font-weight: 700; font-size: 1.125rem; }
+
+/* Chiplets Row */
+.chiplets { display: flex; justify-content: space-around; gap: 16px; margin-bottom: 16px; }
+.chiplet { border-radius: 12px; padding: 16px; flex: 1; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+.chiplet-title { color: white; font-weight: 700; font-size: 1rem; text-align: center; margin-bottom: 12px; }
+
+/* Memory Controller */
+.mem-ctrl { background: #15803d; }
+.mem-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.mem-ch { background: #14532d; border-radius: 8px; padding: 8px; text-align: center; }
+.mem-ch-name { color: white; font-weight: 600; font-size: 0.875rem; }
+.mem-ch-type { color: #bbf7d0; font-size: 0.875rem; }
+.mem-total { text-align: center; margin-top: 12px; font-size: 0.875rem; color: #dcfce7; font-weight: 600; }
+
+/* Compute Chiplet */
+.compute { background: #ea580c; }
+.compute-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+.compute-core { background: #9a3412; border-radius: 8px; padding: 8px; text-align: center; }
+.compute-core-name { color: white; font-weight: 600; font-size: 0.875rem; }
+.compute-core-type { color: #fed7aa; font-size: 0.875rem; }
+.compute-cache { background: #9a3412; border-radius: 8px; padding: 8px; text-align: center; }
+.compute-cache span { color: white; font-weight: 600; font-size: 0.875rem; }
+
+/* Control & Monitor */
+.control { background: #d97706; }
+.control-items { display: flex; flex-direction: column; gap: 8px; }
+.control-item { background: #92400e; border-radius: 8px; padding: 8px; text-align: center; }
+.control-item span { color: white; font-weight: 600; font-size: 0.875rem; }
+
+/* eSRAM */
+.esram-wrap { display: flex; justify-content: center; margin-bottom: 16px; }
+.esram { background: #be185d; border-radius: 12px; padding: 12px 32px; text-align: center; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+.esram-title { color: white; font-weight: 700; font-size: 1rem; }
+.esram-sub { color: #fbcfe8; font-size: 0.875rem; }
+
+/* NVMe Controller */
+.nvme-wrap { display: flex; justify-content: center; }
+.nvme { background: #374151; border-radius: 12px; padding: 12px 24px; text-align: center; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+.nvme-title { color: white; font-weight: 700; font-size: 1rem; }
+.nvme-sub { color: #e5e7eb; font-size: 0.875rem; }
+
+/* External Memory/Storage */
+.external { display: flex; justify-content: space-around; margin: 0 16px; gap: 24px; }
+.external-col { flex: 1; }
+.ext-bars { display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 12px; }
+.ext-bar { width: 8px; height: 32px; border-radius: 4px; }
+.ext-bar-ddr { background: #15803d; }
+.ext-bar-flash { background: #4b5563; }
+.ext-box { border-radius: 12px; padding: 16px; text-align: center; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+.ext-ddr { background: #15803d; }
+.ext-flash { background: #4b5563; }
+.ext-title { color: white; font-weight: 700; font-size: 1.125rem; }
+.ext-size { color: #dcfce7; font-size: 1rem; margin-top: 4px; }
+.ext-flash .ext-size { color: #f3f4f6; }
+.ext-detail { font-size: 0.875rem; }
+.ext-ddr .ext-detail { color: #bbf7d0; }
+.ext-flash .ext-detail { color: #e5e7eb; }
+
+/* Legend */
+.legend { margin-top: 32px; border-top: 4px solid #d1d5db; padding-top: 20px; }
+.legend-title { font-size: 1rem; color: #374151; text-align: center; margin-bottom: 12px; font-weight: 700; }
+.legend-items { display: flex; justify-content: center; gap: 32px; font-size: 1rem; }
+.legend-item { display: flex; align-items: center; gap: 8px; }
+.legend-box { width: 24px; height: 16px; border-radius: 4px; }
+.legend-box.cxl { background: #1d4ed8; }
+.legend-box.io { background: #ea580c; }
+.legend-box.ucie { background: #7e22ce; }
+.legend-box.ddr { background: #15803d; }
+.legend-label { font-weight: 600; }
+.legend-label.cxl { color: #1e40af; }
+.legend-label.io { color: #c2410c; }
+.legend-label.ucie { color: #6b21a8; }
+.legend-label.ddr { color: #166534; }
+
+/* Bandwidth Table */
+.bw-table { margin-top: 24px; background: #1f2937; border-radius: 12px; padding: 20px; margin-left: 16px; margin-right: 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
+.bw-title { font-size: 1.125rem; color: white; text-align: center; margin-bottom: 16px; font-weight: 700; }
+.bw-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; text-align: center; }
+.bw-cell { border-radius: 8px; padding: 12px; }
+.bw-cell.ucie { background: #7e22ce; }
+.bw-cell.ddr { background: #15803d; }
+.bw-cell.cxl { background: #1d4ed8; }
+.bw-cell.nvme { background: #4b5563; }
+.bw-label { font-weight: 700; font-size: 1rem; }
+.bw-cell.ucie .bw-label { color: #e9d5ff; }
+.bw-cell.ddr .bw-label { color: #dcfce7; }
+.bw-cell.cxl .bw-label { color: #dbeafe; }
+.bw-cell.nvme .bw-label { color: #f3f4f6; }
+.bw-value { color: white; font-weight: 700; font-size: 1.25rem; }
+</style>
+</head>
+<body>
+
+<h1>Distributed Endpoint Architecture</h1>
+<p class="subtitle">CXL 3.0 Type-3 Memory-Compute Node</p>
+
+<div class="stack">
+
+  <!-- Host -->
+  <div class="host-wrap">
+    <div class="host">
+      <div class="host-title">HOST (CPU/GPU)</div>
+      <div class="host-sub">Load/Store Instructions</div>
+    </div>
+  </div>
+
+  <!-- PCIe Connection -->
+  <div class="pcie-conn">
+    <div class="pcie-bar"></div>
+    <div class="pcie-label">PCIe 5.0 x8/x16</div>
+    <div class="pcie-bar"></div>
+  </div>
+
+  <!-- Endpoint Package -->
+  <div class="endpoint-pkg">
+    <div class="endpoint-title">ENDPOINT PACKAGE (UCIe Integrated)</div>
+
+    <!-- CXL Protocol Engine -->
+    <div class="cxl-engine">
+      <div class="cxl-box">
+        <div class="cxl-title">CXL PROTOCOL ENGINE</div>
+        <div class="cxl-protocols">
+          <div class="cxl-proto">
+            <div class="cxl-proto-name">CXL.mem</div>
+            <div class="cxl-proto-sub">HDM-D/HDM-DB</div>
+          </div>
+          <div class="cxl-proto">
+            <div class="cxl-proto-name">CXL.io</div>
+            <div class="cxl-proto-sub">Mailbox/Config</div>
+          </div>
+          <div class="cxl-proto">
+            <div class="cxl-proto-name">CXL.cache</div>
+            <div class="cxl-proto-sub">Coherency</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- UCIe Bar -->
+    <div class="ucie-bar">
+      <span>UCIe 1.1 â€” 1+ TB/s Die-to-Die</span>
+    </div>
+
+    <!-- Chiplets Row -->
+    <div class="chiplets">
+      <!-- Memory Controller -->
+      <div class="chiplet mem-ctrl">
+        <div class="chiplet-title">MEMORY CONTROLLER</div>
+        <div class="mem-grid">
+          <div class="mem-ch">
+            <div class="mem-ch-name">CH 0-3</div>
+            <div class="mem-ch-type">DDR5-6400</div>
+          </div>
+          <div class="mem-ch">
+            <div class="mem-ch-name">CH 4-7</div>
+            <div class="mem-ch-type">DDR5-6400</div>
+          </div>
+        </div>
+        <div class="mem-total">8ch Ã— 51.2 GB/s = 409.6 GB/s</div>
+      </div>
+
+      <!-- Compute Chiplet -->
+      <div class="chiplet compute">
+        <div class="chiplet-title">COMPUTE CHIPLET</div>
+        <div class="compute-grid">
+          <div class="compute-core">
+            <div class="compute-core-name">Core 0-3</div>
+            <div class="compute-core-type">A78 @ 3GHz</div>
+          </div>
+          <div class="compute-core">
+            <div class="compute-core-name">Core 4-7</div>
+            <div class="compute-core-type">A78 @ 3GHz</div>
+          </div>
+        </div>
+        <div class="compute-cache">
+          <span>L3 Cache â€” 8 MB</span>
+        </div>
+      </div>
+
+      <!-- Control & Monitor -->
+      <div class="chiplet control">
+        <div class="chiplet-title">CONTROL & MONITOR</div>
+        <div class="control-items">
+          <div class="control-item"><span>Policy Engine</span></div>
+          <div class="control-item"><span>Access Tracker</span></div>
+          <div class="control-item"><span>Prefetch Queue</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- eSRAM -->
+    <div class="esram-wrap">
+      <div class="esram">
+        <div class="esram-title">On-Package eSRAM</div>
+        <div class="esram-sub">64 MB @ 8ns â€” Metadata & Index Storage</div>
+      </div>
+    </div>
+
+    <!-- NVMe Controller -->
+    <div class="nvme-wrap">
+      <div class="nvme">
+        <div class="nvme-title">NVMe Controller</div>
+        <div class="nvme-sub">PCIe 4.0 x4 to Flash</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- External Memory and Storage -->
+  <div class="external">
+    <div class="external-col">
+      <div class="ext-bars">
+        <div class="ext-bar ext-bar-ddr"></div>
+        <div class="ext-bar ext-bar-ddr"></div>
+        <div class="ext-bar ext-bar-ddr"></div>
+        <div class="ext-bar ext-bar-ddr"></div>
+      </div>
+      <div class="ext-box ext-ddr">
+        <div class="ext-title">DDR5 DRAM</div>
+        <div class="ext-size">256-512 GB</div>
+        <div class="ext-detail">8Ã— DDR5-6400 DIMMs</div>
+      </div>
+    </div>
+    <div class="external-col">
+      <div class="ext-bars">
+        <div class="ext-bar ext-bar-flash"></div>
+      </div>
+      <div class="ext-box ext-flash">
+        <div class="ext-title">NVMe Flash</div>
+        <div class="ext-size">4-16 TB</div>
+        <div class="ext-detail">Cold Tier Storage</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div class="legend">
+    <div class="legend-title">DATA FLOW LEGEND</div>
+    <div class="legend-items">
+      <div class="legend-item">
+        <div class="legend-box cxl"></div>
+        <span class="legend-label cxl">CXL.mem (Data)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-box io"></div>
+        <span class="legend-label io">CXL.io (Control)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-box ucie"></div>
+        <span class="legend-label ucie">UCIe (Internal)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-box ddr"></div>
+        <span class="legend-label ddr">DDR5 (Memory)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bandwidth Table -->
+  <div class="bw-table">
+    <div class="bw-title">BANDWIDTH HIERARCHY</div>
+    <div class="bw-grid">
+      <div class="bw-cell ucie">
+        <div class="bw-label">UCIe Internal</div>
+        <div class="bw-value">1+ TB/s</div>
+      </div>
+      <div class="bw-cell ddr">
+        <div class="bw-label">DDR5 Local</div>
+        <div class="bw-value">409.6 GB/s</div>
+      </div>
+      <div class="bw-cell cxl">
+        <div class="bw-label">CXL External</div>
+        <div class="bw-value">32-64 GB/s</div>
+      </div>
+      <div class="bw-cell nvme">
+        <div class="bw-label">NVMe Flash</div>
+        <div class="bw-value">~14 GB/s</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

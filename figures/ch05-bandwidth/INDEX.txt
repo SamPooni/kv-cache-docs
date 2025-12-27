@@ -1,0 +1,20 @@
+================================================================================
+CH05 - BANDWIDTH - FIGURE INDEX
+================================================================================
+
+Fig 5.1: Single Endpoint Limitation
+      Source: bandwidth-aggregation.html
+
+Fig 5.2: Layer Prefetch Pipeline
+      Source: bandwidth-aggregation.html
+
+Fig 5.3: Overlap Execution & Transfer
+      Source: bandwidth-aggregation.html
+
+Fig 5.4: Multi-GPU Scaling
+      Source: bandwidth-aggregation.html
+
+Fig 5.5: Bandwidth Aggregation
+      Source: bandwidth-aggregation.html
+
+TOTAL: 5 figures

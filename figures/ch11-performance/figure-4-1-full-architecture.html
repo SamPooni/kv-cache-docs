@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Figure 4.1 — Full Architecture</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: system-ui, sans-serif; background: linear-gradient(135deg, #0f172a, #1e293b); min-height: 100vh; color: #e2e8f0; }</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+function FullArchitecture() {
+  const layers = [
+    { name: 'Application Layer', items: ['vLLM', 'TensorRT-LLM', 'Custom Inference'], color: '#10b981' },
+    { name: 'Cache Manager', items: ['Per-head tracking', 'EMA scoring', 'RoPE prefetch'], color: '#3b82f6' },
+    { name: 'CXL Interface', items: ['CXL.mem protocol', 'Load/store semantics', 'Coherency'], color: '#8b5cf6' },
+    { name: 'Hardware', items: ['CXL Switch', '4× Endpoints', 'DDR5 + NVMe'], color: '#f59e0b' }
+  ];
+  const styles = {
+    container: { maxWidth: '800px', margin: '0 auto', padding: '2rem' },
+    header: { textAlign: 'center', marginBottom: '2rem' },
+    stack: { display: 'flex', flexDirection: 'column', gap: '0.5rem' },
+    layer: (color) => ({ background: '#1e293b', borderLeft: `4px solid ${color}`, borderRadius: '0 12px 12px 0', padding: '1.25rem' }),
+    layerName: (color) => ({ fontWeight: 700, color, marginBottom: '0.5rem' }),
+    items: { display: 'flex', gap: '1rem', flexWrap: 'wrap' },
+    item: { background: '#0f172a', padding: '0.5rem 1rem', borderRadius: '8px', fontSize: '0.875rem' },
+    stats: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginTop: '2rem' },
+    stat: { background: '#1e293b', borderRadius: '12px', padding: '1rem', textAlign: 'center' },
+    statVal: { fontSize: '1.5rem', fontWeight: 700, color: '#10b981' },
+    statLabel: { fontSize: '0.75rem', color: '#64748b' }
+  };
+  return (
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <div style={{display: 'inline-block', padding: '0.25rem 0.75rem', background: 'rgba(16,185,129,0.2)', color: '#34d399', fontSize: '0.75rem', fontFamily: 'monospace', borderRadius: '20px', marginBottom: '0.5rem'}}>FIGURE 4.1</div>
+        <h1 style={{fontSize: '1.5rem', fontWeight: 700}}>Complete System Architecture</h1>
+      </div>
+      <div style={styles.stack}>
+        {layers.map((l, i) => (
+          <div key={i} style={styles.layer(l.color)}>
+            <div style={styles.layerName(l.color)}>{l.name}</div>
+            <div style={styles.items}>
+              {l.items.map((item, j) => <div key={j} style={styles.item}>{item}</div>)}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={styles.stats}>
+        <div style={styles.stat}><div style={styles.statVal}>6×</div><div style={styles.statLabel}>Memory</div></div>
+        <div style={styles.stat}><div style={styles.statVal}>8×</div><div style={styles.statLabel}>Users</div></div>
+        <div style={styles.stat}><div style={styles.statVal}>95%</div><div style={styles.statLabel}>Hit Rate</div></div>
+        <div style={styles.stat}><div style={styles.statVal}>36%</div><div style={styles.statLabel}>Cost ↓</div></div>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<FullArchitecture />);
+</script>
+</body>
+</html>

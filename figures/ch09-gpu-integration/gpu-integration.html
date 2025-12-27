@@ -1,0 +1,1266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GPU Integration</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  min-height: 100vh;
+  padding: 2rem;
+  color: #e2e8f0;
+}
+
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+/* Header */
+.header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.section-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.35rem 1rem;
+  border-radius: 50px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+
+h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #f8fafc 0%, #94a3b8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  color: #64748b;
+  font-size: 1.1rem;
+}
+
+/* Section Styling */
+.section {
+  background: #1e293b;
+  border-radius: 20px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  border: 1px solid #334155;
+}
+
+.section-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.section-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+}
+
+.section-icon.green { background: linear-gradient(135deg, #22c55e, #16a34a); }
+.section-icon.blue { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+.section-icon.purple { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+.section-icon.orange { background: linear-gradient(135deg, #f97316, #ea580c); }
+.section-icon.cyan { background: linear-gradient(135deg, #06b6d4, #0891b2); }
+
+/* Memory Map Diagram */
+.memory-map-container {
+  display: grid;
+  grid-template-columns: 1fr 80px 1fr;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.memory-block {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.memory-header {
+  padding: 1rem;
+  text-align: center;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.gpu-mem .memory-header {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+}
+
+.cxl-mem .memory-header {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+}
+
+.memory-regions {
+  background: rgba(0,0,0,0.3);
+  padding: 1rem;
+}
+
+.mem-region {
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mem-region:last-child { margin-bottom: 0; }
+
+.mem-region.hbm {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.1));
+  border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+.mem-region.mapped {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.1));
+  border: 1px solid rgba(59, 130, 246, 0.4);
+}
+
+.mem-region.kv {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(139, 92, 246, 0.1));
+  border: 1px solid rgba(139, 92, 246, 0.4);
+}
+
+.mem-region.weights {
+  background: linear-gradient(135deg, rgba(249, 115, 22, 0.2), rgba(249, 115, 22, 0.1));
+  border: 1px solid rgba(249, 115, 22, 0.4);
+}
+
+.region-name {
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+.region-addr {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: #64748b;
+}
+
+/* Bridge Connector */
+.bridge-connector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.bridge-line {
+  width: 60px;
+  height: 3px;
+  background: linear-gradient(90deg, #22c55e, #3b82f6);
+  border-radius: 2px;
+  position: relative;
+}
+
+.bridge-line::before,
+.bridge-line::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  background: inherit;
+  border-radius: 50%;
+  transform: translateY(-50%);
+}
+
+.bridge-line::before { left: -4px; background: #22c55e; }
+.bridge-line::after { right: -4px; background: #3b82f6; }
+
+.bridge-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  color: #64748b;
+  text-align: center;
+  background: rgba(0,0,0,0.3);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+/* Load/Store Semantics */
+.semantics-box {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.05));
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-top: 1rem;
+}
+
+.semantics-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #4ade80;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.semantics-code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  background: rgba(0,0,0,0.4);
+  border-radius: 8px;
+  padding: 1rem;
+  color: #e2e8f0;
+  line-height: 1.8;
+}
+
+.code-comment { color: #64748b; }
+.code-keyword { color: #f472b6; }
+.code-type { color: #60a5fa; }
+.code-var { color: #4ade80; }
+.code-addr { color: #fbbf24; }
+
+/* Hint Interface */
+.hint-api {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.hint-struct {
+  background: rgba(0,0,0,0.3);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.struct-header {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  padding: 0.75rem 1rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  color: white;
+  font-weight: 600;
+}
+
+.struct-body {
+  padding: 1rem;
+}
+
+.struct-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+
+.struct-field:last-child { border-bottom: none; }
+
+.field-type {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: #60a5fa;
+  min-width: 80px;
+}
+
+.field-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: #4ade80;
+  min-width: 100px;
+}
+
+.field-desc {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  flex: 1;
+}
+
+/* Enum Values */
+.enum-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.enum-card {
+  background: rgba(0,0,0,0.3);
+  border-radius: 10px;
+  padding: 1rem;
+  border-left: 3px solid;
+}
+
+.enum-card.kv { border-color: #8b5cf6; }
+.enum-card.weights { border-color: #f97316; }
+.enum-card.activations { border-color: #06b6d4; }
+.enum-card.scratch { border-color: #64748b; }
+
+.enum-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #f8fafc;
+  margin-bottom: 0.35rem;
+}
+
+.enum-desc {
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+/* Driver Flow Diagram */
+.driver-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.flow-stage {
+  display: flex;
+  align-items: stretch;
+  gap: 1rem;
+}
+
+.stage-num {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: white;
+  flex-shrink: 0;
+}
+
+.stage-content {
+  flex: 1;
+  background: rgba(0,0,0,0.3);
+  border-radius: 12px;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.stage-icon {
+  font-size: 1.75rem;
+  flex-shrink: 0;
+}
+
+.stage-details {
+  flex: 1;
+}
+
+.stage-title {
+  font-weight: 600;
+  color: #f8fafc;
+  font-size: 0.95rem;
+  margin-bottom: 0.25rem;
+}
+
+.stage-desc {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.stage-code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.7rem;
+  color: #60a5fa;
+  background: rgba(59, 130, 246, 0.1);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  margin-top: 0.35rem;
+  display: inline-block;
+}
+
+.flow-arrow {
+  display: flex;
+  justify-content: center;
+  padding-left: 20px;
+}
+
+.arrow-line {
+  width: 2px;
+  height: 20px;
+  background: linear-gradient(to bottom, #3b82f6, #8b5cf6);
+  position: relative;
+}
+
+.arrow-line::after {
+  content: "â–¼";
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.6rem;
+  color: #8b5cf6;
+}
+
+/* Mailbox Diagram */
+.mailbox-section {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(6, 182, 212, 0.05));
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  border-radius: 14px;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.mailbox-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #22d3ee;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mailbox-diagram {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.mailbox-node {
+  text-align: center;
+  flex: 1;
+}
+
+.node-box {
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.node-box.driver {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+.node-box.pcie {
+  background: linear-gradient(135deg, #64748b, #475569);
+}
+
+.node-box.firmware {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+}
+
+.node-label {
+  font-weight: 600;
+  color: white;
+  font-size: 0.85rem;
+}
+
+.node-sublabel {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.7);
+}
+
+.mailbox-arrow {
+  font-size: 1.5rem;
+  color: #06b6d4;
+}
+
+.mailbox-packet {
+  background: rgba(0,0,0,0.4);
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-top: 1rem;
+}
+
+.packet-title {
+  font-size: 0.75rem;
+  color: #67e8f9;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.packet-fields {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.packet-field {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  background: rgba(6, 182, 212, 0.2);
+  color: #22d3ee;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+/* Fault Handling */
+.fault-timeline {
+  position: relative;
+  padding-left: 30px;
+  margin-top: 1.5rem;
+}
+
+.fault-timeline::before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(to bottom, #ef4444, #f97316, #eab308, #22c55e);
+  border-radius: 2px;
+}
+
+.fault-step {
+  position: relative;
+  padding: 1rem 0 1rem 2rem;
+}
+
+.fault-dot {
+  position: absolute;
+  left: -22px;
+  top: 1.25rem;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 3px solid #1e293b;
+}
+
+.fault-dot.step1 { background: #ef4444; }
+.fault-dot.step2 { background: #f97316; }
+.fault-dot.step3 { background: #eab308; }
+.fault-dot.step4 { background: #22c55e; }
+
+.fault-card {
+  background: rgba(0,0,0,0.3);
+  border-radius: 12px;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.fault-latency {
+  background: rgba(0,0,0,0.4);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  text-align: center;
+  min-width: 80px;
+}
+
+.latency-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.fault-step:nth-child(1) .latency-value { color: #f87171; }
+.fault-step:nth-child(2) .latency-value { color: #fb923c; }
+.fault-step:nth-child(3) .latency-value { color: #fbbf24; }
+.fault-step:nth-child(4) .latency-value { color: #4ade80; }
+
+.latency-label {
+  font-size: 0.6rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.fault-details {
+  flex: 1;
+}
+
+.fault-title {
+  font-weight: 600;
+  color: #f8fafc;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+
+.fault-desc {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+/* Total Latency */
+.total-latency {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(249, 115, 22, 0.1));
+  border: 2px solid rgba(239, 68, 68, 0.4);
+  border-radius: 14px;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.total-label {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fca5a5;
+}
+
+.total-equation {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+}
+
+.eq-part {
+  padding: 0.4rem 0.6rem;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.eq-part.mmu { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+.eq-part.cxl { background: rgba(249, 115, 22, 0.2); color: #fb923c; }
+.eq-part.pcie { background: rgba(234, 179, 8, 0.2); color: #fbbf24; }
+.eq-part.endpoint { background: rgba(34, 197, 94, 0.2); color: #4ade80; }
+
+.eq-plus { color: #64748b; }
+
+.total-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #f87171;
+}
+
+/* Sequence Diagram */
+.sequence-diagram {
+  background: rgba(0,0,0,0.4);
+  border-radius: 14px;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+  overflow-x: auto;
+}
+
+.seq-header {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #334155;
+}
+
+.seq-actor {
+  text-align: center;
+  min-width: 100px;
+}
+
+.actor-box {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 0.5rem;
+}
+
+.actor-box.gpu { background: linear-gradient(135deg, #22c55e, #16a34a); }
+.actor-box.mmu { background: linear-gradient(135deg, #ef4444, #dc2626); }
+.actor-box.cxl { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+.actor-box.endpoint { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+
+.actor-line {
+  width: 2px;
+  height: 250px;
+  background: #334155;
+  margin: 0 auto;
+  position: relative;
+}
+
+.seq-messages {
+  position: relative;
+  height: 250px;
+  margin-top: -250px;
+}
+
+.seq-msg {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  font-size: 0.7rem;
+  color: #94a3b8;
+}
+
+.msg-arrow {
+  height: 2px;
+  background: #64748b;
+  position: relative;
+}
+
+.msg-arrow::after {
+  content: "â–¶";
+  position: absolute;
+  right: -2px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.5rem;
+  color: #64748b;
+}
+
+.msg-arrow.reverse::after {
+  content: "â—€";
+  left: -2px;
+  right: auto;
+}
+
+.msg-label {
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: #1e293b;
+  padding: 0.15rem 0.4rem;
+  border-radius: 3px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+}
+
+/* Comparison Table */
+.comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1.5rem;
+}
+
+.comparison-table th,
+.comparison-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #334155;
+}
+
+.comparison-table th {
+  background: rgba(0,0,0,0.3);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.comparison-table td {
+  font-size: 0.85rem;
+}
+
+.comparison-table tr:hover td {
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.table-highlight {
+  color: #4ade80;
+  font-weight: 600;
+}
+
+.table-dim {
+  color: #64748b;
+}
+
+@media (max-width: 768px) {
+  .memory-map-container { grid-template-columns: 1fr; }
+  .hint-api { grid-template-columns: 1fr; }
+  .enum-grid { grid-template-columns: 1fr; }
+  .mailbox-diagram { flex-direction: column; }
+  .total-latency { flex-direction: column; gap: 1rem; text-align: center; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="section-badge">Section 8</div>
+    <h1>GPU Integration</h1>
+    <p class="subtitle">Memory mapping, hint interfaces, and fault handling for CXL.mem</p>
+  </div>
+
+  <!-- 8.1 Memory Mapping -->
+  <div class="section">
+    <div class="section-title">
+      <div class="section-icon green">ðŸ—ºï¸</div>
+      8.1 Memory Mapping
+    </div>
+
+    <p style="color: #94a3b8; margin-bottom: 1.5rem;">
+      CXL.mem regions appear in the GPU's unified virtual address space via PCIe BAR mapping with CXL.mem bridging.
+      The GPU accesses remote memory using standard <strong style="color: #4ade80;">load/store semantics</strong>.
+    </p>
+
+    <div class="memory-map-container">
+      <!-- GPU Memory -->
+      <div class="memory-block gpu-mem">
+        <div class="memory-header">GPU Virtual Address Space</div>
+        <div class="memory-regions">
+          <div class="mem-region hbm">
+            <div>
+              <div class="region-name">HBM (Local)</div>
+              <div class="region-addr">0x0000 â€” 0x4FFF</div>
+            </div>
+            <span style="font-size: 0.7rem; color: #4ade80;">192 GB</span>
+          </div>
+          <div class="mem-region mapped">
+            <div>
+              <div class="region-name">CXL.mem Region 0</div>
+              <div class="region-addr">0x5000 â€” 0x8FFF</div>
+            </div>
+            <span style="font-size: 0.7rem; color: #60a5fa;">64 GB</span>
+          </div>
+          <div class="mem-region mapped">
+            <div>
+              <div class="region-name">CXL.mem Region 1</div>
+              <div class="region-addr">0x9000 â€” 0xCFFF</div>
+            </div>
+            <span style="font-size: 0.7rem; color: #60a5fa;">64 GB</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bridge -->
+      <div class="bridge-connector">
+        <div class="bridge-label">CXL.mem<br>Bridge</div>
+        <div class="bridge-line"></div>
+        <div class="bridge-label">load/store<br>semantics</div>
+      </div>
+
+      <!-- CXL Memory -->
+      <div class="memory-block cxl-mem">
+        <div class="memory-header">Endpoint Physical Memory</div>
+        <div class="memory-regions">
+          <div class="mem-region kv">
+            <div>
+              <div class="region-name">KV-Cache Pool</div>
+              <div class="region-addr">EP0: 0x0000</div>
+            </div>
+            <span style="font-size: 0.7rem; color: #a78bfa;">48 GB</span>
+          </div>
+          <div class="mem-region weights">
+            <div>
+              <div class="region-name">Model Weights</div>
+              <div class="region-addr">EP0: 0x3000</div>
+            </div>
+            <span style="font-size: 0.7rem; color: #fb923c;">64 GB</span>
+          </div>
+          <div class="mem-region kv">
+            <div>
+              <div class="region-name">KV-Cache Overflow</div>
+              <div class="region-addr">EP1: 0x0000</div>
+            </div>
+            <span style="font-size: 0.7rem; color: #a78bfa;">128 GB</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Load/Store Semantics -->
+    <div class="semantics-box">
+      <div class="semantics-title">
+        <span>ðŸ’»</span> GPU Kernel Access Pattern
+      </div>
+      <div class="semantics-code">
+        <span class="code-comment">// GPU kernel accessing CXL.mem KV-cache</span><br>
+        <span class="code-keyword">__global__</span> <span class="code-type">void</span> <span class="code-var">attention_kernel</span>(<span class="code-type">float*</span> kv_cache) {<br>
+        &nbsp;&nbsp;<span class="code-comment">// Direct load from CXL.mem address</span><br>
+        &nbsp;&nbsp;<span class="code-type">float4</span> kv = *(<span class="code-type">float4*</span>)(<span class="code-addr">kv_cache + offset</span>);<br>
+        &nbsp;&nbsp;<br>
+        &nbsp;&nbsp;<span class="code-comment">// GPU MMU translates VA â†’ CXL.mem address</span><br>
+        &nbsp;&nbsp;<span class="code-comment">// CXL bridge handles coherent access</span><br>
+        &nbsp;&nbsp;<span class="code-comment">// No explicit DMA, no driver intervention</span><br>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- 8.2 Hint Interface -->
+  <div class="section">
+    <div class="section-title">
+      <div class="section-icon purple">ðŸ“‹</div>
+      8.2 Hint Interface
+    </div>
+
+    <p style="color: #94a3b8; margin-bottom: 1.5rem;">
+      Extended allocation API communicates memory characteristics to the endpoint, enabling intelligent caching and prefetch decisions.
+    </p>
+
+    <div class="hint-api">
+      <!-- Allocation Hints Struct -->
+      <div class="hint-struct">
+        <div class="struct-header">struct cxl_alloc_hints</div>
+        <div class="struct-body">
+          <div class="struct-field">
+            <span class="field-type">enum</span>
+            <span class="field-name">data_type</span>
+            <span class="field-desc">KV_CACHE, WEIGHTS, ACTIVATIONS, SCRATCH</span>
+          </div>
+          <div class="struct-field">
+            <span class="field-type">enum</span>
+            <span class="field-name">access_pattern</span>
+            <span class="field-desc">SEQUENTIAL, RANDOM, STRIDED, BROADCAST</span>
+          </div>
+          <div class="struct-field">
+            <span class="field-type">enum</span>
+            <span class="field-name">consistency</span>
+            <span class="field-desc">RELAXED, ACQUIRE_RELEASE, SEQ_CST</span>
+          </div>
+          <div class="struct-field">
+            <span class="field-type">u32</span>
+            <span class="field-name">prefetch_window</span>
+            <span class="field-desc">Lookahead distance in cache lines</span>
+          </div>
+          <div class="struct-field">
+            <span class="field-type">u32</span>
+            <span class="field-name">priority</span>
+            <span class="field-desc">Eviction priority (0 = evict first)</span>
+          </div>
+          <div class="struct-field">
+            <span class="field-type">u64</span>
+            <span class="field-name">expected_size</span>
+            <span class="field-desc">Allocation size hint for placement</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Prefetch Params -->
+      <div class="hint-struct">
+        <div class="struct-header">struct prefetch_params</div>
+        <div class="struct-body">
+          <div class="struct-field">
+            <span class="field-type">u32</span>
+            <span class="field-name">window_size</span>
+            <span class="field-desc">Number of entries to prefetch ahead</span>
+          </div>
+          <div class="struct-field">
+            <span class="field-type">u32</span>
+            <span class="field-name">stride</span>
+            <span class="field-desc">Access stride for strided patterns</span>
+          </div>
+          <div class="struct-field">
+            <span class="field-type">bool</span>
+            <span class="field-name">rope_aware</span>
+            <span class="field-desc">Enable RoPE position locality</span>
+          </div>
+          <div class="struct-field">
+            <span class="field-type">u32</span>
+            <span class="field-name">rope_window</span>
+            <span class="field-desc">Position window [P-W, P+W]</span>
+          </div>
+          <div class="struct-field">
+            <span class="field-type">float</span>
+            <span class="field-name">ema_alpha</span>
+            <span class="field-desc">EMA decay for attention scoring</span>
+          </div>
+          <div class="struct-field">
+            <span class="field-type">u32</span>
+            <span class="field-name">head_count</span>
+            <span class="field-desc">GQA head count for per-head tracking</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Data Type Enums -->
+    <div class="enum-grid">
+      <div class="enum-card kv">
+        <div class="enum-name">DATA_TYPE_KV_CACHE</div>
+        <div class="enum-desc">Per-head eviction, EMA scoring, RoPE prefetch enabled</div>
+      </div>
+      <div class="enum-card weights">
+        <div class="enum-name">DATA_TYPE_WEIGHTS</div>
+        <div class="enum-desc">Read-only, layer prefetch, broadcast-optimized</div>
+      </div>
+      <div class="enum-card activations">
+        <div class="enum-name">DATA_TYPE_ACTIVATIONS</div>
+        <div class="enum-desc">High-bandwidth, sequential, short-lived</div>
+      </div>
+      <div class="enum-card scratch">
+        <div class="enum-name">DATA_TYPE_SCRATCH</div>
+        <div class="enum-desc">Temporary workspace, lowest eviction priority</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8.3 Driver Translation -->
+  <div class="section">
+    <div class="section-title">
+      <div class="section-icon blue">âš™ï¸</div>
+      8.3 Driver â†’ Firmware Translation
+    </div>
+
+    <p style="color: #94a3b8; margin-bottom: 1rem;">
+      The GPU driver translates allocation hints into endpoint firmware configuration via CXL.io mailbox commands.
+    </p>
+
+    <div class="driver-flow">
+      <div class="flow-stage">
+        <div class="stage-num">1</div>
+        <div class="stage-content">
+          <div class="stage-icon">ðŸ“</div>
+          <div class="stage-details">
+            <div class="stage-title">Application Allocation Request</div>
+            <div class="stage-desc">Runtime calls extended allocation API with hints</div>
+            <div class="stage-code">cxl_malloc(size, &hints)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-arrow"><div class="arrow-line"></div></div>
+
+      <div class="flow-stage">
+        <div class="stage-num">2</div>
+        <div class="stage-content">
+          <div class="stage-icon">ðŸ”„</div>
+          <div class="stage-details">
+            <div class="stage-title">Driver Hint Processing</div>
+            <div class="stage-desc">Driver validates hints, selects target endpoint based on capacity and locality</div>
+            <div class="stage-code">select_endpoint(hints) â†’ EP0</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-arrow"><div class="arrow-line"></div></div>
+
+      <div class="flow-stage">
+        <div class="stage-num">3</div>
+        <div class="stage-content">
+          <div class="stage-icon">ðŸ“¦</div>
+          <div class="stage-details">
+            <div class="stage-title">Mailbox Command Construction</div>
+            <div class="stage-desc">Pack hints into CXL.io mailbox payload with vendor-specific extensions</div>
+            <div class="stage-code">build_mailbox_cmd(VENDOR_ALLOC, hints)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-arrow"><div class="arrow-line"></div></div>
+
+      <div class="flow-stage">
+        <div class="stage-num">4</div>
+        <div class="stage-content">
+          <div class="stage-icon">ðŸ“¡</div>
+          <div class="stage-details">
+            <div class="stage-title">CXL.io Mailbox Transfer</div>
+            <div class="stage-desc">Command sent over PCIe to endpoint controller</div>
+            <div class="stage-code">cxl_mailbox_send(ep, cmd)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flow-arrow"><div class="arrow-line"></div></div>
+
+      <div class="flow-stage">
+        <div class="stage-num">5</div>
+        <div class="stage-content">
+          <div class="stage-icon">ðŸ§ </div>
+          <div class="stage-details">
+            <div class="stage-title">Firmware Configuration</div>
+            <div class="stage-desc">Endpoint firmware configures caching policy, prefetcher, and eviction strategy</div>
+            <div class="stage-code">configure_region(addr, policy)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mailbox Detail -->
+    <div class="mailbox-section">
+      <div class="mailbox-title">
+        <span>ðŸ“¬</span> CXL.io Mailbox Protocol
+      </div>
+
+      <div class="mailbox-diagram">
+        <div class="mailbox-node">
+          <div class="node-box driver">
+            <div class="node-label">GPU Driver</div>
+            <div class="node-sublabel">Host CPU</div>
+          </div>
+        </div>
+        <div class="mailbox-arrow">â†’</div>
+        <div class="mailbox-node">
+          <div class="node-box pcie">
+            <div class="node-label">PCIe / CXL.io</div>
+            <div class="node-sublabel">Transport</div>
+          </div>
+        </div>
+        <div class="mailbox-arrow">â†’</div>
+        <div class="mailbox-node">
+          <div class="node-box firmware">
+            <div class="node-label">Endpoint FW</div>
+            <div class="node-sublabel">ARM Cores</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mailbox-packet">
+        <div class="packet-title">Mailbox Command Payload</div>
+        <div class="packet-fields">
+          <span class="packet-field">opcode: 0xC0 (VENDOR_ALLOC)</span>
+          <span class="packet-field">size: 4096</span>
+          <span class="packet-field">data_type: KV_CACHE</span>
+          <span class="packet-field">pattern: RANDOM</span>
+          <span class="packet-field">prefetch_window: 64</span>
+          <span class="packet-field">ema_alpha: 0.2</span>
+          <span class="packet-field">head_count: 8</span>
+          <span class="packet-field">rope_aware: true</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8.4 Fault Handling -->
+  <div class="section">
+    <div class="section-title">
+      <div class="section-icon orange">âš¡</div>
+      8.4 Fault Handling & Latency Breakdown
+    </div>
+
+    <p style="color: #94a3b8; margin-bottom: 1rem;">
+      When GPU accesses an uncached CXL.mem address, a fault triggers the full access path. Total latency is the sum of each stage.
+    </p>
+
+    <div class="fault-timeline">
+      <div class="fault-step">
+        <div class="fault-dot step1"></div>
+        <div class="fault-card">
+          <div class="fault-latency">
+            <div class="latency-value">~50 ns</div>
+            <div class="latency-label">Latency</div>
+          </div>
+          <div class="fault-details">
+            <div class="fault-title">GPU MMU Handling</div>
+            <div class="fault-desc">TLB miss, page table walk, virtual â†’ physical translation. GPU MMU identifies CXL.mem region from PTE flags.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="fault-step">
+        <div class="fault-dot step2"></div>
+        <div class="fault-card">
+          <div class="fault-latency">
+            <div class="latency-value">~30 ns</div>
+            <div class="latency-label">Latency</div>
+          </div>
+          <div class="fault-details">
+            <div class="fault-title">CXL Protocol Processing</div>
+            <div class="fault-desc">CXL.mem request formation, coherence state check (if applicable), request queuing at CXL bridge.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="fault-step">
+        <div class="fault-dot step3"></div>
+        <div class="fault-card">
+          <div class="fault-latency">
+            <div class="latency-value">~70 ns</div>
+            <div class="latency-label">Latency</div>
+          </div>
+          <div class="fault-details">
+            <div class="fault-title">PCIe Transmission</div>
+            <div class="fault-desc">Request traverses PCIe 5.0 link (or CXL 3.0 fabric if through switch). Round-trip wire delay + PHY processing.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="fault-step">
+        <div class="fault-dot step4"></div>
+        <div class="fault-card">
+          <div class="fault-latency">
+            <div class="latency-value">~50 ns</div>
+            <div class="latency-label">Latency</div>
+          </div>
+          <div class="fault-details">
+            <div class="fault-title">Endpoint Memory Access</div>
+            <div class="fault-desc">Endpoint controller processes request, accesses local DRAM (or triggers flash fetch if uncached), returns data.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Total Latency -->
+    <div class="total-latency">
+      <div class="total-label">Total Fault Latency</div>
+      <div class="total-equation">
+        <span class="eq-part mmu">MMU</span>
+        <span class="eq-plus">+</span>
+        <span class="eq-part cxl">CXL</span>
+        <span class="eq-plus">+</span>
+        <span class="eq-part pcie">PCIe</span>
+        <span class="eq-plus">+</span>
+        <span class="eq-part endpoint">Endpoint</span>
+        <span class="eq-plus">=</span>
+      </div>
+      <div class="total-value">~200 ns</div>
+    </div>
+
+    <!-- Comparison -->
+    <table class="comparison-table">
+      <thead>
+        <tr>
+          <th>Access Type</th>
+          <th>Latency</th>
+          <th>Bandwidth</th>
+          <th>CPU Involved</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>HBM (Local)</td>
+          <td class="table-highlight">~30 ns</td>
+          <td>8 TB/s</td>
+          <td class="table-dim">No</td>
+        </tr>
+        <tr>
+          <td>CXL.mem (Direct)</td>
+          <td>~200 ns</td>
+          <td>64 GB/s per EP</td>
+          <td class="table-dim">No</td>
+        </tr>
+        <tr>
+          <td>PCIe DMA (Traditional)</td>
+          <td class="table-dim">~13 Î¼s</td>
+          <td>64 GB/s</td>
+          <td style="color: #f87171;">Yes (driver)</td>
+        </tr>
+        <tr>
+          <td>NVMe Read</td>
+          <td class="table-dim">~10-20 Î¼s</td>
+          <td>14 GB/s</td>
+          <td style="color: #f87171;">Yes (filesystem)</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div>
+</body>
+</html>

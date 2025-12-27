@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Section 2.1 — Inference Fundamentals</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: system-ui, sans-serif; background: linear-gradient(135deg, #0f172a, #1e293b); min-height: 100vh; color: #e2e8f0; }</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState } = React;
+function InferenceFundamentals() {
+  const [view, setView] = useState('overview');
+  const styles = {
+    container: { maxWidth: '900px', margin: '0 auto', padding: '2rem' },
+    tabs: { display: 'flex', gap: '0.5rem', marginBottom: '2rem', justifyContent: 'center' },
+    tab: (active) => ({ padding: '0.75rem 1.5rem', background: active ? '#3b82f6' : '#334155', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: active ? 600 : 400 }),
+    card: { background: '#1e293b', borderRadius: '16px', padding: '1.5rem', marginBottom: '1rem' },
+    title: { fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem', color: '#60a5fa' },
+    text: { color: '#94a3b8', lineHeight: 1.6 },
+    highlight: { color: '#10b981', fontWeight: 600 },
+    grid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' },
+    stat: { background: '#0f172a', borderRadius: '8px', padding: '1rem', textAlign: 'center' },
+    statVal: { fontSize: '1.5rem', fontWeight: 700, color: '#60a5fa' },
+    statLabel: { fontSize: '0.75rem', color: '#64748b' }
+  };
+  return (
+    <div style={styles.container}>
+      <div style={{textAlign: 'center', marginBottom: '2rem'}}>
+        <h1 style={{fontSize: '1.75rem', fontWeight: 700}}>Inference Fundamentals</h1>
+      </div>
+      <div style={styles.tabs}>
+        <button style={styles.tab(view === 'overview')} onClick={() => setView('overview')}>Overview</button>
+        <button style={styles.tab(view === 'memory')} onClick={() => setView('memory')}>Memory</button>
+        <button style={styles.tab(view === 'compute')} onClick={() => setView('compute')}>Compute</button>
+      </div>
+      {view === 'overview' && (
+        <div style={styles.card}>
+          <div style={styles.title}>LLM Inference Pipeline</div>
+          <div style={styles.text}>
+            <p>LLM inference consists of two distinct phases:</p>
+            <p style={{marginTop: '1rem'}}><span style={styles.highlight}>1. Prefill</span> — Process the entire input prompt in parallel, building the KV-cache</p>
+            <p style={{marginTop: '0.5rem'}}><span style={styles.highlight}>2. Decode</span> — Generate tokens one at a time, reading from KV-cache each step</p>
+          </div>
+        </div>
+      )}
+      {view === 'memory' && (
+        <div style={styles.card}>
+          <div style={styles.title}>Memory Requirements</div>
+          <div style={styles.grid}>
+            <div style={styles.stat}><div style={styles.statVal}>140 GB</div><div style={styles.statLabel}>Llama-70B Weights</div></div>
+            <div style={styles.stat}><div style={styles.statVal}>41 GB</div><div style={styles.statLabel}>KV-Cache @ 128K</div></div>
+            <div style={styles.stat}><div style={styles.statVal}>192 GB</div><div style={styles.statLabel}>B200 HBM</div></div>
+            <div style={styles.stat}><div style={{...styles.statVal, color: '#ef4444'}}>Overflow!</div><div style={styles.statLabel}>With just 1 user</div></div>
+          </div>
+        </div>
+      )}
+      {view === 'compute' && (
+        <div style={styles.card}>
+          <div style={styles.title}>Compute Characteristics</div>
+          <div style={styles.grid}>
+            <div style={styles.stat}><div style={styles.statVal}>Prefill</div><div style={styles.statLabel}>Compute-bound (high FLOP/byte)</div></div>
+            <div style={styles.stat}><div style={styles.statVal}>Decode</div><div style={styles.statLabel}>Memory-bound (low FLOP/byte)</div></div>
+          </div>
+          <div style={{...styles.text, marginTop: '1rem'}}>Decode reads the entire KV-cache to generate each token, making memory bandwidth the bottleneck.</div>
+        </div>
+      )}
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<InferenceFundamentals />);
+</script>
+</body>
+</html>

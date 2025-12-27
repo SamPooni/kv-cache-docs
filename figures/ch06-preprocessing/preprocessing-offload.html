@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Preprocessing Offload</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  min-height: 100vh;
+  padding: 2rem;
+  color: #e2e8f0;
+}
+
+.container {
+  max-width: 950px;
+  margin: 0 auto;
+}
+
+/* Header */
+.header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.section-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.35rem 1rem;
+  border-radius: 50px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+
+h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #f8fafc 0%, #94a3b8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  color: #64748b;
+  font-size: 1.1rem;
+}
+
+/* Path Comparison */
+.paths-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.path-card {
+  border-radius: 16px;
+  padding: 1.75rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.path-card.traditional {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05));
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.path-card.endpoint {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.05));
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.path-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.path-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.path-icon {
+  font-size: 1.5rem;
+}
+
+.path-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.path-card.traditional .path-name { color: #fca5a5; }
+.path-card.endpoint .path-name { color: #86efac; }
+
+.path-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.3rem 0.75rem;
+  border-radius: 50px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.path-card.traditional .path-badge {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+.path-card.endpoint .path-badge {
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+}
+
+/* Flow Diagram */
+.flow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.flow-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  min-width: 100px;
+  text-align: center;
+}
+
+.flow-node.storage {
+  background: linear-gradient(135deg, #64748b, #475569);
+}
+
+.flow-node.cpu-dram {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+.flow-node.cpu-proc {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+}
+
+.flow-node.gpu-dram {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+}
+
+.flow-node.ep-flash {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+}
+
+.flow-node.ep-dram {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+.flow-node.ep-arm {
+  background: linear-gradient(135deg, #06b6d4, #0891b2);
+}
+
+.flow-node.cxl-mem {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.flow-node.gpu {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+}
+
+.node-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: white;
+}
+
+.node-sublabel {
+  font-size: 0.6rem;
+  color: rgba(255,255,255,0.7);
+}
+
+.flow-arrow {
+  color: #64748b;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.flow-arrow.highlight {
+  color: #4ade80;
+}
+
+/* Bottleneck Indicator */
+.bottleneck {
+  position: relative;
+}
+
+.bottleneck::after {
+  content: "CPU Bottleneck";
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.6rem;
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.2);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+/* Bypass Indicator */
+.bypass-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(34, 197, 94, 0.15);
+  border-radius: 8px;
+  border: 1px dashed rgba(34, 197, 94, 0.4);
+}
+
+.bypass-icon {
+  font-size: 1.1rem;
+}
+
+.bypass-text {
+  font-size: 0.85rem;
+  color: #86efac;
+}
+
+.bypass-text strong {
+  color: #4ade80;
+}
+
+/* Tasks Section */
+.tasks-section {
+  background: #1e293b;
+  border-radius: 20px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  border: 1px solid #334155;
+}
+
+.section-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.section-title-icon {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #06b6d4, #0891b2);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+
+.tasks-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+.task-card {
+  background: rgba(0,0,0,0.3);
+  border-radius: 12px;
+  padding: 1.25rem;
+  text-align: center;
+  border: 1px solid #334155;
+  transition: all 0.2s ease;
+}
+
+.task-card:hover {
+  border-color: #06b6d4;
+  transform: translateY(-2px);
+}
+
+.task-icon {
+  font-size: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+.task-name {
+  font-weight: 600;
+  color: #f8fafc;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+
+.task-detail {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+/* ARM Specs */
+.arm-section {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(6, 182, 212, 0.05));
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  border-radius: 16px;
+  padding: 1.75rem;
+  margin-bottom: 2rem;
+}
+
+.arm-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.arm-logo {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #06b6d4, #0891b2);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: white;
+}
+
+.arm-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #67e8f9;
+}
+
+.arm-subtitle {
+  font-size: 0.85rem;
+  color: #06b6d4;
+}
+
+.arm-factors {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.arm-factor {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(0,0,0,0.2);
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+.factor-icon {
+  font-size: 1.5rem;
+}
+
+.factor-content {
+  flex: 1;
+}
+
+.factor-label {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.factor-value {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+/* Key Insight */
+.insight-section {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(16, 185, 129, 0.1));
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  border-radius: 16px;
+  padding: 1.75rem;
+}
+
+.insight-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.insight-icon {
+  font-size: 1.5rem;
+}
+
+.insight-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #4ade80;
+}
+
+.insight-content {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.insight-diagram {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(0,0,0,0.3);
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+.insight-node {
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: white;
+}
+
+.insight-node.arm { background: #06b6d4; }
+.insight-node.cxl { background: #10b981; }
+.insight-node.gpu { background: #22c55e; }
+
+.insight-arrow {
+  color: #4ade80;
+  font-size: 1rem;
+}
+
+.insight-text {
+  flex: 1;
+  font-size: 0.95rem;
+  color: #86efac;
+  line-height: 1.6;
+}
+
+.insight-text strong {
+  color: #4ade80;
+}
+
+.cpu-crossed {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: rgba(239, 68, 68, 0.2);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  text-decoration: line-through;
+  color: #f87171;
+}
+
+@media (max-width: 768px) {
+  .tasks-grid { grid-template-columns: repeat(2, 1fr); }
+  .arm-factors { grid-template-columns: 1fr; }
+  .flow { justify-content: center; }
+  .insight-content { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="section-badge">Section 6</div>
+    <h1>Preprocessing Offload</h1>
+    <p class="subtitle">Move data preparation to the endpoint, bypass the CPU entirely</p>
+  </div>
+
+  <!-- Path Comparison -->
+  <div class="paths-container">
+    
+    <!-- Traditional Path -->
+    <div class="path-card traditional">
+      <div class="path-header">
+        <div class="path-title">
+          <span class="path-icon">ðŸŒ</span>
+          <span class="path-name">Traditional Path</span>
+        </div>
+        <span class="path-badge">CPU Bound</span>
+      </div>
+      
+      <div class="flow">
+        <div class="flow-node storage">
+          <span class="node-label">Storage</span>
+          <span class="node-sublabel">NVMe</span>
+        </div>
+        <span class="flow-arrow">â†’</span>
+        <div class="flow-node cpu-dram bottleneck">
+          <span class="node-label">CPU DRAM</span>
+          <span class="node-sublabel">DDR5</span>
+        </div>
+        <span class="flow-arrow">â†’</span>
+        <div class="flow-node cpu-proc bottleneck">
+          <span class="node-label">CPU Preprocessing</span>
+          <span class="node-sublabel">x86 cores</span>
+        </div>
+        <span class="flow-arrow">â†’</span>
+        <div class="flow-node gpu-dram">
+          <span class="node-label">GPU DRAM</span>
+          <span class="node-sublabel">via PCIe</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Endpoint Path -->
+    <div class="path-card endpoint">
+      <div class="path-header">
+        <div class="path-title">
+          <span class="path-icon">âš¡</span>
+          <span class="path-name">Endpoint Path</span>
+        </div>
+        <span class="path-badge">Direct to GPU</span>
+      </div>
+      
+      <div class="flow">
+        <div class="flow-node ep-flash">
+          <span class="node-label">Endpoint Flash</span>
+          <span class="node-sublabel">NVMe</span>
+        </div>
+        <span class="flow-arrow highlight">â†’</span>
+        <div class="flow-node ep-dram">
+          <span class="node-label">Endpoint DRAM</span>
+          <span class="node-sublabel">DDR5</span>
+        </div>
+        <span class="flow-arrow highlight">â†’</span>
+        <div class="flow-node ep-arm">
+          <span class="node-label">ARM Preprocessing</span>
+          <span class="node-sublabel">Embedded cores</span>
+        </div>
+        <span class="flow-arrow highlight">â†’</span>
+        <div class="flow-node cxl-mem">
+          <span class="node-label">CXL.mem</span>
+          <span class="node-sublabel">Direct</span>
+        </div>
+        <span class="flow-arrow highlight">â†’</span>
+        <div class="flow-node gpu">
+          <span class="node-label">GPU</span>
+          <span class="node-sublabel">HBM</span>
+        </div>
+      </div>
+
+      <div class="bypass-indicator">
+        <span class="bypass-icon">ðŸš«</span>
+        <span class="bypass-text"><strong>Zero CPU involvement</strong> â€” data flows directly to GPU-accessible memory</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preprocessing Tasks -->
+  <div class="tasks-section">
+    <div class="section-title">
+      <div class="section-title-icon">âš™ï¸</div>
+      Preprocessing Tasks for Embedded ARM
+    </div>
+
+    <div class="tasks-grid">
+      <div class="task-card">
+        <div class="task-icon">ðŸ“</div>
+        <div class="task-name">Tokenization</div>
+        <div class="task-detail">SentencePiece, BPE</div>
+      </div>
+      <div class="task-card">
+        <div class="task-icon">ðŸ–¼ï¸</div>
+        <div class="task-name">Image Decode</div>
+        <div class="task-detail">JPEG/PNG + normalize</div>
+      </div>
+      <div class="task-card">
+        <div class="task-icon">ðŸ”„</div>
+        <div class="task-name">Format Conversion</div>
+        <div class="task-detail">FP32 â†’ FP16/BF16</div>
+      </div>
+      <div class="task-card">
+        <div class="task-icon">ðŸ“¦</div>
+        <div class="task-name">Batching & Padding</div>
+        <div class="task-detail">Sequence alignment</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ARM Performance Factors -->
+  <div class="arm-section">
+    <div class="arm-header">
+      <div class="arm-logo">ARM</div>
+      <div>
+        <div class="arm-title">Embedded ARM Cores</div>
+        <div class="arm-subtitle">Throughput depends on core count and clock speed</div>
+      </div>
+    </div>
+
+    <div class="arm-factors">
+      <div class="arm-factor">
+        <div class="factor-icon">ðŸ”¢</div>
+        <div class="factor-content">
+          <div class="factor-label">Core Count</div>
+          <div class="factor-value">4â€“16 Cortex-A cores</div>
+        </div>
+      </div>
+      <div class="arm-factor">
+        <div class="factor-icon">â±ï¸</div>
+        <div class="factor-content">
+          <div class="factor-label">Clock Speed</div>
+          <div class="factor-value">1.5â€“2.5 GHz</div>
+        </div>
+      </div>
+      <div class="arm-factor">
+        <div class="factor-icon">ðŸ“Š</div>
+        <div class="factor-content">
+          <div class="factor-label">Tokenization Rate</div>
+          <div class="factor-value">~500K tokens/sec</div>
+        </div>
+      </div>
+      <div class="arm-factor">
+        <div class="factor-icon">ðŸ–¼ï¸</div>
+        <div class="factor-content">
+          <div class="factor-label">Image Throughput</div>
+          <div class="factor-value">~1000 img/sec (224Ã—224)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Key Insight -->
+  <div class="insight-section">
+    <div class="insight-header">
+      <span class="insight-icon">ðŸ’¡</span>
+      <span class="insight-title">Key Insight: Direct Data Path</span>
+    </div>
+    
+    <div class="insight-content">
+      <div class="insight-diagram">
+        <div class="insight-node arm">ARM</div>
+        <span class="insight-arrow">â†’</span>
+        <div class="insight-node cxl">CXL.mem</div>
+        <span class="insight-arrow">â†’</span>
+        <div class="insight-node gpu">GPU</div>
+      </div>
+      
+      <div class="insight-text">
+        Data flows directly to GPU-accessible CXL.mem region <strong>without CPU involvement</strong>. 
+        No <span class="cpu-crossed">CPU âŒ</span> copies, no PCIe DMA setup, no interrupt overhead. 
+        The endpoint handles everything from raw storage to GPU-ready tensors.
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,23 @@
+================================================================================
+CH10 - MARKET LANDSCAPE - FIGURE INDEX
+================================================================================
+
+Fig 10.1: Commercial Hardware Comparison
+      Source: market-landscape.html -> CMM-D/B, Apollo, Niagara
+
+Fig 10.2: Software Frameworks Comparison
+      Source: market-landscape.html -> vLLM, Mooncake, FlexGen
+
+Fig 10.3: Academic Papers Overview
+      Source: market-landscape.html -> PNM-KV, CXL-SpecKV, TraCT
+
+Fig 10.4: The Innovation Gap
+      Source: kv-cache-landscape.html
+
+Fig 10.5: The Gap We Fill
+      Source: kv-cache-landscape.html
+
+Fig 10.6: The Opportunity
+      Source: kv-cache-landscape.html
+
+TOTAL: 6 figures

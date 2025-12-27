@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RoPE Prefetch - Worked Example</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: #ffffff;
+  color: #1a1a1a;
+  padding: 2.5rem;
+  line-height: 1.5;
+}
+.container { max-width: 1000px; margin: 0 auto; }
+h1 {
+  font-size: 2.2rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+.subtitle {
+  text-align: center;
+  color: #555;
+  font-size: 1.15rem;
+  margin-bottom: 2.5rem;
+}
+.section { margin-bottom: 2.5rem; }
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+.section-num {
+  width: 36px;
+  height: 36px;
+  background: #6f42c1;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.section-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+.card {
+  background: #fafafa;
+  border: 2px solid #e8e8e8;
+  border-radius: 14px;
+  padding: 1.5rem;
+}
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.config-item {
+  background: #fff;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 1rem;
+  text-align: center;
+}
+.config-label {
+  font-size: 0.85rem;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.25rem;
+}
+.config-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  font-family: 'Fira Code', monospace;
+  color: #6f42c1;
+}
+.config-unit {
+  font-size: 0.9rem;
+  color: #888;
+}
+.sequence-container {
+  overflow-x: auto;
+  padding: 1rem 0;
+}
+.token-sequence {
+  display: flex;
+  gap: 4px;
+  min-width: max-content;
+  justify-content: center;
+}
+.token {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Fira Code', monospace;
+  position: relative;
+}
+.token-pos {
+  font-size: 0.7rem;
+  color: #999;
+  position: absolute;
+  top: -18px;
+}
+.token-id {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.token.storage { background: #f0f0f0; color: #666; border: 2px solid #ddd; }
+.heatmap-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+.heatmap {
+  display: grid;
+  grid-template-columns: repeat(16, 1fr);
+  gap: 2px;
+  padding: 0.5rem;
+  background: #fff;
+  border-radius: 8px;
+  border: 2px solid #e0e0e0;
+}
+.heat-cell {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-family: 'Fira Code', monospace;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+.legend-gradient {
+  width: 150px;
+  height: 16px;
+  border-radius: 4px;
+  background: linear-gradient(to right, #f0f0f0, #ffd700, #ff6b35, #dc3545);
+}
+.formula-box {
+  background: #f8f5ff;
+  border: 2px solid #d4c4f0;
+  border-radius: 10px;
+  padding: 1rem 1.5rem;
+  text-align: center;
+  margin: 1rem 0;
+}
+.formula-text {
+  font-family: 'Fira Code', monospace;
+  font-size: 1.1rem;
+  color: #333;
+}
+.formula-text .highlight { color: #6f42c1; font-weight: 700; }
+.formula-text .red { color: #dc3545; font-weight: 700; }
+.timeline {
+  position: relative;
+  padding-left: 120px;
+}
+.timeline-step {
+  position: relative;
+  padding: 1.25rem;
+  padding-left: 2rem;
+  border-left: 3px solid #e0e0e0;
+}
+.timeline-step:last-child { border-left-color: transparent; }
+.timeline-step::before {
+  content: attr(data-time);
+  position: absolute;
+  left: -120px;
+  top: 1.25rem;
+  width: 100px;
+  text-align: right;
+  font-family: 'Fira Code', monospace;
+  font-size: 0.85rem;
+  color: #6f42c1;
+  font-weight: 600;
+}
+.timeline-dot {
+  position: absolute;
+  left: -10px;
+  top: 1.5rem;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #6f42c1;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 2px #6f42c1;
+}
+.timeline-dot.fetch { background: #ffc107; box-shadow: 0 0 0 2px #ffc107; }
+.timeline-dot.hit { background: #28a745; box-shadow: 0 0 0 2px #28a745; }
+.timeline-dot.miss { background: #dc3545; box-shadow: 0 0 0 2px #dc3545; }
+.step-title {
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-bottom: 0.5rem;
+}
+.step-detail {
+  font-size: 0.95rem;
+  color: #555;
+  margin-bottom: 0.75rem;
+}
+.step-cache {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.mini-token {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: 'Fira Code', monospace;
+}
+.mini-token.cached { background: #d4edda; color: #155724; border: 1px solid #28a745; }
+.mini-token.new { background: #fff3cd; color: #856404; border: 1px solid #ffc107; }
+.mini-token.evict { background: #f8d7da; color: #721c24; border: 1px solid #dc3545; text-decoration: line-through; }
+.cache-label {
+  font-size: 0.8rem;
+  color: #888;
+  margin-right: 0.5rem;
+}
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+.stat-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 1.25rem;
+  text-align: center;
+  border: 2px solid #e0e0e0;
+}
+.stat-card.good { border-color: #28a745; background: #f8fff8; }
+.stat-card.neutral { border-color: #6f42c1; background: #faf8ff; }
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  font-family: 'Fira Code', monospace;
+}
+.stat-card.good .stat-value { color: #28a745; }
+.stat-card.neutral .stat-value { color: #6f42c1; }
+.stat-label {
+  font-size: 0.85rem;
+  color: #666;
+  margin-top: 0.25rem;
+}
+.comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+.compare-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.25rem;
+  border: 2px solid #e0e0e0;
+}
+.compare-card.winner {
+  border-color: #28a745;
+  box-shadow: 0 4px 12px rgba(40,167,69,0.15);
+}
+.compare-title {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.compare-card.winner .compare-title { color: #28a745; }
+.compare-stat {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #eee;
+  font-size: 0.95rem;
+}
+.compare-stat:last-child { border-bottom: none; }
+.compare-stat-value { font-weight: 600; font-family: 'Fira Code', monospace; }
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.badge.success { background: #d4edda; color: #155724; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>RoPE Prefetch: Worked Example</h1>
+  <p class="subtitle">Step-by-step walkthrough of locality-aware KV-cache prefetching</p>
+
+  <!-- Section 1: Setup -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">1</div>
+      <div class="section-title">Scenario Configuration</div>
+    </div>
+    <div class="card">
+      <div class="config-grid">
+        <div class="config-item">
+          <div class="config-label">Sequence Length</div>
+          <div class="config-value">16</div>
+          <div class="config-unit">tokens</div>
+        </div>
+        <div class="config-item">
+          <div class="config-label">GPU Cache Size</div>
+          <div class="config-value">8</div>
+          <div class="config-unit">KV slots</div>
+        </div>
+        <div class="config-item">
+          <div class="config-label">Prefetch Window</div>
+          <div class="config-value">W = 3</div>
+          <div class="config-unit">Â±3 positions</div>
+        </div>
+        <div class="config-item">
+          <div class="config-label">Storage Latency</div>
+          <div class="config-value">50</div>
+          <div class="config-unit">Âµs per fetch</div>
+        </div>
+      </div>
+      
+      <div class="formula-box">
+        <div class="formula-text">
+          Query at position <span class="red">P</span> â†’ Prefetch 
+          [<span class="highlight">Pâˆ’3</span>, <span class="highlight">P+3</span>] into GPU cache
+        </div>
+      </div>
+
+      <div class="sequence-container" style="margin-top:1.5rem;">
+        <div class="token-sequence">
+          <div class="token storage"><span class="token-pos">0</span><span class="token-id">The</span></div>
+          <div class="token storage"><span class="token-pos">1</span><span class="token-id">quick</span></div>
+          <div class="token storage"><span class="token-pos">2</span><span class="token-id">brown</span></div>
+          <div class="token storage"><span class="token-pos">3</span><span class="token-id">fox</span></div>
+          <div class="token storage"><span class="token-pos">4</span><span class="token-id">jumps</span></div>
+          <div class="token storage"><span class="token-pos">5</span><span class="token-id">over</span></div>
+          <div class="token storage"><span class="token-pos">6</span><span class="token-id">the</span></div>
+          <div class="token storage"><span class="token-pos">7</span><span class="token-id">lazy</span></div>
+          <div class="token storage"><span class="token-pos">8</span><span class="token-id">dog</span></div>
+          <div class="token storage"><span class="token-pos">9</span><span class="token-id">and</span></div>
+          <div class="token storage"><span class="token-pos">10</span><span class="token-id">runs</span></div>
+          <div class="token storage"><span class="token-pos">11</span><span class="token-id">into</span></div>
+          <div class="token storage"><span class="token-pos">12</span><span class="token-id">the</span></div>
+          <div class="token storage"><span class="token-pos">13</span><span class="token-id">dark</span></div>
+          <div class="token storage"><span class="token-pos">14</span><span class="token-id">forest</span></div>
+          <div class="token storage"><span class="token-pos">15</span><span class="token-id">.</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: Attention Pattern -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">2</div>
+      <div class="section-title">RoPE Attention Distribution (Query @ P=8)</div>
+    </div>
+    <div class="card">
+      <div class="heatmap-container">
+        <div class="heatmap">
+          <div class="heat-cell" style="background:#e8e8e8;color:#666">0</div>
+          <div class="heat-cell" style="background:#f5e6c8;color:#333">1</div>
+          <div class="heat-cell" style="background:#f0d090;color:#333">2</div>
+          <div class="heat-cell" style="background:#e8b860;color:#333">3</div>
+          <div class="heat-cell" style="background:#e09830;color:#fff">4</div>
+          <div class="heat-cell" style="background:#e87830;color:#fff">5</div>
+          <div class="heat-cell" style="background:#f04020;color:#fff">6</div>
+          <div class="heat-cell" style="background:#e81818;color:#fff">7</div>
+          <div class="heat-cell" style="background:#dc3545;color:#fff;box-shadow:0 0 8px #dc3545">Q</div>
+          <div class="heat-cell" style="background:#e82020;color:#fff">9</div>
+          <div class="heat-cell" style="background:#f04828;color:#fff">10</div>
+          <div class="heat-cell" style="background:#e88038;color:#fff">11</div>
+          <div class="heat-cell" style="background:#e0a040;color:#333">12</div>
+          <div class="heat-cell" style="background:#e8c068;color:#333">13</div>
+          <div class="heat-cell" style="background:#f0d898;color:#333">14</div>
+          <div class="heat-cell" style="background:#ece0c0;color:#666">15</div>
+        </div>
+        <div class="heatmap-legend">
+          <span>Low attention</span>
+          <div class="legend-gradient"></div>
+          <span>High attention</span>
+        </div>
+        <p style="color:#666; font-size:0.9rem; max-width:600px; text-align:center;">
+          RoPE causes attention to concentrate around the query position. 
+          Positions 5â€“11 (within Â±3 of query P=8) capture <strong>~72%</strong> of total attention mass.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 3: Timeline -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">3</div>
+      <div class="section-title">Prefetch Execution Timeline</div>
+    </div>
+    <div class="card">
+      <div class="timeline">
+        <div class="timeline-step" data-time="t = 0 Âµs">
+          <div class="timeline-dot miss"></div>
+          <div class="step-title">ðŸ”´ Cache Miss: Query P=8 ("dog")</div>
+          <div class="step-detail">
+            GPU requests KV for position 8. Not in cache â†’ fetch from storage.
+            <br>Trigger prefetch for window [5, 11].
+          </div>
+          <div class="step-cache">
+            <span class="cache-label">Cache:</span>
+            <span style="color:#999; font-style:italic;">empty</span>
+          </div>
+        </div>
+
+        <div class="timeline-step" data-time="t = 50 Âµs">
+          <div class="timeline-dot fetch"></div>
+          <div class="step-title">â³ Fetching P=8 + Prefetch [5,11]</div>
+          <div class="step-detail">
+            Storage returns position 8. Async prefetch loads positions 5,6,7,9,10,11.
+          </div>
+          <div class="step-cache">
+            <span class="cache-label">Cache:</span>
+            <div class="mini-token new">5</div>
+            <div class="mini-token new">6</div>
+            <div class="mini-token new">7</div>
+            <div class="mini-token cached" style="box-shadow:0 0 6px #28a745">8</div>
+            <div class="mini-token new">9</div>
+            <div class="mini-token new">10</div>
+            <div class="mini-token new">11</div>
+          </div>
+        </div>
+
+        <div class="timeline-step" data-time="t = 51 Âµs">
+          <div class="timeline-dot hit"></div>
+          <div class="step-title">ðŸŸ¢ Cache Hit: Attention needs P=7 ("lazy")</div>
+          <div class="step-detail">
+            High attention weight to position 7 â†’ already prefetched!
+          </div>
+        </div>
+
+        <div class="timeline-step" data-time="t = 52 Âµs">
+          <div class="timeline-dot hit"></div>
+          <div class="step-title">ðŸŸ¢ Cache Hits: P=6, P=9, P=10</div>
+          <div class="step-detail">
+            Remaining high-attention positions all hit in prefetch window.
+          </div>
+        </div>
+
+        <div class="timeline-step" data-time="t = 100 Âµs">
+          <div class="timeline-dot"></div>
+          <div class="step-title">âž¡ï¸ Next Query: P=12 ("the")</div>
+          <div class="step-detail">
+            Autoregressive decode moves to next token. New window [9, 15].
+            <br>Positions 9,10,11 already cached â†’ only fetch 12,13,14,15.
+          </div>
+          <div class="step-cache">
+            <span class="cache-label">Evict:</span>
+            <div class="mini-token evict">5</div>
+            <div class="mini-token evict">6</div>
+            <div class="mini-token evict">7</div>
+            <div class="mini-token evict">8</div>
+            <span class="cache-label" style="margin-left:1rem;">Keep:</span>
+            <div class="mini-token cached">9</div>
+            <div class="mini-token cached">10</div>
+            <div class="mini-token cached">11</div>
+            <span class="cache-label" style="margin-left:1rem;">New:</span>
+            <div class="mini-token new">12</div>
+            <div class="mini-token new">13</div>
+            <div class="mini-token new">14</div>
+            <div class="mini-token new">15</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 4: Results -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">4</div>
+      <div class="section-title">Performance Results</div>
+    </div>
+    <div class="card">
+      <div class="stats-grid">
+        <div class="stat-card good">
+          <div class="stat-value">85%</div>
+          <div class="stat-label">Cache Hit Rate</div>
+        </div>
+        <div class="stat-card neutral">
+          <div class="stat-value">72%</div>
+          <div class="stat-label">Attention Captured</div>
+        </div>
+        <div class="stat-card good">
+          <div class="stat-value">3.2Ã—</div>
+          <div class="stat-label">Latency Reduction</div>
+        </div>
+        <div class="stat-card neutral">
+          <div class="stat-value">1.4Ã—</div>
+          <div class="stat-label">Bandwidth Overhead</div>
+        </div>
+      </div>
+
+      <div class="comparison" style="margin-top:1.5rem;">
+        <div class="compare-card">
+          <div class="compare-title">âŒ Naive (No Prefetch)</div>
+          <div class="compare-stat">
+            <span>Fetches per query</span>
+            <span class="compare-stat-value">16</span>
+          </div>
+          <div class="compare-stat">
+            <span>Avg latency</span>
+            <span class="compare-stat-value">800 Âµs</span>
+          </div>
+          <div class="compare-stat">
+            <span>Storage round-trips</span>
+            <span class="compare-stat-value">16</span>
+          </div>
+        </div>
+        <div class="compare-card winner">
+          <div class="compare-title">âœ… RoPE Prefetch (W=3) <span class="badge success">Winner</span></div>
+          <div class="compare-stat">
+            <span>Fetches per query</span>
+            <span class="compare-stat-value">7</span>
+          </div>
+          <div class="compare-stat">
+            <span>Avg latency</span>
+            <span class="compare-stat-value">250 Âµs</span>
+          </div>
+          <div class="compare-stat">
+            <span>Storage round-trips</span>
+            <span class="compare-stat-value">2</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 5: Key Insight -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">5</div>
+      <div class="section-title">Key Insight</div>
+    </div>
+    <div class="card" style="background:linear-gradient(135deg, #f8f5ff 0%, #f0fff0 100%);">
+      <div style="display:flex; gap:1.5rem; align-items:center; flex-wrap:wrap;">
+        <div style="flex:1; min-width:280px;">
+          <h3 style="font-size:1.2rem; margin-bottom:0.75rem; color:#333;">
+            RoPE locality = predictable access patterns
+          </h3>
+          <p style="color:#555; font-size:0.95rem; line-height:1.6;">
+            Because rotary position encoding causes attention to concentrate near the query position, 
+            we can <strong>predict</strong> which KV pairs will be needed and fetch them <strong>before</strong> 
+            the GPU stalls. This transforms random storage access into sequential prefetch streams.
+          </p>
+        </div>
+        <div style="background:#fff; border-radius:12px; padding:1.25rem; border:2px solid #d4c4f0; text-align:center;">
+          <div style="font-size:0.9rem; color:#6f42c1; font-weight:600; margin-bottom:0.5rem;">Effective Bandwidth</div>
+          <div style="font-size:2.5rem; font-weight:700; color:#28a745;">4.8 GB/s</div>
+          <div style="font-size:0.85rem; color:#666;">vs 1.5 GB/s naive</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

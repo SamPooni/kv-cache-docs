@@ -1,0 +1,26 @@
+================================================================================
+CH09 - GPU INTEGRATION - FIGURE INDEX
+================================================================================
+
+Fig 9.1: Memory Mapping
+      Source: gpu-integration.html
+
+Fig 9.2: Hint Interface
+      Source: gpu-integration.html
+
+Fig 9.3: Mailbox Protocol
+      Source: gpu-integration.html
+
+Fig 9.4: Fault Handling
+      Source: gpu-integration.html
+
+Fig 9.5: GPU-CXL KV-Cache Integration
+      Source: gpu-cxl-kvcache.html
+
+Fig 9.6: Endpoint Cache Policy (Per KV-Head)
+      Source: gpu-cxl-kvcache.html
+
+Fig 9.7: Tiered Capacity (3 Endpoints)
+      Source: gpu-cxl-kvcache.html
+
+TOTAL: 7 figures

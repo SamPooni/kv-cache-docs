@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Latency Calculations</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: system-ui, sans-serif; background: linear-gradient(135deg, #0f172a, #1e293b); min-height: 100vh; color: #e2e8f0; }</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState } = React;
+function LatencyCalculations() {
+  const [dramHit, setDramHit] = useState(85);
+  const [flashHit, setFlashHit] = useState(14);
+  const missRate = Math.max(0, 100 - dramHit - flashHit);
+  const Ldram = 250; // ns
+  const Lflash = 25000; // ns (25 μs)
+  const Lrecompute = 50000000; // ns (50 ms)
+  const Leff = (dramHit/100) * Ldram + (flashHit/100) * Lflash + (missRate/100) * Lrecompute;
+  const formatLat = (ns) => ns >= 1e6 ? (ns/1e6).toFixed(2) + ' ms' : ns >= 1000 ? (ns/1000).toFixed(1) + ' μs' : ns + ' ns';
+  const styles = {
+    container: { maxWidth: '700px', margin: '0 auto', padding: '2rem' },
+    header: { textAlign: 'center', marginBottom: '2rem' },
+    formula: { background: '#0f172a', borderRadius: '12px', padding: '1.5rem', marginBottom: '2rem', textAlign: 'center', fontFamily: 'monospace', color: '#60a5fa' },
+    sliders: { background: '#1e293b', borderRadius: '16px', padding: '1.5rem', marginBottom: '1.5rem' },
+    slider: { marginBottom: '1.5rem' },
+    sliderLabel: { display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' },
+    input: { width: '100%' },
+    result: { background: 'linear-gradient(135deg, #10b981, #059669)', borderRadius: '16px', padding: '2rem', textAlign: 'center' },
+    resultVal: { fontSize: '2.5rem', fontWeight: 700, color: 'white' },
+    resultLabel: { color: 'rgba(255,255,255,0.8)' },
+    breakdown: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginTop: '1.5rem' },
+    stat: { background: '#0f172a', borderRadius: '8px', padding: '1rem', textAlign: 'center' },
+    statVal: { fontSize: '1.1rem', fontWeight: 600, color: '#60a5fa' },
+    statLabel: { fontSize: '0.7rem', color: '#64748b' }
+  };
+  return (
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <h1 style={{fontSize: '1.5rem', fontWeight: 700}}>Effective Latency Calculator</h1>
+      </div>
+      <div style={styles.formula}>
+        L_eff = α×L_dram + β×L_flash + γ×L_recompute
+      </div>
+      <div style={styles.sliders}>
+        <div style={styles.slider}>
+          <div style={styles.sliderLabel}><span>DRAM Hit Rate (α)</span><span style={{color: '#10b981', fontWeight: 600}}>{dramHit}%</span></div>
+          <input type="range" min="0" max="100" value={dramHit} onChange={e => setDramHit(+e.target.value)} style={styles.input} />
+        </div>
+        <div style={styles.slider}>
+          <div style={styles.sliderLabel}><span>Flash Hit Rate (β)</span><span style={{color: '#f59e0b', fontWeight: 600}}>{flashHit}%</span></div>
+          <input type="range" min="0" max={100 - dramHit} value={flashHit} onChange={e => setFlashHit(Math.min(+e.target.value, 100 - dramHit))} style={styles.input} />
+        </div>
+        <div style={{...styles.sliderLabel, color: '#ef4444'}}>
+          <span>Miss Rate (γ = recompute)</span><span style={{fontWeight: 600}}>{missRate.toFixed(1)}%</span>
+        </div>
+      </div>
+      <div style={styles.result}>
+        <div style={styles.resultVal}>{formatLat(Leff)}</div>
+        <div style={styles.resultLabel}>Effective Latency</div>
+      </div>
+      <div style={styles.breakdown}>
+        <div style={styles.stat}><div style={styles.statVal}>{formatLat((dramHit/100) * Ldram)}</div><div style={styles.statLabel}>DRAM contribution</div></div>
+        <div style={styles.stat}><div style={styles.statVal}>{formatLat((flashHit/100) * Lflash)}</div><div style={styles.statLabel}>Flash contribution</div></div>
+        <div style={styles.stat}><div style={styles.statVal}>{formatLat((missRate/100) * Lrecompute)}</div><div style={styles.statLabel}>Miss contribution</div></div>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<LatencyCalculations />);
+</script>
+</body>
+</html>

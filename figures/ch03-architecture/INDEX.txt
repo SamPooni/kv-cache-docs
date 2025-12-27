@@ -1,0 +1,38 @@
+================================================================================
+CH03 - ARCHITECTURE - FIGURE INDEX
+================================================================================
+
+Fig 3.1: System Topology
+      Source: diagram-architecture-html.html
+
+Fig 3.2: CXL Endpoint Architecture
+      Source: endpoint-diagram.html
+
+Fig 3.3: Endpoint Internal Components
+      Source: endpoint-diagram.html -> Internal Architecture
+
+Fig 3.4: CXL Controller
+      Source: endpoint-diagram.html -> CXL Controller
+
+Fig 3.5: Compute Chiplet
+      Source: endpoint-diagram.html -> Compute Chiplet
+
+Fig 3.6: Memory Subsystem
+      Source: endpoint-diagram.html -> Memory Subsystem
+
+Fig 3.7: CXL 3.0 Coherency Protocol
+      Source: figure-3-1-cxl-architecture.tsx
+
+Fig 3.8: Three-Tier Architecture
+      Source: figure-3-2-memory-hierarchy.tsx -> Tier Specifications
+
+Fig 3.9: Tiered Memory Layout
+      Source: figure-3-2-memory-hierarchy.tsx -> KV-Cache Placement
+
+Fig 3.10: Bandwidth Hierarchy
+      Source: cxl-architecture-diagram.tsx
+
+Fig 3.11: HBM vs CXL Comparison
+      Source: figure-3-2-memory-hierarchy.tsx
+
+TOTAL: 11 figures

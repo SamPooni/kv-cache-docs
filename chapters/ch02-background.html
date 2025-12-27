@@ -9,25 +9,16 @@
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
-  <div class="watermark">
-    © 2025 Subramaniyam (Sam) Pooni<br>
-    All Rights Reserved<br>
-    Proprietary & Confidential
-  </div>
+  <div class="watermark">© 2025 Subramaniyam (Sam) Pooni<br>All Rights Reserved<br>Proprietary & Confidential</div>
 
   <nav class="nav">
     <div class="nav-inner">
-      <a href="../index.html" class="nav-brand">
-        <span class="nav-brand-icon">⚡</span>
-        KV-Cache Architecture
-      </a>
+      <a href="../index.html" class="nav-brand"><span class="nav-brand-icon">⚡</span> KV-Cache Architecture</a>
       <div class="nav-links">
         <a href="ch00-executive-summary.html" class="nav-link"><span class="nav-chapter-num">0</span> Summary</a>
-        <a href="ch01-introduction.html" class="nav-link"><span class="nav-chapter-num">1</span> Introduction</a>
         <a href="ch02-background.html" class="nav-link active"><span class="nav-chapter-num">2</span> Background</a>
-        <a href="ch03-architecture.html" class="nav-link"><span class="nav-chapter-num">3</span> Architecture</a>
         <a href="ch07-kv-cache.html" class="nav-link"><span class="nav-chapter-num">7</span> KV-Cache</a>
-        <a href="../appendix/index.html" class="nav-link">Appendix</a>
+        <a href="../figures/index.html" class="nav-link">📊 Figures</a>
       </div>
     </div>
   </nav>
@@ -36,599 +27,88 @@
     <div class="container">
       <header class="chapter-header">
         <div class="chapter-label">Chapter 2</div>
-        <h1 class="chapter-title">Background</h1>
-        <p class="chapter-subtitle">LLM inference fundamentals, the bandwidth-compute gap in modern hardware, and analysis of current approaches and their limitations.</p>
+        <h1 class="chapter-title">Background: LLM Inference Fundamentals</h1>
+        <p class="chapter-subtitle">Understanding prefill vs decode, the roofline model, and why KV-cache exists.</p>
       </header>
 
-      <!-- Section 2.1: LLM Inference Fundamentals -->
-      <h2>2.1 LLM Inference Fundamentals</h2>
-
-      <p>Understanding how LLM inference works—and why it behaves so differently from training—is essential background for the architectural solutions we propose. This section covers the two distinct phases of inference and how they stress different system resources.</p>
-
-      <h3>Prefill vs Decode Phases</h3>
-
-      <p>LLM inference consists of two fundamentally different computational phases:</p>
-
-      <div class="figure">
-        <div class="figure-label">Figure 2.1 — Inference Phase Comparison</div>
-        <div class="comparison-grid">
-          <div style="background: rgba(88, 166, 255, 0.08); border: 2px solid var(--accent-cyan); border-radius: 12px; padding: 1.5rem;">
-            <h4 style="margin-top: 0; color: var(--accent-cyan); font-size: 1.2rem;">Prefill Phase</h4>
-            <p style="font-size: 0.95rem; margin-bottom: 1rem;">Process the entire input prompt in parallel</p>
-            <div style="display: grid; gap: 0.75rem;">
-              <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border-secondary);">
-                <span style="color: var(--text-muted);">Parallelism</span>
-                <span class="mono highlight">High (1000s of tokens)</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border-secondary);">
-                <span style="color: var(--text-muted);">Bottleneck</span>
-                <span class="mono">Compute-bound</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border-secondary);">
-                <span style="color: var(--text-muted);">GPU Utilization</span>
-                <span class="mono highlight">90-95%</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
-                <span style="color: var(--text-muted);">Latency Impact</span>
-                <span class="mono">TTFT (Time To First Token)</span>
-              </div>
-            </div>
-          </div>
-          <div style="background: rgba(163, 113, 247, 0.08); border: 2px solid var(--accent-purple); border-radius: 12px; padding: 1.5rem;">
-            <h4 style="margin-top: 0; color: var(--accent-purple); font-size: 1.2rem;">Decode Phase</h4>
-            <p style="font-size: 0.95rem; margin-bottom: 1rem;">Generate output tokens one at a time</p>
-            <div style="display: grid; gap: 0.75rem;">
-              <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border-secondary);">
-                <span style="color: var(--text-muted);">Parallelism</span>
-                <span class="mono warning">Low (1 token)</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border-secondary);">
-                <span style="color: var(--text-muted);">Bottleneck</span>
-                <span class="mono danger">Memory-bound</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; border-bottom: 1px solid var(--border-secondary);">
-                <span style="color: var(--text-muted);">GPU Utilization</span>
-                <span class="mono danger">10-20%</span>
-              </div>
-              <div style="display: flex; justify-content: space-between; padding: 0.5rem 0;">
-                <span style="color: var(--text-muted);">Latency Impact</span>
-                <span class="mono">TPOT (Time Per Output Token)</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="figure-caption">The prefill phase processes the input prompt and is compute-bound. The decode phase generates tokens sequentially and is severely memory-bound due to low arithmetic intensity.</div>
+      <div class="stats-grid" style="margin-bottom: 3rem;">
+        <div class="stat-box"><div class="stat-value">8</div><div class="stat-label">Figures in Chapter</div></div>
+        <div class="stat-box"><div class="stat-value">2</div><div class="stat-label">Inference Phases</div></div>
+        <div class="stat-box"><div class="stat-value">1000×</div><div class="stat-label">Recompute Savings</div></div>
       </div>
 
-      <h4>Prefill Phase Details</h4>
+      <h2>2.1 Inference Fundamentals</h2>
 
-      <p>During prefill, the model processes all input tokens simultaneously. This enables efficient matrix-matrix multiplications with high arithmetic intensity:</p>
-
-      <ul>
-        <li><strong>Input:</strong> Full prompt (e.g., 32K tokens for a document)</li>
-        <li><strong>Operation:</strong> Batched attention and FFN across all positions</li>
-        <li><strong>Output:</strong> KV-cache populated for all input tokens</li>
-        <li><strong>Character:</strong> Compute-bound, GPU fully utilized</li>
-      </ul>
-
-      <p>Prefill latency is typically 1-10 seconds for long contexts, appearing to users as the "thinking" time before the first token appears.</p>
-
-      <h4>Decode Phase Details</h4>
-
-      <p>During decode, the model generates one token at a time. Each token requires reading the entire model and accumulated KV-cache:</p>
-
-      <ul>
-        <li><strong>Input:</strong> Previously generated tokens + KV-cache</li>
-        <li><strong>Operation:</strong> Single-token attention against full context</li>
-        <li><strong>Output:</strong> One new token + updated KV-cache</li>
-        <li><strong>Character:</strong> Memory-bound, GPU waiting on data</li>
-      </ul>
-
-      <p>Decode determines the perceived "speed" of generation—typically 20-50 tokens/second for optimal user experience.</p>
-
-      <h3>Memory Access Pattern Analysis</h3>
-
-      <p>The decode phase creates a distinctive memory access pattern that we exploit for caching:</p>
-
-      <div class="figure">
-        <div class="figure-label">Figure 2.2 — Decode Phase Memory Access</div>
-        <div style="display: flex; flex-direction: column; gap: 1rem; margin: 1rem 0;">
-          <div style="display: flex; align-items: center; gap: 1rem;">
-            <div style="width: 120px; text-align: right; font-size: 0.9rem; color: var(--text-muted);">Model Weights</div>
-            <div style="flex: 1; height: 40px; background: var(--bg-primary); border-radius: 6px; overflow: hidden;">
-              <div style="width: 100%; height: 100%; background: var(--accent-cyan); display: flex; align-items: center; padding-left: 1rem; font-size: 0.85rem; color: #fff;">140 GB — Full read every token</div>
-            </div>
-          </div>
-          <div style="display: flex; align-items: center; gap: 1rem;">
-            <div style="width: 120px; text-align: right; font-size: 0.9rem; color: var(--text-muted);">KV-Cache</div>
-            <div style="flex: 1; height: 40px; background: var(--bg-primary); border-radius: 6px; overflow: hidden;">
-              <div style="width: 60%; height: 100%; background: var(--accent-purple); display: flex; align-items: center; padding-left: 1rem; font-size: 0.85rem; color: #fff;">41 GB @ 128K — Full read every token</div>
-            </div>
-          </div>
-          <div style="display: flex; align-items: center; gap: 1rem;">
-            <div style="width: 120px; text-align: right; font-size: 0.9rem; color: var(--text-muted);">Activations</div>
-            <div style="flex: 1; height: 40px; background: var(--bg-primary); border-radius: 6px; overflow: hidden;">
-              <div style="width: 8%; height: 100%; background: var(--accent-green); display: flex; align-items: center; padding-left: 1rem; font-size: 0.85rem; color: #fff;">~5 GB</div>
-            </div>
-          </div>
+      <div class="figure-embed" style="margin: 2rem 0;">
+        <div class="figure-embed-header">
+          <span class="figure-embed-label">Visual Appendix — Background Figures</span>
+          <a href="../figures/ch02-background/visual-appendix.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
         </div>
-        <div style="margin-top: 1rem; padding: 1rem; background: var(--bg-tertiary); border-radius: 8px;">
-          <div style="font-family: var(--font-mono); font-size: 0.95rem; color: var(--text-primary);">
-            Total per token: 140 + 41 = <strong>181 GB</strong>
-          </div>
-          <div style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.5rem;">
-            At 20 tokens/sec: 181 GB × 20 = <strong>3.62 TB/s</strong> bandwidth requirement
-          </div>
-        </div>
-        <div class="figure-caption">Every generated token requires reading the full model weights plus the entire KV-cache. This creates massive bandwidth demand that dominates decode latency.</div>
+        <iframe src="../figures/ch02-background/visual-appendix.html" style="width:100%;height:800px;border:none;"></iframe>
       </div>
 
-      <h3>KV-Cache Growth Dynamics</h3>
+      <h2>2.2 Prefill vs Decode Phases</h2>
 
-      <p>The KV-cache grows monotonically during a generation session. Understanding this growth is critical for capacity planning:</p>
-
-      <div class="figure">
-        <div class="figure-label">Figure 2.3 — KV-Cache Size by Context Length (Llama-70B)</div>
-        <div class="bar-chart">
-          <div class="bar-row">
-            <span class="bar-label">2K tokens</span>
-            <div class="bar-container">
-              <div class="bar-fill" style="width: 2%; min-width: 55px; background: var(--accent-green);">0.6 GB</div>
-            </div>
-          </div>
-          <div class="bar-row">
-            <span class="bar-label">8K tokens</span>
-            <div class="bar-container">
-              <div class="bar-fill" style="width: 8%; background: var(--accent-green);">2.6 GB</div>
-            </div>
-          </div>
-          <div class="bar-row">
-            <span class="bar-label">32K tokens</span>
-            <div class="bar-container">
-              <div class="bar-fill" style="width: 12%; background: var(--accent-cyan);">10 GB</div>
-            </div>
-          </div>
-          <div class="bar-row">
-            <span class="bar-label">128K tokens</span>
-            <div class="bar-container">
-              <div class="bar-fill" style="width: 45%; background: var(--accent-cyan);">41 GB</div>
-            </div>
-          </div>
-          <div class="bar-row">
-            <span class="bar-label">512K tokens</span>
-            <div class="bar-container">
-              <div class="bar-fill" style="width: 85%; background: var(--accent-orange);">164 GB</div>
-            </div>
-          </div>
-          <div class="bar-row">
-            <span class="bar-label">1M tokens</span>
-            <div class="bar-container">
-              <div class="bar-fill" style="width: 100%; background: var(--accent-red);">320 GB</div>
-            </div>
-          </div>
+      <div class="figure-embed" style="margin: 2rem 0;">
+        <div class="figure-embed-header">
+          <span class="figure-embed-label">Figure 2.1-2.3 — Inference Phases</span>
+          <a href="../figures/ch02-background/figure-2-1-inference-phases.html" target="_blank" class="figure-embed-link">View Source ↗</a>
         </div>
-        <div class="figure-caption">KV-cache grows at 320 KB per token for Llama-70B with GQA. Even 128K context (common for document processing) consumes 41 GB per user.</div>
+        <iframe src="../figures/ch02-background/figure-2-1-inference-phases.html" style="width:100%;height:500px;border:none;background:#1a1a2e;"></iframe>
       </div>
 
-      <!-- Section 2.2: The Bandwidth-Compute Gap -->
-      <h2>2.2 The Bandwidth-Compute Gap</h2>
-
-      <p>Modern GPUs are designed for training workloads with high arithmetic intensity. LLM decode's memory-bound nature exposes a fundamental mismatch between hardware capabilities and workload requirements.</p>
-
-      <h3>H100/B200 Specifications</h3>
-
-      <div class="figure">
-        <div class="figure-label">Figure 2.4 — GPU Memory Specifications</div>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Specification</th>
-                <th>H100 SXM</th>
-                <th>B200</th>
-                <th>Trend</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>HBM Capacity</td>
-                <td class="mono">80 GB</td>
-                <td class="mono highlight">192 GB</td>
-                <td class="highlight">2.4× increase</td>
-              </tr>
-              <tr>
-                <td>HBM Bandwidth</td>
-                <td class="mono">3.35 TB/s</td>
-                <td class="mono highlight">8.0 TB/s</td>
-                <td class="highlight">2.4× increase</td>
-              </tr>
-              <tr>
-                <td>FP16 Compute</td>
-                <td class="mono">2 PFLOPS</td>
-                <td class="mono">4.5 PFLOPS</td>
-                <td class="warning">2.25× increase</td>
-              </tr>
-              <tr>
-                <td>HBM Latency</td>
-                <td class="mono">~100 ns</td>
-                <td class="mono">~100 ns</td>
-                <td>No improvement</td>
-              </tr>
-              <tr>
-                <td>Cost (estimated)</td>
-                <td class="mono">~$30,000</td>
-                <td class="mono">~$35,000</td>
-                <td>—</td>
-              </tr>
-            </tbody>
-          </table>
+      <div class="figure-embed" style="margin: 2rem 0;">
+        <div class="figure-embed-header">
+          <span class="figure-embed-label">Section 2.1 — Inference Fundamentals Deep Dive</span>
+          <a href="../figures/ch02-background/section-2-1-inference-fundamentals.html" target="_blank" class="figure-embed-link">View Source ↗</a>
         </div>
-        <div class="figure-caption">B200 doubles capacity and bandwidth, but memory still grows slower than compute. The gap between compute capability and memory capacity continues to widen.</div>
+        <iframe src="../figures/ch02-background/section-2-1-inference-fundamentals.html" style="width:100%;height:500px;border:none;background:#1a1a2e;"></iframe>
       </div>
 
-      <h3>The 16× Capacity Wall</h3>
+      <h2>2.3 Why KV-Cache Exists</h2>
 
-      <p>Despite B200's 192 GB HBM, the memory wall remains severe for multi-user deployments:</p>
-
-      <div class="derivation">
-        <div class="derivation-step">
-          <div class="step-num">Given:</div>
-          <div class="step-content">
-            <div class="step-eq">B200 HBM: 192 GB</div>
-            <div class="step-explain">Total available memory on the GPU</div>
-          </div>
+      <div class="figure-embed" style="margin: 2rem 0;">
+        <div class="figure-embed-header">
+          <span class="figure-embed-label">Figure 2.4 — With vs Without KV-Cache</span>
+          <a href="../figures/ch02-background/figure-2-3-why-kv-cache.html" target="_blank" class="figure-embed-link">View Source ↗</a>
         </div>
-        <div class="derivation-step">
-          <div class="step-num">Fixed:</div>
-          <div class="step-content">
-            <div class="step-eq">Model weights: 140 GB + Activations: 5 GB = 145 GB</div>
-            <div class="step-explain">Memory consumed regardless of user count</div>
-          </div>
-        </div>
-        <div class="derivation-step">
-          <div class="step-num">Available:</div>
-          <div class="step-content">
-            <div class="step-eq">For KV-cache: 192 - 145 = 47 GB</div>
-            <div class="step-explain">Remaining memory for all users' KV-caches</div>
-          </div>
-        </div>
-        <div class="derivation-step">
-          <div class="step-num">Per user:</div>
-          <div class="step-content">
-            <div class="step-eq">KV-cache @ 128K: 41 GB per user</div>
-            <div class="step-explain">Memory required for one user's context</div>
-          </div>
-        </div>
-        <div class="derivation-step">
-          <div class="step-num">Result:</div>
-          <div class="step-content">
-            <div class="step-eq">Maximum users: 47 / 41 ≈ <strong>1 user</strong></div>
-            <div class="step-explain">B200 can only serve 1 user at 128K context!</div>
-          </div>
-        </div>
+        <iframe src="../figures/ch02-background/figure-2-3-why-kv-cache.html" style="width:100%;height:500px;border:none;background:#1a1a2e;"></iframe>
       </div>
 
-      <p>To serve 8 concurrent users at 128K context, we would need:</p>
-      <div class="equation">
-        Required memory = 145 GB + (8 × 41 GB) = 145 + 328 = <strong>473 GB</strong>
-        <span class="equation-label">This is 2.5× B200's capacity—requiring multiple GPUs without memory expansion</span>
-      </div>
-
-      <h3>The 65× Bandwidth Wall</h3>
-
-      <p>Even when data fits in HBM, PCIe-based offloading is too slow:</p>
-
-      <div class="figure">
-        <div class="figure-label">Figure 2.5 — Memory Access Latency Comparison</div>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Access Path</th>
-                <th>Latency</th>
-                <th>vs HBM</th>
-                <th>Notes</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>GPU HBM</td>
-                <td class="mono highlight">100 ns</td>
-                <td>1×</td>
-                <td>Baseline, on-chip</td>
-              </tr>
-              <tr>
-                <td>CXL.mem DRAM</td>
-                <td class="mono">250 ns</td>
-                <td>2.5×</td>
-                <td>Direct load/store</td>
-              </tr>
-              <tr>
-                <td>PCIe DMA (CPU)</td>
-                <td class="mono warning">5-10 μs</td>
-                <td class="warning">50-100×</td>
-                <td>CPU-mediated transfer</td>
-              </tr>
-              <tr>
-                <td>NVMe SSD</td>
-                <td class="mono danger">10-50 μs</td>
-                <td class="danger">100-500×</td>
-                <td>Storage-class latency</td>
-              </tr>
-              <tr>
-                <td>Recompute</td>
-                <td class="mono danger">10-100 ms</td>
-                <td class="danger">100,000-1,000,000×</td>
-                <td>Re-run prefill</td>
-              </tr>
-            </tbody>
-          </table>
+      <div class="figure-embed" style="margin: 2rem 0;">
+        <div class="figure-embed-header">
+          <span class="figure-embed-label">Figure 2.5 — KV-Cache Growth</span>
+          <a href="../figures/ch02-background/figure-2-2-kv-cache-growth.html" target="_blank" class="figure-embed-link">View Source ↗</a>
         </div>
-        <div class="figure-caption">CXL provides only 2.5× latency penalty vs HBM, compared to 50-100× for traditional PCIe. This is the key enabler for practical memory expansion.</div>
+        <iframe src="../figures/ch02-background/figure-2-2-kv-cache-growth.html" style="width:100%;height:500px;border:none;background:#1a1a2e;"></iframe>
       </div>
 
-      <p>The 65× latency improvement of CXL over PCIe comes from eliminating CPU involvement:</p>
+      <h2>2.4 Roofline Model</h2>
 
-      <div class="comparison-grid">
-        <div class="card">
-          <h4 style="margin-top: 0; color: var(--accent-red);">PCIe DMA Path</h4>
-          <ol style="font-size: 0.9rem; margin-bottom: 0;">
-            <li>GPU triggers page fault (50 ns)</li>
-            <li>Interrupt to CPU (2-5 μs)</li>
-            <li>CPU page fault handler (1-2 μs)</li>
-            <li>DMA setup and transfer (500 ns)</li>
-            <li>TLB shootdown to GPU (1-2 μs)</li>
-          </ol>
-          <div style="margin-top: 1rem; font-weight: 600; color: var(--accent-red);">Total: 5-10 μs</div>
+      <div class="figure-embed" style="margin: 2rem 0;">
+        <div class="figure-embed-header">
+          <span class="figure-embed-label">Figure 2.7 — Roofline Analysis</span>
+          <a href="../figures/ch02-background/figure-2-4-roofline.html" target="_blank" class="figure-embed-link">View Source ↗</a>
         </div>
-        <div class="card">
-          <h4 style="margin-top: 0; color: var(--accent-green);">CXL.mem Path</h4>
-          <ol style="font-size: 0.9rem; margin-bottom: 0;">
-            <li>GPU issues load instruction (10 ns)</li>
-            <li>CXL protocol request (50 ns)</li>
-            <li>PCIe PHY traversal (40 ns)</li>
-            <li>Endpoint DRAM access (100 ns)</li>
-            <li>CXL protocol response (50 ns)</li>
-          </ol>
-          <div style="margin-top: 1rem; font-weight: 600; color: var(--accent-green);">Total: ~250 ns</div>
+        <iframe src="../figures/ch02-background/figure-2-4-roofline.html" style="width:100%;height:500px;border:none;background:#1a1a2e;"></iframe>
+      </div>
+
+      <h2>2.5 Current Approaches</h2>
+
+      <div class="figure-embed" style="margin: 2rem 0;">
+        <div class="figure-embed-header">
+          <span class="figure-embed-label">Figure 2.8 — Approaches Comparison Matrix</span>
+          <a href="../figures/ch02-background/current-approaches-comparison.html" target="_blank" class="figure-embed-link">View Source ↗</a>
         </div>
+        <iframe src="../figures/ch02-background/current-approaches-comparison.html" style="width:100%;height:500px;border:none;background:#1a1a2e;"></iframe>
       </div>
 
-      <!-- Section 2.3: Current Approaches -->
-      <h2>2.3 Current Approaches and Limitations</h2>
-
-      <p>Several techniques attempt to address the memory wall. Understanding their trade-offs motivates our architectural approach.</p>
-
-      <h3>vLLM / PagedAttention</h3>
-
-      <p><strong>vLLM</strong> is the current state-of-the-art LLM serving framework, featuring PagedAttention for memory efficiency:</p>
-
-      <div class="callout definition">
-        <div class="callout-title">📦 PagedAttention</div>
-        <p>PagedAttention manages KV-cache memory like an operating system manages virtual memory. Instead of allocating contiguous blocks per sequence, it uses fixed-size "pages" that can be allocated on-demand and shared across sequences with common prefixes.</p>
-      </div>
-
-      <p><strong>Benefits:</strong></p>
-      <ul>
-        <li>Near-zero memory waste from fragmentation</li>
-        <li>Prefix caching for repeated prompts</li>
-        <li>Efficient continuous batching</li>
-      </ul>
-
-      <p><strong>Limitations:</strong></p>
-      <ul>
-        <li>Does not expand total memory capacity</li>
-        <li>Software-only, no hardware acceleration</li>
-        <li>Cannot prefetch based on attention patterns</li>
-      </ul>
-
-      <h3>CPU/SSD Offload</h3>
-
-      <p>Traditional offloading moves cold KV-cache entries to system RAM or NVMe SSDs:</p>
-
-      <div class="figure">
-        <div class="figure-label">Figure 2.6 — Offload Path Comparison</div>
-        <div style="display: flex; flex-direction: column; gap: 1.5rem; margin: 1rem 0;">
-          <div>
-            <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">CPU DRAM Offload</div>
-            <div style="display: flex; align-items: center; gap: 1rem;">
-              <div style="padding: 0.5rem 1rem; background: rgba(63, 185, 80, 0.15); border: 1px solid var(--accent-green); border-radius: 6px; font-size: 0.85rem; color: var(--accent-green);">GPU HBM</div>
-              <span style="color: var(--text-muted);">←→</span>
-              <div style="padding: 0.5rem 1rem; background: rgba(210, 153, 34, 0.15); border: 1px solid var(--accent-orange); border-radius: 6px; font-size: 0.85rem; color: var(--accent-orange);">PCIe ×16</div>
-              <span style="color: var(--text-muted);">←→</span>
-              <div style="padding: 0.5rem 1rem; background: rgba(139,148,158,0.15); border: 1px solid var(--text-muted); border-radius: 6px; font-size: 0.85rem; color: var(--text-secondary);">CPU DRAM</div>
-              <span style="font-size: 0.85rem; color: var(--text-muted); margin-left: 1rem;">64 GB/s, 5-10 μs latency</span>
-            </div>
-          </div>
-          <div>
-            <div style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 0.5rem;">NVMe SSD Offload</div>
-            <div style="display: flex; align-items: center; gap: 1rem;">
-              <div style="padding: 0.5rem 1rem; background: rgba(63, 185, 80, 0.15); border: 1px solid var(--accent-green); border-radius: 6px; font-size: 0.85rem; color: var(--accent-green);">GPU HBM</div>
-              <span style="color: var(--text-muted);">←→</span>
-              <div style="padding: 0.5rem 1rem; background: rgba(210, 153, 34, 0.15); border: 1px solid var(--accent-orange); border-radius: 6px; font-size: 0.85rem; color: var(--accent-orange);">PCIe</div>
-              <span style="color: var(--text-muted);">←→</span>
-              <div style="padding: 0.5rem 1rem; background: rgba(139,148,158,0.15); border: 1px solid var(--text-muted); border-radius: 6px; font-size: 0.85rem; color: var(--text-secondary);">CPU</div>
-              <span style="color: var(--text-muted);">←→</span>
-              <div style="padding: 0.5rem 1rem; background: rgba(248, 81, 73, 0.15); border: 1px solid var(--accent-red); border-radius: 6px; font-size: 0.85rem; color: var(--accent-red);">NVMe</div>
-              <span style="font-size: 0.85rem; color: var(--text-muted); margin-left: 1rem;">14 GB/s, 10-50 μs</span>
-            </div>
-          </div>
-        </div>
-        <div class="figure-caption">Traditional offload paths require CPU involvement, adding significant latency that degrades user experience during token generation.</div>
-      </div>
-
-      <p><strong>Limitations:</strong></p>
-      <ul>
-        <li>High latency degrades decode speed</li>
-        <li>CPU becomes a bottleneck for coordination</li>
-        <li>No intelligent prefetch—reactive only</li>
-        <li>System RAM competes with other processes</li>
-      </ul>
-
-      <h3>Tensor Parallelism</h3>
-
-      <p>Tensor parallelism distributes model weights across multiple GPUs, effectively pooling their memory:</p>
-
-      <div class="figure">
-        <div class="figure-label">Figure 2.7 — Tensor Parallelism Scaling</div>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Configuration</th>
-                <th>Total HBM</th>
-                <th>Users @ 128K</th>
-                <th>Cost</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>1× B200</td>
-                <td class="mono">192 GB</td>
-                <td class="mono">1</td>
-                <td class="mono">$35,000</td>
-              </tr>
-              <tr>
-                <td>2× B200 (TP=2)</td>
-                <td class="mono">384 GB</td>
-                <td class="mono">4-5</td>
-                <td class="mono warning">$70,000</td>
-              </tr>
-              <tr>
-                <td>4× B200 (TP=4)</td>
-                <td class="mono">768 GB</td>
-                <td class="mono">12-14</td>
-                <td class="mono danger">$140,000</td>
-              </tr>
-              <tr>
-                <td>8× B200 (TP=8)</td>
-                <td class="mono">1.5 TB</td>
-                <td class="mono">30+</td>
-                <td class="mono danger">$280,000</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="figure-caption">Tensor parallelism scales memory linearly but at full GPU cost. Inter-GPU communication also adds latency overhead.</div>
-      </div>
-
-      <p><strong>Limitations:</strong></p>
-      <ul>
-        <li>Linear cost scaling ($35K per GPU)</li>
-        <li>NVLink/NVSwitch overhead for communication</li>
-        <li>Diminishing returns from synchronization</li>
-        <li>Power and cooling for multiple GPUs</li>
-      </ul>
-
-      <h3>KV-Cache Compression</h3>
-
-      <p>Compression techniques reduce KV-cache size through quantization or attention approximation:</p>
-
-      <ul>
-        <li><strong>INT8 quantization:</strong> 2× reduction, minimal quality loss</li>
-        <li><strong>INT4 quantization:</strong> 4× reduction, noticeable quality degradation</li>
-        <li><strong>Attention pruning:</strong> Remove low-attention tokens, loses information</li>
-      </ul>
-
-      <p><strong>Limitations:</strong></p>
-      <ul>
-        <li>Quality-capacity tradeoff</li>
-        <li>Still doesn't solve multi-user scaling</li>
-        <li>Compute overhead for compression/decompression</li>
-      </ul>
-
-      <h3>Summary: The Gap in Current Solutions</h3>
-
-      <div class="figure">
-        <div class="figure-label">Figure 2.8 — Current Solutions Comparison</div>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Approach</th>
-                <th>Capacity</th>
-                <th>Latency</th>
-                <th>Cost</th>
-                <th>Intelligence</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>vLLM/PagedAttention</td>
-                <td class="danger">No expansion</td>
-                <td class="highlight">Minimal overhead</td>
-                <td class="highlight">Software only</td>
-                <td class="warning">Basic LRU</td>
-              </tr>
-              <tr>
-                <td>CPU/SSD Offload</td>
-                <td class="highlight">Large expansion</td>
-                <td class="danger">50-100× slower</td>
-                <td class="highlight">Low</td>
-                <td class="danger">None</td>
-              </tr>
-              <tr>
-                <td>Tensor Parallelism</td>
-                <td class="highlight">Linear scaling</td>
-                <td class="warning">Comm overhead</td>
-                <td class="danger">$35K/GPU</td>
-                <td class="danger">None</td>
-              </tr>
-              <tr>
-                <td>Compression</td>
-                <td class="warning">2-4× reduction</td>
-                <td class="warning">Encode/decode</td>
-                <td class="highlight">Low</td>
-                <td class="danger">None</td>
-              </tr>
-              <tr style="background: rgba(63, 185, 80, 0.08);">
-                <td><strong>Our Approach</strong></td>
-                <td class="highlight">6× expansion</td>
-                <td class="highlight">2.5× (CXL)</td>
-                <td class="highlight">$5/GB</td>
-                <td class="highlight">Full EMA+RoPE</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="figure-caption">No existing solution combines capacity expansion, low latency, reasonable cost, and intelligent cache management. Our architecture addresses all four dimensions.</div>
-      </div>
-
-      <div class="callout insight">
-        <div class="callout-title">🎯 The Opportunity</div>
-        <p>The gap between cheap-but-slow (CPU/SSD) and fast-but-expensive (tensor parallelism) creates an opportunity for <strong>CXL-based intelligent endpoints</strong> that offer:</p>
-        <ul style="margin-bottom: 0;">
-          <li>Near-HBM latency (2.5× vs 50-100×)</li>
-          <li>10× cost advantage over HBM ($5/GB vs $50/GB)</li>
-          <li>Hardware-accelerated cache intelligence</li>
-          <li>Seamless GPU integration via load/store semantics</li>
-        </ul>
-      </div>
-
-      <!-- Chapter Navigation -->
       <div class="chapter-nav">
-        <a href="ch01-introduction.html" class="chapter-nav-btn prev">
-          <span class="chapter-nav-label">← Previous</span>
-          <span class="chapter-nav-title">Chapter 1: Introduction</span>
-        </a>
-        <a href="ch03-architecture.html" class="chapter-nav-btn next">
-          <span class="chapter-nav-label">Next Chapter →</span>
-          <span class="chapter-nav-title">Chapter 3: Architecture Overview</span>
-        </a>
+        <a href="ch01-introduction.html" class="chapter-nav-btn prev"><span class="chapter-nav-label">← Previous</span><span class="chapter-nav-title">Introduction</span></a>
+        <a href="ch03-architecture.html" class="chapter-nav-btn next"><span class="chapter-nav-label">Next →</span><span class="chapter-nav-title">Architecture</span></a>
       </div>
     </div>
-
-    <footer class="footer">
-      <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-primary);">
-        <p style="font-size: 0.8rem; color: var(--text-muted);">
-          © 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.<br>
-          This document contains proprietary and confidential information.<br>
-          Unauthorized reproduction or distribution is strictly prohibited.
-        </p>
-      </div>
-      <p>Distributed Endpoint Architecture for KV-Cache Offloading in LLM Inference</p>
-      <p style="margin-top: 0.5rem;">Technical Documentation v3.0 — December 2025</p>
-    </footer>
+    <footer class="footer"><p style="font-size: 0.8rem; color: var(--text-muted);">© 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.</p></footer>
   </div>
 </body>
 </html>

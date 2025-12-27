@@ -3,26 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chapter 12: Implementation Considerations — KV-Cache Offloading</title>
+  <title>Chapter 12: Implementation — KV-Cache Offloading Architecture</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
-  <div class="watermark">
-    © 2025 Subramaniyam (Sam) Pooni<br>
-    All Rights Reserved<br>
-    Proprietary & Confidential
-  </div>
+  <div class="watermark">© 2025 Subramaniyam (Sam) Pooni<br>All Rights Reserved<br>Proprietary & Confidential</div>
 
   <nav class="nav">
     <div class="nav-inner">
       <a href="../index.html" class="nav-brand"><span class="nav-brand-icon">⚡</span> KV-Cache Architecture</a>
       <div class="nav-links">
-        <a href="ch11-performance.html" class="nav-link">Performance</a>
-        <a href="ch12-implementation.html" class="nav-link active">Implementation</a>
-        <a href="ch13-conclusion.html" class="nav-link">Conclusion</a>
-        <a href="../appendix/index.html" class="nav-link">Appendix</a>
+        <a href="ch00-executive-summary.html" class="nav-link"><span class="nav-chapter-num">0</span> Summary</a>
+        <a href="ch12-implementation.html" class="nav-link active"><span class="nav-chapter-num">12</span> Implementation</a>
+        <a href="../figures/index.html" class="nav-link">📊 Figures</a>
       </div>
     </div>
   </nav>
@@ -31,213 +26,42 @@
     <div class="container">
       <header class="chapter-header">
         <div class="chapter-label">Chapter 12</div>
-        <h1 class="chapter-title">Implementation Considerations</h1>
-        <p class="chapter-subtitle">Hardware requirements, software stack, driver modifications, firmware development, and deployment scenarios.</p>
+        <h1 class="chapter-title">Implementation Details</h1>
+        <p class="chapter-subtitle">Software integration, cache management placement, quantization, and TCO analysis.</p>
       </header>
 
-      <h2>12.1 Hardware Requirements</h2>
-
-      <h3>CXL 3.0 Compatible GPUs</h3>
-
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr><th>GPU</th><th>CXL Version</th><th>Timeline</th><th>Notes</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>AMD MI300X</td><td class="mono">CXL 2.0</td><td>Available</td><td>Upgradeable firmware</td></tr>
-            <tr><td>AMD MI400</td><td class="mono highlight">CXL 3.0</td><td>2025</td><td>Full support</td></tr>
-            <tr><td>Intel GPU Max</td><td class="mono">CXL 1.1+</td><td>Available</td><td>Data center focused</td></tr>
-            <tr><td>Intel Falcon Shores</td><td class="mono highlight">CXL 3.0</td><td>2025</td><td>Full support</td></tr>
-            <tr><td>NVIDIA H100/B200</td><td class="mono warning">None</td><td>—</td><td>Requires bridge</td></tr>
-          </tbody>
-        </table>
+      <div class="stats-grid" style="margin-bottom: 3rem;">
+        <div class="stat-box"><div class="stat-value">5</div><div class="stat-label">Figures in Chapter</div></div>
+        <div class="stat-box"><div class="stat-value">vLLM</div><div class="stat-label">Integration</div></div>
+        <div class="stat-box"><div class="stat-value">3-Year</div><div class="stat-label">TCO Analysis</div></div>
       </div>
 
-      <h3>Endpoint Controller Specifications</h3>
+      <h2>12.1 Cache Management Placement</h2>
 
-      <div class="comparison-grid">
-        <div class="card">
-          <h4 style="margin-top: 0; color: var(--accent-orange);">Minimum Viable</h4>
-          <ul style="font-size: 0.9rem; margin-bottom: 0;">
-            <li>ARM Cortex-A78 (4 cores, 3 GHz)</li>
-            <li>256 GB DDR5-5600</li>
-            <li>4 TB NVMe SSD (Gen5)</li>
-            <li>CXL Type-3 Controller</li>
-            <li>×16 PCIe Gen5</li>
-          </ul>
+      <div class="figure-embed" style="margin: 2rem 0;">
+        <div class="figure-embed-header">
+          <span class="figure-embed-label">Figure 12.2 — Cache Management Placement Options</span>
+          <a href="../figures/ch12-implementation/cache-management-placement.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
         </div>
-        <div class="card">
-          <h4 style="margin-top: 0; color: var(--accent-green);">Recommended</h4>
-          <ul style="font-size: 0.9rem; margin-bottom: 0;">
-            <li>ARM Neoverse V2 (8 cores)</li>
-            <li>512 GB DDR5-6400</li>
-            <li>8 TB NVMe (dual-port)</li>
-            <li>CXL Type-3 with multi-head</li>
-            <li>Dual ×16 for bandwidth</li>
-          </ul>
+        <iframe src="../figures/ch12-implementation/cache-management-placement.html" style="width:100%;height:600px;border:none;"></iframe>
+      </div>
+
+      <h2>12.2 Complete KV-Cache Diagrams</h2>
+
+      <div class="figure-embed" style="margin: 2rem 0;">
+        <div class="figure-embed-header">
+          <span class="figure-embed-label">Figures 12.1, 12.3-12.5 — Implementation Details</span>
+          <a href="../figures/ch12-implementation/kv-cache-diagrams-html.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
         </div>
-      </div>
-
-      <h3>Switch Requirements</h3>
-
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr><th>Component</th><th>Single-Node</th><th>Multi-Node</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>Switch</td><td class="mono">CXL 3.0 8-port</td><td class="mono">UEC-compatible</td></tr>
-            <tr><td>Backplane</td><td class="mono">Non-blocking 2 TB/s</td><td class="mono">400 GbE per node</td></tr>
-            <tr><td>Features</td><td>Port bifurcation</td><td>RDMA/RoCE</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <h2>12.2 Software Stack</h2>
-
-      <h3>Linux Kernel Requirements</h3>
-
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr><th>Component</th><th>Version</th><th>Purpose</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>CXL subsystem</td><td class="mono">5.18+</td><td>Base CXL support</td></tr>
-            <tr><td>ZONE_CXL</td><td class="mono">Custom patch</td><td>CXL memory zones</td></tr>
-            <tr><td>Device DAX</td><td class="mono">5.19+</td><td>Memory mapping</td></tr>
-            <tr><td>GPU driver</td><td class="mono">Custom</td><td>Hint interface</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <h3>Runtime API</h3>
-
-      <pre><code>from endpoint_cache import EndpointCache, AllocationHints
-
-# Initialize endpoint pool
-cache = EndpointCache(
-    endpoints=["cxl://ep0", "cxl://ep1", "cxl://ep2", "cxl://ep3"],
-    policy="head_aware"
-)
-
-# Allocate KV-cache with hints
-kv_handle = cache.allocate(
-    model="llama-70b",
-    max_seq_len=128000,
-    batch_size=8,
-    hints=AllocationHints(
-        prefetch_depth=2,
-        eviction_policy="ema",
-        rope_aware=True
-    )
-)
-
-# Integration with vLLM
-from vllm import LLM
-llm = LLM(
-    model="meta-llama/Llama-2-70b",
-    kv_cache_backend=cache,
-    max_model_len=128000
-)</code></pre>
-
-      <h3>Firmware Responsibilities</h3>
-
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr><th>Function</th><th>Implementation</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>CXL.mem handling</td><td>Request/response state machine</td></tr>
-            <tr><td>Tier management</td><td>DRAM/Flash placement logic</td></tr>
-            <tr><td>EMA scoring</td><td>Per-entry score maintenance</td></tr>
-            <tr><td>Prefetch queue</td><td>Priority-ordered fetch</td></tr>
-            <tr><td>MoE histogram</td><td>Activation tracking</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <h2>12.3 Deployment Scenarios</h2>
-
-      <h3>Single-Node (Direct Attach)</h3>
-
-      <pre><code>1 GPU + 4 endpoints via CXL switch
-├── Capacity: 1 TB DRAM + 16 TB flash
-├── Bandwidth: 256 GB/s aggregate
-└── Latency: 250 ns (DRAM hit)</code></pre>
-
-      <p><strong>Use Cases:</strong> Single-model serving, development, small-scale production</p>
-
-      <h3>Multi-Node (Switched Fabric)</h3>
-
-      <pre><code>8 GPUs + 32 endpoints via fabric
-├── Capacity: 8 TB DRAM + 128 TB flash
-├── Bandwidth: 2 TB/s cross-sectional
-└── Latency: 500 ns - 2 μs (fabric hop)</code></pre>
-
-      <p><strong>Use Cases:</strong> Multi-model, high-availability, multi-tenant</p>
-
-      <h3>Kubernetes Integration</h3>
-
-      <pre><code>apiVersion: v1
-kind: Pod
-metadata:
-  name: llm-inference
-spec:
-  containers:
-  - name: inference
-    image: llm-server:latest
-    resources:
-      limits:
-        nvidia.com/gpu: 1
-        cxl.io/memory: 256Gi
-      requests:
-        nvidia.com/gpu: 1
-        cxl.io/memory: 128Gi</code></pre>
-
-      <h3>Deployment Checklist</h3>
-
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr><th>Phase</th><th>Tasks</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>Planning</td><td>Capacity sizing, topology design, vendor selection</td></tr>
-            <tr><td>Procurement</td><td>GPU, endpoints, switches, cables</td></tr>
-            <tr><td>Installation</td><td>Rack mounting, cabling, power</td></tr>
-            <tr><td>Configuration</td><td>Firmware, drivers, network</td></tr>
-            <tr><td>Integration</td><td>Runtime APIs, framework patches</td></tr>
-            <tr><td>Testing</td><td>Latency validation, throughput benchmarks</td></tr>
-            <tr><td>Production</td><td>Monitoring, alerting, runbooks</td></tr>
-          </tbody>
-        </table>
+        <iframe src="../figures/ch12-implementation/kv-cache-diagrams-html.html" style="width:100%;height:700px;border:none;"></iframe>
       </div>
 
       <div class="chapter-nav">
-        <a href="ch11-performance.html" class="chapter-nav-btn prev">
-          <span class="chapter-nav-label">← Previous</span>
-          <span class="chapter-nav-title">Chapter 11: Performance</span>
-        </a>
-        <a href="ch13-conclusion.html" class="chapter-nav-btn next">
-          <span class="chapter-nav-label">Next Chapter →</span>
-          <span class="chapter-nav-title">Chapter 13: Conclusion</span>
-        </a>
+        <a href="ch11-performance.html" class="chapter-nav-btn prev"><span class="chapter-nav-label">← Previous</span><span class="chapter-nav-title">Performance</span></a>
+        <a href="ch13-conclusion.html" class="chapter-nav-btn next"><span class="chapter-nav-label">Next →</span><span class="chapter-nav-title">Conclusion</span></a>
       </div>
     </div>
-    <footer class="footer">
-      <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-primary);">
-        <p style="font-size: 0.8rem; color: var(--text-muted);">
-          © 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.<br>
-          This document contains proprietary and confidential information.<br>
-          Unauthorized reproduction or distribution is strictly prohibited.
-        </p>
-      </div>
-      <p>Distributed Endpoint Architecture for KV-Cache Offloading in LLM Inference</p>
-      <p style="margin-top: 0.5rem;">Technical Documentation v3.0 — December 2025</p>
-    </footer>
+    <footer class="footer"><p style="font-size: 0.8rem; color: var(--text-muted);">© 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.</p></footer>
   </div>
 </body>
 </html>

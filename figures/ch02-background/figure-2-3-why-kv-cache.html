@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Figure 2.3 — Why KV-Cache</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: system-ui, sans-serif; background: linear-gradient(135deg, #0f172a, #1e293b); min-height: 100vh; color: #e2e8f0; }</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+function WhyKVCache() {
+  const styles = {
+    container: { maxWidth: '900px', margin: '0 auto', padding: '2rem' },
+    header: { textAlign: 'center', marginBottom: '2rem' },
+    badge: { display: 'inline-block', padding: '0.25rem 0.75rem', background: 'rgba(239,68,68,0.2)', color: '#f87171', fontSize: '0.75rem', fontFamily: 'monospace', borderRadius: '20px', marginBottom: '0.5rem' },
+    grid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' },
+    card: (bad) => ({ background: '#1e293b', borderRadius: '16px', padding: '1.5rem', border: `2px solid ${bad ? '#ef4444' : '#10b981'}` }),
+    cardTitle: (bad) => ({ color: bad ? '#ef4444' : '#10b981', fontWeight: 700, fontSize: '1.1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }),
+    step: { background: '#0f172a', borderRadius: '8px', padding: '0.75rem', marginBottom: '0.5rem', fontSize: '0.875rem' },
+    compare: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '2rem' },
+    stat: (bad) => ({ background: '#0f172a', borderRadius: '12px', padding: '1rem', textAlign: 'center', borderTop: `3px solid ${bad ? '#ef4444' : '#10b981'}` }),
+    statVal: (bad) => ({ fontSize: '1.5rem', fontWeight: 700, color: bad ? '#ef4444' : '#10b981' }),
+    statLabel: { fontSize: '0.75rem', color: '#64748b', marginTop: '0.25rem' }
+  };
+  return (
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <div style={styles.badge}>FIGURE 2.3</div>
+        <h1 style={{fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.5rem'}}>Why KV-Cache Exists</h1>
+        <p style={{color: '#94a3b8'}}>The cost of NOT caching Key-Value pairs</p>
+      </div>
+      <div style={styles.grid}>
+        <div style={styles.card(true)}>
+          <div style={styles.cardTitle(true)}>❌ Without KV-Cache</div>
+          <div style={styles.step}>Step 1: Compute K,V for tokens 1..N</div>
+          <div style={styles.step}>Step 2: Compute K,V for tokens 1..N+1</div>
+          <div style={styles.step}>Step 3: Compute K,V for tokens 1..N+2</div>
+          <div style={styles.step}>...</div>
+          <div style={{color: '#ef4444', fontSize: '0.875rem', marginTop: '1rem'}}>O(N²) total compute — recomputing everything each step!</div>
+        </div>
+        <div style={styles.card(false)}>
+          <div style={styles.cardTitle(false)}>✓ With KV-Cache</div>
+          <div style={styles.step}>Step 1: Compute K,V for tokens 1..N → <strong>Store</strong></div>
+          <div style={styles.step}>Step 2: Compute K,V for token N+1 only → <strong>Append</strong></div>
+          <div style={styles.step}>Step 3: Compute K,V for token N+2 only → <strong>Append</strong></div>
+          <div style={styles.step}>...</div>
+          <div style={{color: '#10b981', fontSize: '0.875rem', marginTop: '1rem'}}>O(N) total compute — only new tokens computed!</div>
+        </div>
+      </div>
+      <div style={styles.compare}>
+        <div style={styles.stat(true)}><div style={styles.statVal(true)}>N²</div><div style={styles.statLabel}>FLOPs (no cache)</div></div>
+        <div style={styles.stat(false)}><div style={styles.statVal(false)}>N</div><div style={styles.statLabel}>FLOPs (with cache)</div></div>
+        <div style={styles.stat(true)}><div style={styles.statVal(true)}>50ms+</div><div style={styles.statLabel}>Per token latency</div></div>
+        <div style={styles.stat(false)}><div style={styles.statVal(false)}>30ms</div><div style={styles.statLabel}>Per token latency</div></div>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<WhyKVCache />);
+</script>
+</body>
+</html>

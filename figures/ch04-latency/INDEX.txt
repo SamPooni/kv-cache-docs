@@ -1,0 +1,34 @@
+================================================================================
+CH04 - LATENCY - FIGURE INDEX
+================================================================================
+
+Fig 4.1: Effective Latency Formula
+      Source: effective-latency-analysis.html
+
+Fig 4.2: Example Calculation
+      Source: effective-latency-analysis.html
+
+Fig 4.3: PCIe vs CXL.mem Comparison
+      Source: effective-latency-analysis.html
+      Source: diagram-latency-path-html.html
+
+Fig 4.4: CXL.mem vs PCIe Latency Paths
+      Source: diagram-latency-path-html.html
+
+Fig 4.5: Access Timeline (Waterfall)
+      Source: figure-2-5-latency-waterfall.tsx
+
+Fig 4.6: CXL.mem Access Breakdown
+      Source: figure-2-5-latency-waterfall.tsx
+
+Fig 4.7: PCIe DMA: Why CPU in Path
+      Source: figure-2-5-latency-waterfall.tsx
+      Source: latency-calculations.tsx
+
+Fig 4.8: Degradation Under Load
+      Source: effective-latency-analysis.html
+
+Fig 4.9: The Numbers Summary
+      Source: latency-calculations.tsx
+
+TOTAL: 9 figures

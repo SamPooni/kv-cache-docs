@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Per-Head Tracking Rationale</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: #ffffff;
+  min-height: 100vh;
+  color: #1a1a1a;
+  padding: 2.5rem;
+}
+h1 {
+  text-align: center;
+  font-size: 2.4rem;
+  margin-bottom: 0.75rem;
+  color: #1a1a1a;
+  font-weight: 700;
+}
+.subtitle {
+  text-align: center;
+  color: #555;
+  margin-bottom: 2.5rem;
+  font-size: 1.2rem;
+}
+.container { max-width: 1200px; margin: 0 auto; }
+.tokens-row {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 2.5rem;
+  flex-wrap: wrap;
+}
+.token {
+  background: #f5f5f5;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-family: 'Fira Code', monospace;
+  font-size: 1.1rem;
+  border: 2px solid #e0e0e0;
+  color: #333;
+  font-weight: 500;
+}
+.heads-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 2rem;
+}
+.head-card {
+  background: #fafafa;
+  border-radius: 16px;
+  padding: 1.75rem;
+  border: 2px solid #e8e8e8;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.head-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.1);
+}
+.head-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+.head-name {
+  font-weight: 700;
+  font-size: 1.3rem;
+  color: #1a1a1a;
+}
+.head-tag {
+  font-size: 0.9rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: 20px;
+  font-weight: 600;
+}
+.tag-position { background: #d4edda; color: #155724; }
+.tag-syntax { background: #ffe5cc; color: #8a4500; }
+.tag-semantic { background: #cce5ff; color: #004085; }
+.tag-copy { background: #f3d9fa; color: #6f2c91; }
+.rationale {
+  font-size: 1.05rem;
+  color: #444;
+  margin-bottom: 1.5rem;
+  line-height: 1.6;
+}
+.attention-matrix {
+  display: grid;
+  gap: 4px;
+  font-size: 0.9rem;
+}
+.attn-row { display: flex; gap: 4px; align-items: center; }
+.attn-label {
+  width: 70px;
+  text-align: right;
+  padding-right: 10px;
+  color: #555;
+  font-family: monospace;
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+.attn-cell {
+  width: 52px;
+  height: 52px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-family: monospace;
+  font-weight: 600;
+  border: 1px solid rgba(0,0,0,0.1);
+}
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: 2.5rem;
+  margin-top: 2.5rem;
+  flex-wrap: wrap;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 1.1rem;
+  color: #333;
+  font-weight: 500;
+}
+.legend-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Per-Head Tracking Rationale</h1>
+  <p class="subtitle">Visualizing what each attention head learns to track</p>
+  
+  <div class="tokens-row">
+    <div class="token">The</div>
+    <div class="token">model</div>
+    <div class="token">processes</div>
+    <div class="token">each</div>
+    <div class="token">token</div>
+  </div>
+  
+  <div class="heads-grid" id="headsGrid"></div>
+  
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#28a745"></div>Positional</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#e67700"></div>Syntactic</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#007bff"></div>Semantic</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#9c27b0"></div>Copy/Induction</div>
+  </div>
+</div>
+
+<script>
+const tokens = ['The', 'model', 'proc.', 'each', 'token'];
+const heads = [
+  {
+    name: 'Head 0.3',
+    type: 'position',
+    tag: 'Positional',
+    tagClass: 'tag-position',
+    rationale: 'Attends to fixed relative positions. Strong diagonal pattern indicates local context aggregation within a fixed window.',
+    pattern: (i, j) => Math.exp(-Math.abs(i - j) * 1.2)
+  },
+  {
+    name: 'Head 1.7',
+    type: 'syntax',
+    tag: 'Syntactic',
+    tagClass: 'tag-syntax',
+    rationale: 'Tracks subject-verb relationships. "processes" attends strongly to "model" (its subject).',
+    pattern: (i, j) => {
+      const syntaxPairs = [[2,1], [4,3]];
+      for (let [a,b] of syntaxPairs) if (i===a && j===b) return 0.9;
+      return 0.1 + Math.random() * 0.15;
+    }
+  },
+  {
+    name: 'Head 2.4',
+    type: 'semantic',
+    tag: 'Semantic',
+    tagClass: 'tag-semantic',
+    rationale: 'Groups semantically related tokens. "token" and "model" share high mutual attention as domain concepts.',
+    pattern: (i, j) => {
+      const semGroups = [[1,4], [4,1], [2,4], [4,2]];
+      for (let [a,b] of semGroups) if (i===a && j===b) return 0.85;
+      if (i === j) return 0.5;
+      return 0.1 + Math.random() * 0.2;
+    }
+  },
+  {
+    name: 'Head 3.11',
+    type: 'copy',
+    tag: 'Induction',
+    tagClass: 'tag-copy',
+    rationale: 'Induction head for in-context learning. Copies patterns from previous occurrences to predict next tokens.',
+    pattern: (i, j) => {
+      if (j === 0 && i > 0) return 0.7 - i * 0.1;
+      if (i === j) return 0.3;
+      return 0.05 + Math.random() * 0.15;
+    }
+  }
+];
+
+function getColor(val, type) {
+  const colors = {
+    position: { r: 40, g: 167, b: 69 },
+    syntax: { r: 230, g: 119, b: 0 },
+    semantic: { r: 0, g: 123, b: 255 },
+    copy: { r: 156, g: 39, b: 176 }
+  };
+  const c = colors[type];
+  const alpha = 0.15 + val * 0.7;
+  return `rgba(${c.r}, ${c.g}, ${c.b}, ${alpha})`;
+}
+
+function getTextColor(val) {
+  return val > 0.4 ? '#fff' : '#333';
+}
+
+function renderHead(head) {
+  const card = document.createElement('div');
+  card.className = 'head-card';
+  
+  let matrixHTML = '';
+  for (let i = 0; i < tokens.length; i++) {
+    let row = `<div class="attn-row"><div class="attn-label">${tokens[i]}</div>`;
+    let rowSum = 0;
+    const vals = [];
+    for (let j = 0; j < tokens.length; j++) {
+      vals.push(head.pattern(i, j));
+      rowSum += vals[j];
+    }
+    for (let j = 0; j < tokens.length; j++) {
+      const norm = vals[j] / rowSum;
+      row += `<div class="attn-cell" style="background:${getColor(norm, head.type)}; color:${getTextColor(norm)}">${norm.toFixed(2)}</div>`;
+    }
+    row += '</div>';
+    matrixHTML += row;
+  }
+  
+  card.innerHTML = `
+    <div class="head-header">
+      <span class="head-name">${head.name}</span>
+      <span class="head-tag ${head.tagClass}">${head.tag}</span>
+    </div>
+    <p class="rationale">${head.rationale}</p>
+    <div class="attention-matrix">${matrixHTML}</div>
+  `;
+  return card;
+}
+
+const grid = document.getElementById('headsGrid');
+heads.forEach(h => grid.appendChild(renderHead(h)));
+</script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+================================================================================
+CH12 - IMPLEMENTATION - FIGURE INDEX
+================================================================================
+
+Fig 12.1: Software Integration Stack
+      Source: kv-cache-diagrams-html.html -> Software Integration Stack
+
+Fig 12.2: Cache Management Placement Options
+      Source: cache-management-placement.html
+
+Fig 12.3: KV-Cache Quantization Support
+      Source: kv-cache-diagrams-html.html -> Quantization Support
+
+Fig 12.4: Power & Thermal Analysis
+      Source: kv-cache-diagrams-html.html -> Power & Thermal
+
+Fig 12.5: Total Cost of Ownership
+      Source: kv-cache-diagrams-html.html -> TCO (3-Year)
+
+TOTAL: 5 figures

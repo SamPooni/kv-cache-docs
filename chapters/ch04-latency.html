@@ -7,22 +7,53 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .figure-embed {
+      background: var(--bg-card);
+      border: 1px solid var(--border-primary);
+      border-radius: 12px;
+      margin: 2rem 0;
+      overflow: hidden;
+    }
+    .figure-embed-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.5rem;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border-primary);
+    }
+    .figure-embed-label {
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      color: var(--accent-cyan);
+    }
+    .figure-embed-link {
+      font-size: 0.85rem;
+      color: var(--accent-purple);
+      text-decoration: none;
+    }
+    .figure-embed-link:hover { text-decoration: underline; }
+    .figure-embed iframe {
+      width: 100%;
+      height: 550px;
+      border: none;
+      background: #fff;
+    }
+    .figure-embed.tall iframe { height: 700px; }
+  </style>
 </head>
 <body>
-  <div class="watermark">
-    © 2025 Subramaniyam (Sam) Pooni<br>
-    All Rights Reserved<br>
-    Proprietary & Confidential
-  </div>
+  <div class="watermark">© 2025 Subramaniyam (Sam) Pooni<br>All Rights Reserved<br>Proprietary & Confidential</div>
 
   <nav class="nav">
     <div class="nav-inner">
       <a href="../index.html" class="nav-brand"><span class="nav-brand-icon">⚡</span> KV-Cache Architecture</a>
       <div class="nav-links">
-        <a href="ch03-architecture.html" class="nav-link">Architecture</a>
-        <a href="ch04-latency.html" class="nav-link active">Latency</a>
-        <a href="ch05-bandwidth.html" class="nav-link">Bandwidth</a>
-        <a href="ch07-kv-cache.html" class="nav-link">KV-Cache</a>
+        <a href="ch00-executive-summary.html" class="nav-link"><span class="nav-chapter-num">0</span> Summary</a>
+        <a href="ch03-architecture.html" class="nav-link"><span class="nav-chapter-num">3</span> Architecture</a>
+        <a href="ch04-latency.html" class="nav-link active"><span class="nav-chapter-num">4</span> Latency</a>
+        <a href="../figures/index.html" class="nav-link">📊 Figures</a>
         <a href="../appendix/index.html" class="nav-link">Appendix</a>
       </div>
     </div>
@@ -33,306 +64,123 @@
       <header class="chapter-header">
         <div class="chapter-label">Chapter 4</div>
         <h1 class="chapter-title">Effective Latency Analysis</h1>
-        <p class="chapter-subtitle">Two-tier cache model, latency formulas, and the 65× improvement over traditional PCIe swap paths.</p>
+        <p class="chapter-subtitle">Two-tier cache model, CXL vs PCIe comparison, and the 65× latency improvement.</p>
       </header>
 
+      <div class="stats-grid" style="margin-bottom: 3rem;">
+        <div class="stat-box"><div class="stat-value">9</div><div class="stat-label">Figures in Chapter</div></div>
+        <div class="stat-box"><div class="stat-value">250 ns</div><div class="stat-label">CXL.mem</div></div>
+        <div class="stat-box"><div class="stat-value">16 μs</div><div class="stat-label">PCIe DMA</div></div>
+        <div class="stat-box"><div class="stat-value">65×</div><div class="stat-label">Improvement</div></div>
+      </div>
+
+      <!-- Section 4.1: Two-Tier Model -->
       <h2>4.1 Two-Tier Cache Model</h2>
-
-      <p>Each endpoint implements a two-tier storage hierarchy optimized for different access patterns. Understanding this hierarchy is crucial for predicting system performance.</p>
-
-      <h3>Tier 1: Endpoint DRAM (CXL.mem Path)</h3>
-
-      <p>The primary tier uses DDR5 DRAM accessed via the CXL.mem protocol:</p>
-
+      
       <div class="table-wrapper">
         <table>
           <thead>
-            <tr><th>Parameter</th><th>Value</th><th>Notes</th></tr>
+            <tr><th>Tier</th><th>Media</th><th>Latency</th><th>Capacity</th></tr>
           </thead>
           <tbody>
-            <tr><td>Media</td><td class="mono">DDR5-5600</td><td>High-bandwidth, low-latency</td></tr>
-            <tr><td>Capacity</td><td class="mono">256 GB per endpoint</td><td>1 TB aggregate with 4 endpoints</td></tr>
-            <tr><td>Access latency</td><td class="mono highlight">150-300 ns</td><td>Including CXL protocol overhead</td></tr>
-            <tr><td>Bandwidth</td><td class="mono">64 GB/s per endpoint</td><td>PCIe Gen5 ×16 link</td></tr>
+            <tr><td>Tier 1</td><td>Endpoint DDR5</td><td class="mono highlight">250 ns</td><td class="mono">1 TB</td></tr>
+            <tr><td>Tier 2</td><td>Endpoint NVMe</td><td class="mono warning">25 μs</td><td class="mono">16 TB</td></tr>
+            <tr><td>Fallback</td><td>Recompute</td><td class="mono danger">50 ms</td><td class="mono">∞</td></tr>
           </tbody>
         </table>
       </div>
 
-      <p>The DRAM tier stores <strong>hot KV-cache entries</strong> and frequently-accessed model weight slices. Access via CXL.mem uses load/store semantics with hardware coherence—no explicit cache management required.</p>
-
-      <h3>Tier 2: Endpoint Flash (NVMe)</h3>
-
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr><th>Parameter</th><th>Value</th><th>Notes</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>Media</td><td class="mono">Enterprise NVMe SSD</td><td>PCIe Gen5 ×4</td></tr>
-            <tr><td>Capacity</td><td class="mono">2-8 TB per endpoint</td><td>16-32 TB aggregate</td></tr>
-            <tr><td>Access latency</td><td class="mono warning">10-50 μs</td><td>Queue depth dependent</td></tr>
-            <tr><td>Bandwidth</td><td class="mono">14 GB/s per device</td><td>Sufficient for prefetch</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <p>The flash tier provides <strong>capacity for cold KV-cache entries</strong> and full model weight storage. Access requires explicit I/O commands but latency can be masked through intelligent prefetching.</p>
-
-      <h3>Fallback: Recompute</h3>
-
-      <p>When requested KV entries exist in neither DRAM nor flash (complete cache miss), the system falls back to <strong>recomputation</strong>:</p>
-
-      <ul>
-        <li>Re-run prefill for the missing token range</li>
-        <li>Latency: 10-100 ms depending on range size</li>
-        <li>Target: &lt;1% miss rate through intelligent eviction</li>
-      </ul>
-
-      <div class="figure">
-        <div class="figure-label">Figure 4.1 — Memory Tier Hierarchy</div>
-        <div style="display: flex; flex-direction: column; gap: 0.75rem; max-width: 600px; margin: 0 auto;">
-          <div style="padding: 1rem; background: linear-gradient(90deg, rgba(63,185,80,0.2), rgba(63,185,80,0.05)); border: 2px solid var(--accent-green); border-radius: 10px; display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <div style="font-weight: 600; color: var(--accent-green);">GPU HBM</div>
-              <div style="font-size: 0.85rem; color: var(--text-muted);">Model weights + hot activations</div>
-            </div>
-            <div style="text-align: right;">
-              <div style="font-family: var(--font-mono);">192 GB</div>
-              <div style="font-size: 0.8rem; color: var(--text-muted);">100 ns</div>
-            </div>
-          </div>
-          <div style="padding: 1rem; background: linear-gradient(90deg, rgba(88,166,255,0.2), rgba(88,166,255,0.05)); border: 2px solid var(--accent-cyan); border-radius: 10px; display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <div style="font-weight: 600; color: var(--accent-cyan);">CXL DRAM (Tier 1)</div>
-              <div style="font-size: 0.85rem; color: var(--text-muted);">Hot KV-cache entries</div>
-            </div>
-            <div style="text-align: right;">
-              <div style="font-family: var(--font-mono);">1 TB</div>
-              <div style="font-size: 0.8rem; color: var(--text-muted);">250 ns</div>
-            </div>
-          </div>
-          <div style="padding: 1rem; background: linear-gradient(90deg, rgba(163,113,247,0.2), rgba(163,113,247,0.05)); border: 2px solid var(--accent-purple); border-radius: 10px; display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <div style="font-weight: 600; color: var(--accent-purple);">NVMe Flash (Tier 2)</div>
-              <div style="font-size: 0.85rem; color: var(--text-muted);">Cold KV-cache + overflow</div>
-            </div>
-            <div style="text-align: right;">
-              <div style="font-family: var(--font-mono);">16 TB</div>
-              <div style="font-size: 0.8rem; color: var(--text-muted);">25 μs</div>
-            </div>
-          </div>
-          <div style="padding: 1rem; background: linear-gradient(90deg, rgba(248,81,73,0.2), rgba(248,81,73,0.05)); border: 2px solid var(--accent-red); border-radius: 10px; display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <div style="font-weight: 600; color: var(--accent-red);">Recompute (Fallback)</div>
-              <div style="font-size: 0.85rem; color: var(--text-muted);">Re-run prefill on miss</div>
-            </div>
-            <div style="text-align: right;">
-              <div style="font-family: var(--font-mono);">∞</div>
-              <div style="font-size: 0.8rem; color: var(--text-muted);">50 ms</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <h2>4.2 Latency Formula</h2>
-
-      <p>Effective per-access latency follows the standard cache hierarchy model:</p>
-
+      <!-- Section 4.2: Effective Latency -->
+      <h2>4.2 Effective Latency Formula</h2>
+      
       <div class="equation">
         L<sub>eff</sub> = α × L<sub>dram</sub> + β × L<sub>flash</sub> + γ × L<sub>recompute</sub>
-        <span class="equation-label">Weighted average latency across tiers</span>
+        <span class="equation-label">Weighted average across cache tiers</span>
       </div>
 
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr><th>Symbol</th><th>Meaning</th><th>Typical Value</th></tr>
-          </thead>
-          <tbody>
-            <tr><td class="mono">α</td><td>DRAM hit rate</td><td class="mono">0.85</td></tr>
-            <tr><td class="mono">β</td><td>Flash hit rate</td><td class="mono">0.14</td></tr>
-            <tr><td class="mono">γ</td><td>Miss rate (1 - α - β)</td><td class="mono">0.01</td></tr>
-            <tr><td class="mono">L<sub>dram</sub></td><td>DRAM access latency</td><td class="mono">~250 ns</td></tr>
-            <tr><td class="mono">L<sub>flash</sub></td><td>Flash access latency</td><td class="mono">~25 μs</td></tr>
-            <tr><td class="mono">L<sub>recompute</sub></td><td>Recompute latency</td><td class="mono">~50 ms</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <h2>4.3 Example Calculation: Llama-70B at 128K Context</h2>
-
-      <p><strong>Scenario:</strong> Serving Llama-70B with 128K context, 85% DRAM hit rate, 14% flash hit rate, 1% miss rate.</p>
-
-      <h4>Without Prefetch Masking</h4>
-
+      <p>With 85% DRAM hit rate, 14% flash hit, 1% miss:</p>
+      
       <div class="derivation">
         <div class="derivation-step">
-          <div class="step-num">1.</div>
+          <div class="step-num">Calculate:</div>
           <div class="step-content">
             <div class="step-eq">L<sub>eff</sub> = 0.85 × 250 ns + 0.14 × 25 μs + 0.01 × 50 ms</div>
-          </div>
-        </div>
-        <div class="derivation-step">
-          <div class="step-num">2.</div>
-          <div class="step-content">
-            <div class="step-eq">= 212.5 ns + 3.5 μs + 500 μs</div>
-          </div>
-        </div>
-        <div class="derivation-step">
-          <div class="step-num">3.</div>
-          <div class="step-content">
-            <div class="step-eq">= <strong>504 μs ≈ 0.5 ms</strong></div>
-            <div class="step-explain">Dominated by recompute penalty</div>
+            <div class="step-eq">= 212.5 ns + 3.5 μs + 500 μs = <strong>504 μs ≈ 0.5 ms</strong></div>
           </div>
         </div>
       </div>
 
-      <h4>With Prefetch Masking (80% flash overlap)</h4>
-
-      <div class="derivation">
-        <div class="derivation-step">
-          <div class="step-num">1.</div>
-          <div class="step-content">
-            <div class="step-eq">L<sub>eff</sub> = 0.85 × 250 ns + 0.14 × 5 μs + 0.01 × 50 ms</div>
-            <div class="step-explain">Flash latency reduced to 5 μs due to prefetch overlap</div>
-          </div>
+      <div class="figure-embed tall">
+        <div class="figure-embed-header">
+          <span class="figure-embed-label">Figure 4.1 — Effective Latency Analysis</span>
+          <a href="../figures/ch04-latency/effective-latency-analysis.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
         </div>
-        <div class="derivation-step">
-          <div class="step-num">2.</div>
-          <div class="step-content">
-            <div class="step-eq">= 212.5 ns + 700 ns + 500 μs = <strong>501 μs</strong></div>
-          </div>
-        </div>
+        <iframe src="../figures/ch04-latency/effective-latency-analysis.html"></iframe>
       </div>
 
-      <h3>Comparison to Alternatives</h3>
-
+      <!-- Section 4.3: CXL vs PCIe -->
+      <h2>4.3 CXL.mem vs PCIe DMA Path Comparison</h2>
+      
       <div class="table-wrapper">
         <table>
           <thead>
-            <tr><th>Approach</th><th>Effective Latency</th><th>Notes</th></tr>
+            <tr><th>Component</th><th>CXL.mem</th><th>PCIe DMA</th></tr>
           </thead>
           <tbody>
-            <tr><td>Recompute-only</td><td class="mono danger">50 ms</td><td>No caching</td></tr>
-            <tr><td>Naive SSD offload</td><td class="mono warning">25+ ms</td><td>Direct NVMe access</td></tr>
-            <tr><td>CPU DRAM offload</td><td class="mono warning">5-10 μs</td><td>PCIe DMA path</td></tr>
-            <tr><td class="highlight"><strong>Endpoint architecture</strong></td><td class="mono highlight"><strong>0.5 ms</strong></td><td>CXL + intelligent caching</td></tr>
+            <tr><td>CPU involvement</td><td class="mono highlight">None</td><td class="mono danger">Required (interrupt)</td></tr>
+            <tr><td>Protocol overhead</td><td class="mono">100 ns</td><td class="mono">2-5 μs</td></tr>
+            <tr><td>Memory access</td><td class="mono">100 ns</td><td class="mono">100 ns</td></tr>
+            <tr><td>TLB management</td><td class="mono highlight">Hardware</td><td class="mono danger">Software (1-2 μs)</td></tr>
+            <tr style="background: rgba(63,185,80,0.1);"><td><strong>Total</strong></td><td class="mono highlight"><strong>~250 ns</strong></td><td class="mono danger"><strong>5-16 μs</strong></td></tr>
           </tbody>
         </table>
       </div>
 
-      <h2>4.4 Comparison to PCIe Baseline</h2>
-
-      <p>The key latency advantage comes from eliminating CPU involvement in the data path.</p>
-
-      <h3>PCIe Swap Path Components</h3>
-
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr><th>Component</th><th>Latency</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>GPU interrupt to CPU</td><td class="mono">2-5 μs</td></tr>
-            <tr><td>CPU page fault handler</td><td class="mono">1-2 μs</td></tr>
-            <tr><td>DMA setup</td><td class="mono">500 ns</td></tr>
-            <tr><td>PCIe transfer (4 KB page)</td><td class="mono">125 ns</td></tr>
-            <tr><td>GPU TLB shootdown</td><td class="mono">1-2 μs</td></tr>
-            <tr style="background: rgba(248,81,73,0.1);"><td><strong>Total</strong></td><td class="mono danger"><strong>5-10 μs</strong></td></tr>
-          </tbody>
-        </table>
+      <div class="figure-embed tall">
+        <div class="figure-embed-header">
+          <span class="figure-embed-label">Figure 4.2 — Latency Path Comparison</span>
+          <a href="../figures/ch04-latency/diagram-latency-path-html.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
+        </div>
+        <iframe src="../figures/ch04-latency/diagram-latency-path-html.html"></iframe>
       </div>
 
-      <h3>CXL.mem Direct Path</h3>
+      <!-- Section 4.4: Waterfall -->
+      <h2>4.4 Access Timeline (Waterfall)</h2>
 
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr><th>Component</th><th>Latency</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>GPU load instruction</td><td class="mono">10 ns</td></tr>
-            <tr><td>CXL protocol (request/grant)</td><td class="mono">50 ns</td></tr>
-            <tr><td>PCIe PHY (both directions)</td><td class="mono">40 ns</td></tr>
-            <tr><td>Endpoint DRAM access</td><td class="mono">100 ns</td></tr>
-            <tr><td>CXL protocol (response)</td><td class="mono">50 ns</td></tr>
-            <tr style="background: rgba(63,185,80,0.1);"><td><strong>Total</strong></td><td class="mono highlight"><strong>~250 ns</strong></td></tr>
-          </tbody>
-        </table>
+      <div class="figure-embed">
+        <div class="figure-embed-header">
+          <span class="figure-embed-label">Figure 4.3 — Latency Waterfall Diagram</span>
+          <a href="../figures/ch04-latency/figure-2-5-latency-waterfall.html" target="_blank" class="figure-embed-link">View TSX Source ↗</a>
+        </div>
+        <iframe src="../figures/ch04-latency/figure-2-5-latency-waterfall.html" style="background: #1a1a2e;"></iframe>
       </div>
 
       <div class="callout insight">
         <div class="callout-title">🚀 65× Latency Improvement</div>
-        <p>The CXL.mem path eliminates:</p>
-        <ul style="margin-bottom: 0;">
-          <li>✗ CPU involvement (interrupt, handler, scheduling)</li>
-          <li>✗ Explicit DMA setup</li>
-          <li>✗ TLB management overhead</li>
-        </ul>
-        <p style="margin-top: 1rem; margin-bottom: 0;"><strong>Result: 250 ns vs 16+ μs = 65× improvement</strong> for hot-path accesses.</p>
+        <p style="margin-bottom: 0;">CXL.mem eliminates CPU interrupt handling, explicit DMA setup, and software TLB management. Result: <strong>250 ns vs 16+ μs = 65× faster</strong></p>
       </div>
 
-      <h2>4.5 Degradation Under Load</h2>
-
-      <p>Real-world latency exceeds theoretical minimums due to system effects.</p>
-
-      <h3>Queue Depth Effects</h3>
-
-      <p>As concurrent requests increase, endpoint controller queuing adds latency:</p>
-
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr><th>Queue Depth</th><th>Additional Latency</th></tr>
-          </thead>
-          <tbody>
-            <tr><td class="mono">1</td><td class="mono highlight">0 ns</td></tr>
-            <tr><td class="mono">4</td><td class="mono">50 ns</td></tr>
-            <tr><td class="mono">16</td><td class="mono">200 ns</td></tr>
-            <tr><td class="mono">64</td><td class="mono warning">1 μs</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <p><strong>Mitigation:</strong> Deploy sufficient endpoints to limit per-endpoint queue depth below 16.</p>
-
-      <h3>Latency Distribution Summary</h3>
-
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr><th>Percentile</th><th>Expected Latency</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>p50</td><td class="mono highlight">250 ns</td></tr>
-            <tr><td>p90</td><td class="mono">400 ns</td></tr>
-            <tr><td>p99</td><td class="mono">1.5 μs</td></tr>
-            <tr><td>p99.9</td><td class="mono warning">10 μs</td></tr>
-          </tbody>
-        </table>
-      </div>
-
+      <!-- Chapter Navigation -->
       <div class="chapter-nav">
         <a href="ch03-architecture.html" class="chapter-nav-btn prev">
           <span class="chapter-nav-label">← Previous</span>
           <span class="chapter-nav-title">Chapter 3: Architecture</span>
         </a>
         <a href="ch05-bandwidth.html" class="chapter-nav-btn next">
-          <span class="chapter-nav-label">Next Chapter →</span>
-          <span class="chapter-nav-title">Chapter 5: Bandwidth Aggregation</span>
+          <span class="chapter-nav-label">Next →</span>
+          <span class="chapter-nav-title">Chapter 5: Bandwidth</span>
         </a>
       </div>
     </div>
+
     <footer class="footer">
       <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-primary);">
         <p style="font-size: 0.8rem; color: var(--text-muted);">
           © 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.<br>
-          This document contains proprietary and confidential information.<br>
-          Unauthorized reproduction or distribution is strictly prohibited.
+          This document contains proprietary and confidential information.
         </p>
       </div>
-      <p>Distributed Endpoint Architecture for KV-Cache Offloading in LLM Inference</p>
-      <p style="margin-top: 0.5rem;">Technical Documentation v3.0 — December 2025</p>
+      <p>KV-Cache Offloading Architecture — v3.0</p>
     </footer>
   </div>
 </body>

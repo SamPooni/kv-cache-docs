@@ -1,0 +1,14 @@
+================================================================================
+CH06 - PREPROCESSING - FIGURE INDEX
+================================================================================
+
+Fig 6.1: Traditional Path (CPU Bound)
+      Source: preprocessing-offload.html
+
+Fig 6.2: Endpoint Path (Direct to GPU)
+      Source: preprocessing-offload.html
+
+Fig 6.3: ARM Core Performance
+      Source: preprocessing-offload.html
+
+TOTAL: 3 figures

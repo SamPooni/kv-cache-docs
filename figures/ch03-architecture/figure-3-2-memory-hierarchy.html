@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Figure 3.2 — Memory Hierarchy</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: system-ui, sans-serif; background: linear-gradient(135deg, #0f172a, #1e293b); min-height: 100vh; color: #e2e8f0; }</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+function MemoryHierarchy() {
+  const tiers = [
+    { name: 'Tier 0: GPU HBM (Pinned)', cap: '140 GB', lat: '100 ns', color: '#10b981', desc: 'Model weights (non-evictable)' },
+    { name: 'Tier 1: GPU HBM (Evictable)', cap: '~42 GB', lat: '100 ns', color: '#3b82f6', desc: 'Hot KV-cache entries + activations' },
+    { name: 'Tier 2: CXL DRAM', cap: '1 TB', lat: '250 ns', color: '#8b5cf6', desc: 'Warm KV-cache entries' },
+    { name: 'Tier 3: NVMe Flash', cap: '16 TB', lat: '10-50 μs', color: '#f59e0b', desc: 'Cold entries, overflow' }
+  ];
+  const styles = {
+    container: { maxWidth: '700px', margin: '0 auto', padding: '2rem' },
+    header: { textAlign: 'center', marginBottom: '2rem' },
+    pyramid: { display: 'flex', flexDirection: 'column', gap: '0.5rem' },
+    tier: (color, i) => ({ background: '#1e293b', borderLeft: `4px solid ${color}`, borderRadius: '0 12px 12px 0', padding: '1rem 1.5rem', marginLeft: i * 30, transition: 'all 0.2s' }),
+    tierHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' },
+    tierName: (color) => ({ fontWeight: 600, color }),
+    tierStats: { display: 'flex', gap: '1.5rem' },
+    stat: { fontSize: '0.875rem' },
+    statVal: { fontWeight: 600, color: '#60a5fa' },
+    desc: { fontSize: '0.8rem', color: '#64748b' }
+  };
+  return (
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <div style={{display: 'inline-block', padding: '0.25rem 0.75rem', background: 'rgba(139,92,246,0.2)', color: '#a78bfa', fontSize: '0.75rem', fontFamily: 'monospace', borderRadius: '20px', marginBottom: '0.5rem'}}>FIGURE 3.2</div>
+        <h1 style={{fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.5rem'}}>Three-Tier Memory Hierarchy</h1>
+        <p style={{color: '#94a3b8', fontSize: '0.875rem'}}>Capacity increases, speed decreases ↓</p>
+      </div>
+      <div style={styles.pyramid}>
+        {tiers.map((t, i) => (
+          <div key={i} style={styles.tier(t.color, i)}>
+            <div style={styles.tierHeader}>
+              <span style={styles.tierName(t.color)}>{t.name}</span>
+              <div style={styles.tierStats}>
+                <span style={styles.stat}><span style={styles.statVal}>{t.cap}</span></span>
+                <span style={styles.stat}><span style={styles.statVal}>{t.lat}</span></span>
+              </div>
+            </div>
+            <div style={styles.desc}>{t.desc}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<MemoryHierarchy />);
+</script>
+</body>
+</html>

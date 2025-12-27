@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Per-Head Attention Tracking</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0a0a12 0%, #1a1a2e 100%);
+            min-height: 100vh;
+            color: #e0e0e0;
+            padding: 40px 20px;
+        }
+        
+        .container { max-width: 1100px; margin: 0 auto; }
+        
+        h1 {
+            font-size: 1.8rem;
+            text-align: center;
+            margin-bottom: 8px;
+            background: linear-gradient(90deg, #ec4899, #8b5cf6, #06b6d4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+        }
+        
+        .section {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #a78bfa;
+            margin-bottom: 20px;
+        }
+        
+        /* Head cards */
+        .heads-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin: 25px 0;
+        }
+        
+        .head-card {
+            background: rgba(0,0,0,0.3);
+            border-radius: 16px;
+            padding: 18px;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+        
+        .head-card:hover {
+            transform: translateY(-3px);
+        }
+        
+        .head-card.recency { border-color: rgba(251, 146, 60, 0.4); }
+        .head-card.anchor { border-color: rgba(34, 197, 94, 0.4); }
+        .head-card.retrieval { border-color: rgba(139, 92, 246, 0.4); }
+        .head-card.syntactic { border-color: rgba(59, 130, 246, 0.4); }
+        
+        .head-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            margin-bottom: 3px;
+        }
+        
+        .head-card.recency .head-name { color: #fb923c; }
+        .head-card.anchor .head-name { color: #22c55e; }
+        .head-card.retrieval .head-name { color: #a855f7; }
+        .head-card.syntactic .head-name { color: #3b82f6; }
+        
+        .head-id {
+            font-size: 0.75rem;
+            color: #666;
+            margin-bottom: 12px;
+        }
+        
+        .head-pattern {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+        
+        /* Mini attention visualization */
+        .attention-mini {
+            display: flex;
+            gap: 2px;
+            margin-top: 12px;
+        }
+        
+        .attention-bar {
+            flex: 1;
+            height: 24px;
+            border-radius: 3px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+        
+        .attention-fill {
+            border-radius: 3px;
+            transition: height 0.3s ease;
+        }
+        
+        .attention-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.6rem;
+            color: #666;
+            margin-top: 4px;
+        }
+        
+        /* Problem/Solution boxes */
+        .problem-solution {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 25px 0;
+        }
+        
+        .box {
+            padding: 20px;
+            border-radius: 12px;
+        }
+        
+        .box.problem {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        
+        .box.solution {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+        
+        .box-title {
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .box.problem .box-title { color: #ef4444; }
+        .box.solution .box-title { color: #22c55e; }
+        
+        .box-content {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            line-height: 1.6;
+        }
+        
+        /* Scenario visualization */
+        .scenario {
+            background: rgba(0,0,0,0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .scenario-title {
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 15px;
+        }
+        
+        .context-bar {
+            height: 50px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 8px;
+            display: flex;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .context-segment {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            color: white;
+            text-align: center;
+            line-height: 1.2;
+        }
+        
+        .segment-system {
+            width: 5%;
+            background: linear-gradient(180deg, #22c55e, #16a34a);
+        }
+        
+        .segment-doc {
+            width: 50%;
+            background: linear-gradient(180deg, #6366f1, #4f46e5);
+        }
+        
+        .segment-mention {
+            width: 5%;
+            background: linear-gradient(180deg, #a855f7, #7c3aed);
+        }
+        
+        .segment-recent {
+            width: 40%;
+            background: linear-gradient(180deg, #fb923c, #ea580c);
+        }
+        
+        .context-labels {
+            display: flex;
+            margin-top: 8px;
+            font-size: 0.7rem;
+        }
+        
+        .context-label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #888;
+            padding-right: 15px;
+        }
+        
+        .context-label .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        
+        /* Head decisions */
+        .head-decisions {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-top: 20px;
+        }
+        
+        .head-decision {
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            padding: 12px;
+            font-size: 0.75rem;
+        }
+        
+        .head-decision-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .head-decision-title.recency { color: #fb923c; }
+        .head-decision-title.anchor { color: #22c55e; }
+        .head-decision-title.retrieval { color: #a855f7; }
+        .head-decision-title.syntactic { color: #3b82f6; }
+        
+        .keep-list {
+            color: #94a3b8;
+            font-size: 0.7rem;
+        }
+        
+        .result-box {
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.1));
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .result-title {
+            color: #a78bfa;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .result-text {
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+        
+        .result-text strong {
+            color: #c4b5fd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Per-Head Attention Tracking</h1>
+        <p class="subtitle">Different attention heads serve different purposes â€” one cache policy doesn't fit all</p>
+        
+        <div class="section">
+            <div class="section-title">The Four Types of Attention Heads</div>
+            
+            <div class="heads-grid">
+                <div class="head-card recency">
+                    <div class="head-name">Recency Head</div>
+                    <div class="head-id">Head 0, Layer 40</div>
+                    <div class="head-pattern">
+                        Focuses on last 50-100 tokens. Looking for immediate context.
+                    </div>
+                    <div class="attention-mini">
+                        <div class="attention-bar" style="background: rgba(251,146,60,0.1);">
+                            <div class="attention-fill" style="height: 10%; background: #fb923c;"></div>
+                        </div>
+                        <div class="attention-bar" style="background: rgba(251,146,60,0.1);">
+                            <div class="attention-fill" style="height: 15%; background: #fb923c;"></div>
+                        </div>
+                        <div class="attention-bar" style="background: rgba(251,146,60,0.1);">
+                            <div class="attention-fill" style="height: 20%; background: #fb923c;"></div>
+                        </div>
+                        <div class="attention-bar" style="background: rgba(251,146,60,0.1);">
+                            <div class="attention-fill" style="height: 45%; background: #fb923c;"></div>
+                        </div>
+                        <div class="attention-bar" style="background: rgba(251,146,60,0.1);">
+                            <div class="attention-fill" style="height: 95%; background: #fb923c;"></div>
+                        </div>
+                    </div>
+                    <div class="attention-labels">
+                        <span>Old</span>
+                        <span>Recent</span>
+                    </div>
+                </div>
+                
+                <div class="head-card anchor">
+                    <div class="head-name">Anchor Head</div>
+                    <div class="head-id">Head 1, Layer 40</div>
+                    <div class="head-pattern">
+                        Always attends to first 50 tokens. Looking for system instructions.
+                    </div>
+                    <div class="attention-mini">
+                        <div class="attention-bar" style="background: rgba(34,197,94,0.1);">
+                            <div class="attention-fill" style="height: 90%; background: #22c55e;"></div>
+                        </div>
+                        <div class="attention-bar" style="background: rgba(34,197,94,0.1);">
+                            <div class="attention-fill" style="height: 20%; background: #22c55e;"></div>
+                        </div>
+                        <div class="attention-bar" style="background: rgba(34,197,94,0.1);">
+                            <div class="attention-fill" style="height: 15%; background: #22c55e;"></div>
+                        </div>
+                        <div class="attention-bar" style="background: rgba(34,197,94,0.1);">
+                            <div class="attention-fill" style="height: 25%; background: #22c55e;"></div>
+                        </div>
+                        <div class="attention-bar" style="background: rgba(34,197,94,0.1);">
+                            <div class="attention-fill" style="height: 30%; background: #22c55e;"></div>
+                        </div>
+                    </div>
+                    <div class="attention-labels">
+                        <span>Start</span>
+                        <span>End</span>
+                    </div>
+                </div>
+                
+                <div class="head-card retrieval">
+                    <div class="head-name">Retrieval Head</div>
+                    <div class="head-id">Head 2, Layer 40</div>
+                    <div class="head-pattern">
+                        Attends based on semantic similarity. Finds relevant info anywhere.
+                    </div>
+                    <div class="attention-mini">
+                        <div class="attention-bar" style="background: rgba(139,92,246,0.1);">
+                            <div class="attention-fill" style="height: 15%; background: #a855f7;"></div>
+                        </div>
+                        <div class="attention-bar" style="background: rgba(139,92,246,0.1);">
+                            <div class="attention-fill" style="height: 85%; background: #a855f7;"></div>
+                        </div>
+                        <div class="attention-bar" style="background: rgba(139,92,246,0.1);">
+                            <div class="attention-fill" style="height: 20%; background: #a855f7;"></div>
+                        </div>
+                        <div class="attention-bar" style="background: rgba(139,92,246,0.1);">
+                            <div class="attention-fill" style="height: 60%; background: #a855f7;"></div>
+                        </div>
+                        <div class="attention-bar" style="background: rgba(139,92,246,0.1);">
+                            <div class="attention-fill" style="height: 25%; background: #a855f7;"></div>
+                        </div>
+                    </div>
+                    <div class="attention-labels">
+                        <span>Variable</span>
+                        <span>Spiky</span>
+                    </div>
+                </div>
+                
+                <div class="head-card syntactic">
+                    <div class="head-name">Syntactic Head</div>
+                    <div class="head-id">Head 3, Layer 40</div>
+                    <div class="head-pattern">
+                        Attends to grammatically related tokens. Subject-verb agreement, etc.
+                    </div>
+                    <div class="attention-mini">
+                        <div class="attention-bar" style="background: rgba(59,130,246,0.1);">
+                            <div class="attention-fill" style="height: 30%; background: #3b82f6;"></div>
+                        </div>
+                        <div class="attention-bar" style="background: rgba(59,130,246,0.1);">
+                            <div class="attention-fill" style="height: 70%; background: #3b82f6;"></div>
+                        </div>
+                        <div class="attention-bar" style="background: rgba(59,130,246,0.1);">
+                            <div class="attention-fill" style="height: 25%; background: #3b82f6;"></div>
+                        </div>
+                        <div class="attention-bar" style="background: rgba(59,130,246,0.1);">
+                            <div class="attention-fill" style="height: 40%; background: #3b82f6;"></div>
+                        </div>
+                        <div class="attention-bar" style="background: rgba(59,130,246,0.1);">
+                            <div class="attention-fill" style="height: 35%; background: #3b82f6;"></div>
+                        </div>
+                    </div>
+                    <div class="attention-labels">
+                        <span>Structured</span>
+                        <span>Pattern</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="problem-solution">
+                <div class="box problem">
+                    <div class="box-title">âŒ Problem with Global Caching</div>
+                    <div class="box-content">
+                        A single "keep recent tokens" policy works for <strong>recency heads</strong> but fails for:
+                        <ul style="margin-top: 8px; margin-left: 18px;">
+                            <li>Anchor heads (need start of prompt)</li>
+                            <li>Retrieval heads (need specific distant tokens)</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="box solution">
+                    <div class="box-title">âœ“ Solution: Per-Head Tracking</div>
+                    <div class="box-content">
+                        Track which tokens each head needs separately. A token stays cached if <strong>ANY</strong> head still needs it.
+                        This ensures anchor tokens stay cached even though recency heads don't need them.
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">Example: 100K Context Document QA</div>
+            
+            <div class="scenario">
+                <div class="scenario-title">Context structure:</div>
+                <div class="context-bar">
+                    <div class="context-segment segment-system">System<br>Prompt</div>
+                    <div class="context-segment segment-doc">Document (50K tokens)</div>
+                    <div class="context-segment segment-mention">"France"</div>
+                    <div class="context-segment segment-recent">Conversation (40K tokens)</div>
+                </div>
+                <div class="context-labels">
+                    <div class="context-label"><div class="dot" style="background: #22c55e;"></div> Pos 0-100</div>
+                    <div class="context-label"><div class="dot" style="background: #6366f1;"></div> Pos 100-50K</div>
+                    <div class="context-label"><div class="dot" style="background: #a855f7;"></div> Pos 50K (key fact)</div>
+                    <div class="context-label"><div class="dot" style="background: #fb923c;"></div> Pos 50K-100K</div>
+                </div>
+            </div>
+            
+            <p style="color: #888; font-size: 0.85rem; margin: 15px 0;">
+                Query: "What is the capital of France?" â€” Now generating answer...
+            </p>
+            
+            <div class="head-decisions">
+                <div class="head-decision">
+                    <div class="head-decision-title recency">Recency Head</div>
+                    <div class="keep-list">
+                        Needs: Last 100 tokens<br>
+                        (recent conversation)
+                    </div>
+                </div>
+                <div class="head-decision">
+                    <div class="head-decision-title anchor">Anchor Head</div>
+                    <div class="keep-list">
+                        Needs: Pos 0-100<br>
+                        (system prompt)
+                    </div>
+                </div>
+                <div class="head-decision">
+                    <div class="head-decision-title retrieval">Retrieval Head</div>
+                    <div class="keep-list">
+                        Needs: Pos 50K<br>
+                        (where "France" mentioned)
+                    </div>
+                </div>
+                <div class="head-decision">
+                    <div class="head-decision-title syntactic">Syntactic Head</div>
+                    <div class="keep-list">
+                        Needs: Question words<br>
+                        (recent "What is")
+                    </div>
+                </div>
+            </div>
+            
+            <div class="result-box">
+                <div class="result-title">Combined Cache Decision</div>
+                <div class="result-text">
+                    Keep in HBM: <strong>Pos 0-100</strong> (anchor) + <strong>Pos ~50K</strong> (France mention) + <strong>Last 1000 tokens</strong> (recent)<br>
+                    Everything else â†’ CXL DRAM (accessed less frequently)
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

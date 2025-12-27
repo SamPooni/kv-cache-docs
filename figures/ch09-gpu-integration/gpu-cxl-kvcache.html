@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #ffffff;
+  color: #111827;
+  padding: 32px;
+  line-height: 1.4;
+}
+h1 { font-size: 1.875rem; font-weight: 700; text-align: center; margin-bottom: 8px; }
+.subtitle { color: #4b5563; font-size: 1.125rem; text-align: center; margin-bottom: 32px; }
+.stack { display: flex; flex-direction: column; gap: 24px; }
+
+/* Cards */
+.card { border-radius: 16px; padding: 24px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); }
+.card-title { color: white; font-weight: 700; font-size: 1.5rem; text-align: center; margin-bottom: 16px; }
+
+/* GPU Section */
+.gpu { background: linear-gradient(to right, #15803d, #166534); }
+.gpu-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.gpu-box { background: #14532d; border-radius: 12px; padding: 16px; text-align: center; }
+.gpu-box.hbm { background: #052e16; border: 4px solid #eab308; }
+.gpu-label { color: #bbf7d0; font-size: 1rem; font-weight: 600; }
+.gpu-value { color: white; font-size: 1.5rem; font-weight: 700; margin-top: 8px; }
+.gpu-sub { color: #86efac; font-size: 0.875rem; }
+.gpu-sub.yellow { color: #facc15; font-weight: 600; }
+.hbm-inner { margin-top: 8px; background: #ca8a04; border-radius: 8px; padding: 8px; }
+.hbm-inner-label { color: #fef9c3; font-size: 0.75rem; }
+.hbm-inner-value { color: white; font-size: 0.875rem; font-weight: 700; }
+
+/* CXL Connection */
+.cxl-conn { display: flex; justify-content: center; align-items: center; }
+.cxl-conn-inner { display: flex; flex-direction: column; align-items: center; }
+.cxl-conn-row { display: flex; align-items: center; gap: 16px; }
+.cxl-bar { width: 12px; height: 64px; background: #2563eb; border-radius: 4px; }
+.cxl-label { text-align: center; }
+.cxl-label-title { color: #1e40af; font-weight: 700; font-size: 1.125rem; }
+.cxl-label-sub { color: #2563eb; font-size: 0.875rem; }
+.cxl-arrows { display: flex; gap: 32px; margin-top: 8px; }
+.cxl-arrow { text-align: center; }
+.cxl-arrow-label { font-size: 0.875rem; font-weight: 600; }
+.cxl-arrow-label.green { color: #15803d; }
+.cxl-arrow-label.blue { color: #1d4ed8; }
+.cxl-arrow-sub { color: #6b7280; font-size: 0.75rem; }
+
+/* CXL Switch */
+.cxl-switch { background: #7e22ce; border-radius: 12px; padding: 16px; margin: 0 64px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+.cxl-switch-title { color: white; font-weight: 700; font-size: 1.25rem; text-align: center; }
+.cxl-switch-sub { color: #e9d5ff; font-size: 0.875rem; text-align: center; }
+
+/* Switch Lines */
+.switch-lines { display: flex; justify-content: space-around; margin: 0 64px; }
+.switch-line { width: 8px; height: 32px; background: #a855f7; border-radius: 4px; }
+
+/* Endpoints Grid */
+.endpoints { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 0 16px; }
+.endpoint { background: linear-gradient(to bottom, #1d4ed8, #1e40af); border-radius: 16px; padding: 16px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); }
+.endpoint-title { color: white; font-weight: 700; font-size: 1.125rem; text-align: center; margin-bottom: 12px; }
+.endpoint-tier { border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+.endpoint-tier.warm { background: #1e3a8a; border: 2px solid #fb923c; }
+.endpoint-tier.cold { background: #374151; border: 2px solid #6b7280; }
+.tier-label { font-size: 0.875rem; font-weight: 600; text-align: center; }
+.tier-label.warm { color: #bfdbfe; }
+.tier-label.cold { color: #d1d5db; }
+.tier-value { color: white; font-size: 1.25rem; font-weight: 700; text-align: center; }
+.tier-latency { font-size: 0.75rem; text-align: center; font-weight: 600; }
+.tier-latency.warm { color: #fb923c; }
+.tier-latency.cold { color: #9ca3af; }
+.tier-inner { margin-top: 8px; border-radius: 8px; padding: 8px; }
+.tier-inner.warm { background: #ea580c; }
+.tier-inner.cold { background: #4b5563; }
+.tier-inner-label { font-size: 0.75rem; text-align: center; }
+.tier-inner.warm .tier-inner-label { color: #fed7aa; }
+.tier-inner.cold .tier-inner-label { color: #d1d5db; }
+.tier-inner-value { color: white; font-size: 0.75rem; text-align: center; }
+.tier-inner.cold .tier-inner-value { color: #9ca3af; }
+.endpoint-ctrl { margin-top: 12px; background: #172554; border-radius: 8px; padding: 8px; }
+.endpoint-ctrl-title { color: #93c5fd; font-size: 0.75rem; text-align: center; font-weight: 600; }
+.endpoint-ctrl-sub { color: #bfdbfe; font-size: 0.75rem; text-align: center; }
+
+/* Access Flow */
+.flow { background: #f3f4f6; border-radius: 16px; padding: 24px; border: 2px solid #d1d5db; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+.flow-title { color: #1f2937; font-weight: 700; font-size: 1.25rem; text-align: center; margin-bottom: 16px; }
+.flow-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.flow-step { border-radius: 12px; padding: 12px; border: 2px solid; }
+.flow-step.s1 { background: #dcfce7; border-color: #22c55e; }
+.flow-step.s2 { background: #fef9c3; border-color: #eab308; }
+.flow-step.s3 { background: #dbeafe; border-color: #3b82f6; }
+.flow-step.s4 { background: #f3e8ff; border-color: #a855f7; }
+.flow-step-title { font-weight: 700; font-size: 1rem; text-align: center; }
+.flow-step.s1 .flow-step-title { color: #166534; }
+.flow-step.s2 .flow-step-title { color: #854d0e; }
+.flow-step.s3 .flow-step-title { color: #1e40af; }
+.flow-step.s4 .flow-step-title { color: #6b21a8; }
+.flow-step-desc { font-size: 0.875rem; text-align: center; margin-top: 8px; }
+.flow-step.s1 .flow-step-desc { color: #15803d; }
+.flow-step.s2 .flow-step-desc { color: #a16207; }
+.flow-step.s3 .flow-step-desc { color: #1d4ed8; }
+.flow-step.s4 .flow-step-desc { color: #7e22ce; }
+
+/* Cache Policy */
+.policy { background: linear-gradient(to right, #d97706, #b45309); }
+.policy-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.policy-box { background: #78350f; border-radius: 12px; padding: 16px; }
+.policy-title { color: #fde68a; font-weight: 700; font-size: 1rem; text-align: center; margin-bottom: 8px; }
+.policy-list { color: #fef3c7; font-size: 0.875rem; }
+
+/* Capacity Summary */
+.capacity { background: #1f2937; }
+.capacity-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.cap-box { border-radius: 12px; padding: 16px; text-align: center; }
+.cap-box.hot { background: #ca8a04; }
+.cap-box.warm { background: #ea580c; }
+.cap-box.cold { background: #4b5563; }
+.cap-box.total { background: #15803d; }
+.cap-label { font-weight: 600; }
+.cap-box.hot .cap-label { color: #fef9c3; }
+.cap-box.warm .cap-label { color: #fed7aa; }
+.cap-box.cold .cap-label { color: #f3f4f6; }
+.cap-box.total .cap-label { color: #dcfce7; }
+.cap-value { color: white; font-size: 1.5rem; font-weight: 700; }
+.cap-sub { font-size: 0.875rem; }
+.cap-box.hot .cap-sub { color: #fde68a; }
+.cap-box.warm .cap-sub { color: #fdba74; }
+.cap-box.cold .cap-sub { color: #d1d5db; }
+.cap-box.total .cap-sub { color: #bbf7d0; }
+
+/* Key Insight */
+.insight { background: linear-gradient(to right, #111827, #1f2937); border: 4px solid #4b5563; }
+.insight-label { color: #9ca3af; font-size: 1.125rem; text-align: center; margin-bottom: 8px; }
+.insight-title { color: white; font-size: 1.25rem; font-weight: 700; text-align: center; }
+.insight-desc { color: #d1d5db; font-size: 1rem; text-align: center; margin-top: 12px; }
+</style>
+</head>
+<body>
+
+<h1>GPU-CXL KV-Cache Interaction</h1>
+<p class="subtitle">Tiered Memory Architecture for Large Context Inference</p>
+
+<div class="stack">
+
+  <!-- GPU Section -->
+  <div class="card gpu">
+    <div class="card-title">GPU (B200)</div>
+    <div class="gpu-grid">
+      <div class="gpu-box">
+        <div class="gpu-label">Tensor Cores</div>
+        <div class="gpu-value">4,500 TFLOPS</div>
+        <div class="gpu-sub">FP16 Dense</div>
+      </div>
+      <div class="gpu-box hbm">
+        <div class="gpu-label">HBM3e (Hot Tier)</div>
+        <div class="gpu-value">192 GB</div>
+        <div class="gpu-sub yellow">8 TB/s</div>
+        <div class="hbm-inner">
+          <div class="hbm-inner-label">Active KV-Cache</div>
+          <div class="hbm-inner-value">Current Attention Window</div>
+        </div>
+      </div>
+      <div class="gpu-box">
+        <div class="gpu-label">GPU MMU</div>
+        <div class="gpu-value">Page Fault</div>
+        <div class="gpu-sub">â†’ CXL.mem Request</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CXL Connection -->
+  <div class="cxl-conn">
+    <div class="cxl-conn-inner">
+      <div class="cxl-conn-row">
+        <div class="cxl-bar"></div>
+        <div class="cxl-label">
+          <div class="cxl-label-title">CXL.mem</div>
+          <div class="cxl-label-sub">Load/Store Semantics</div>
+          <div class="cxl-label-sub">No Driver Per-Access</div>
+        </div>
+        <div class="cxl-bar"></div>
+      </div>
+      <div class="cxl-arrows">
+        <div class="cxl-arrow">
+          <div class="cxl-arrow-label green">â†’ Data Response</div>
+          <div class="cxl-arrow-sub">Cache Line (64B)</div>
+        </div>
+        <div class="cxl-arrow">
+          <div class="cxl-arrow-label blue">â†“ Read Request</div>
+          <div class="cxl-arrow-sub">Physical Address</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CXL Switch -->
+  <div class="cxl-switch">
+    <div class="cxl-switch-title">CXL 3.0 Switch</div>
+    <div class="cxl-switch-sub">Address Routing | Coherency Management | Multi-Endpoint Aggregation</div>
+  </div>
+
+  <!-- Switch Lines -->
+  <div class="switch-lines">
+    <div class="switch-line"></div>
+    <div class="switch-line"></div>
+    <div class="switch-line"></div>
+  </div>
+
+  <!-- Endpoints -->
+  <div class="endpoints">
+    <div class="endpoint">
+      <div class="endpoint-title">Endpoint 0</div>
+      <div class="endpoint-tier warm">
+        <div class="tier-label warm">DRAM (Warm Tier)</div>
+        <div class="tier-value">256 GB</div>
+        <div class="tier-latency warm">~250 ns latency</div>
+        <div class="tier-inner warm">
+          <div class="tier-inner-label">KV-Cache Entries</div>
+          <div class="tier-inner-value">High attention score</div>
+        </div>
+      </div>
+      <div class="endpoint-tier cold">
+        <div class="tier-label cold">Flash (Cold Tier)</div>
+        <div class="tier-value">4 TB</div>
+        <div class="tier-latency cold">~50 Î¼s latency</div>
+        <div class="tier-inner cold">
+          <div class="tier-inner-label">Evicted KV Entries</div>
+          <div class="tier-inner-value">Low attention score</div>
+        </div>
+      </div>
+      <div class="endpoint-ctrl">
+        <div class="endpoint-ctrl-title">Firmware Controller</div>
+        <div class="endpoint-ctrl-sub">Per-head LRU | Prefetch | Score Tracking</div>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="endpoint-title">Endpoint 1</div>
+      <div class="endpoint-tier warm">
+        <div class="tier-label warm">DRAM (Warm Tier)</div>
+        <div class="tier-value">256 GB</div>
+        <div class="tier-latency warm">~250 ns latency</div>
+        <div class="tier-inner warm">
+          <div class="tier-inner-label">KV-Cache Entries</div>
+          <div class="tier-inner-value">High attention score</div>
+        </div>
+      </div>
+      <div class="endpoint-tier cold">
+        <div class="tier-label cold">Flash (Cold Tier)</div>
+        <div class="tier-value">4 TB</div>
+        <div class="tier-latency cold">~50 Î¼s latency</div>
+        <div class="tier-inner cold">
+          <div class="tier-inner-label">Evicted KV Entries</div>
+          <div class="tier-inner-value">Low attention score</div>
+        </div>
+      </div>
+      <div class="endpoint-ctrl">
+        <div class="endpoint-ctrl-title">Firmware Controller</div>
+        <div class="endpoint-ctrl-sub">Per-head LRU | Prefetch | Score Tracking</div>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="endpoint-title">Endpoint 2</div>
+      <div class="endpoint-tier warm">
+        <div class="tier-label warm">DRAM (Warm Tier)</div>
+        <div class="tier-value">256 GB</div>
+        <div class="tier-latency warm">~250 ns latency</div>
+        <div class="tier-inner warm">
+          <div class="tier-inner-label">KV-Cache Entries</div>
+          <div class="tier-inner-value">High attention score</div>
+        </div>
+      </div>
+      <div class="endpoint-tier cold">
+        <div class="tier-label cold">Flash (Cold Tier)</div>
+        <div class="tier-value">4 TB</div>
+        <div class="tier-latency cold">~50 Î¼s latency</div>
+        <div class="tier-inner cold">
+          <div class="tier-inner-label">Evicted KV Entries</div>
+          <div class="tier-inner-value">Low attention score</div>
+        </div>
+      </div>
+      <div class="endpoint-ctrl">
+        <div class="endpoint-ctrl-title">Firmware Controller</div>
+        <div class="endpoint-ctrl-sub">Per-head LRU | Prefetch | Score Tracking</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Access Flow -->
+  <div class="flow">
+    <div class="flow-title">KV-Cache Access Flow</div>
+    <div class="flow-grid">
+      <div class="flow-step s1">
+        <div class="flow-step-title">1. Request</div>
+        <div class="flow-step-desc">GPU attention kernel needs K/V for token position P</div>
+      </div>
+      <div class="flow-step s2">
+        <div class="flow-step-title">2. HBM Check</div>
+        <div class="flow-step-desc">Hit â†’ Return (12ms for full scan)<br/>Miss â†’ CXL.mem fault</div>
+      </div>
+      <div class="flow-step s3">
+        <div class="flow-step-title">3. Endpoint Lookup</div>
+        <div class="flow-step-desc">DRAM hit â†’ 250 ns<br/>Flash hit â†’ 50 Î¼s<br/>Miss â†’ Recompute</div>
+      </div>
+      <div class="flow-step s4">
+        <div class="flow-step-title">4. Prefetch</div>
+        <div class="flow-step-desc">Position P accessed â†’<br/>Prefetch [P-W, P+W]<br/>(RoPE locality)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cache Policy -->
+  <div class="card policy">
+    <div class="card-title">Endpoint Cache Policy (Per KV-Head)</div>
+    <div class="policy-grid">
+      <div class="policy-box">
+        <div class="policy-title">Access Tracking</div>
+        <div class="policy-list">
+          â€¢ 640 LRU queues (8 heads Ã— 80 layers)<br/>
+          â€¢ Entry: position, count, score_ema<br/>
+          â€¢ Metadata: 640 MB for 128K context
+        </div>
+      </div>
+      <div class="policy-box">
+        <div class="policy-title">Score Integration</div>
+        <div class="policy-list">
+          â€¢ Attention scores via CXL.io mailbox<br/>
+          â€¢ score_ema = Î± Ã— new + (1-Î±) Ã— old<br/>
+          â€¢ High score â†’ Retain in DRAM
+        </div>
+      </div>
+      <div class="policy-box">
+        <div class="policy-title">Eviction Priority</div>
+        <div class="policy-list">
+          â€¢ f(recency_rank, score_ema)<br/>
+          â€¢ Low score + old â†’ Flash<br/>
+          â€¢ High score â†’ Keep in DRAM
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Capacity Summary -->
+  <div class="card capacity">
+    <div class="card-title">Tiered Capacity (4 Endpoints)</div>
+    <div class="capacity-grid">
+      <div class="cap-box hot">
+        <div class="cap-label">Hot (HBM)</div>
+        <div class="cap-value">192 GB</div>
+        <div class="cap-sub">8 TB/s</div>
+      </div>
+      <div class="cap-box warm">
+        <div class="cap-label">Warm (CXL DRAM)</div>
+        <div class="cap-value">1 TB</div>
+        <div class="cap-sub">4 × 256 GB @ 250ns</div>
+      </div>
+      <div class="cap-box cold">
+        <div class="cap-label">Cold (Flash)</div>
+        <div class="cap-value">16 TB</div>
+        <div class="cap-sub">4 × 4 TB @ 25μs</div>
+      </div>
+      <div class="cap-box total">
+        <div class="cap-label">Total</div>
+        <div class="cap-value">~17 TB</div>
+        <div class="cap-sub">vs 192 GB HBM-only</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Key Insight -->
+  <div class="card insight">
+    <div class="insight-label">KEY INSIGHT</div>
+    <div class="insight-title">GPU sees unified address space. Endpoint manages tier placement transparently.</div>
+    <div class="insight-desc">CXL.mem provides load/store semantics â€” no explicit I/O commands.<br/>Endpoint firmware handles caching, prefetching, and promotion/demotion.</div>
+  </div>
+
+</div>
+</body>
+</html>

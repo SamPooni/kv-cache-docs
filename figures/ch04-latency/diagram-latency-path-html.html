@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CXL.mem vs PCIe Latency Paths</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(180deg, #0c0c14 0%, #1a1a2e 100%);
+            min-height: 100vh;
+            color: #e0e0e0;
+            padding: 40px;
+        }
+        
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 8px;
+            background: linear-gradient(90deg, #22c55e, #3b82f6, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 50px;
+            font-size: 1rem;
+        }
+        
+        .paths-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-bottom: 50px;
+        }
+        
+        .path-card {
+            background: rgba(255,255,255,0.02);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        
+        .path-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .path-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+        
+        .path-title.pcie { color: #ef4444; }
+        .path-title.cxl { color: #22c55e; }
+        
+        .path-total {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+        
+        .path-total.pcie { color: #ef4444; }
+        .path-total.cxl { color: #22c55e; }
+        
+        .step {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            position: relative;
+        }
+        
+        .step::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 35px;
+            width: 2px;
+            height: calc(100% + 5px);
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .step:last-child::before {
+            display: none;
+        }
+        
+        .step-number {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+            margin-right: 15px;
+        }
+        
+        .step-number.pcie { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+        .step-number.cxl { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+        
+        .step-content {
+            flex: 1;
+        }
+        
+        .step-name {
+            font-weight: 500;
+            font-size: 0.95rem;
+            margin-bottom: 4px;
+        }
+        
+        .step-detail {
+            font-size: 0.8rem;
+            color: #666;
+        }
+        
+        .step-latency {
+            font-weight: 600;
+            font-size: 0.95rem;
+            text-align: right;
+            min-width: 80px;
+        }
+        
+        .step-latency.pcie { color: #f87171; }
+        .step-latency.cxl { color: #4ade80; }
+        
+        /* Comparison Bar */
+        .comparison-section {
+            background: rgba(255,255,255,0.02);
+            border-radius: 20px;
+            padding: 35px;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+        
+        .comparison-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 30px;
+            text-align: center;
+            color: #a78bfa;
+        }
+        
+        .comparison-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+        
+        .comp-row {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .comp-label {
+            width: 180px;
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+        
+        .comp-bar-container {
+            flex: 1;
+            height: 45px;
+            background: rgba(255,255,255,0.03);
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .comp-bar {
+            height: 100%;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            padding-left: 15px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: white;
+            position: relative;
+        }
+        
+        .comp-bar.pcie {
+            background: linear-gradient(90deg, #ef4444, #dc2626);
+        }
+        
+        .comp-bar.cxl {
+            background: linear-gradient(90deg, #22c55e, #16a34a);
+        }
+        
+        .comp-bar.nvme {
+            background: linear-gradient(90deg, #f59e0b, #d97706);
+        }
+        
+        .improvement-badge {
+            position: absolute;
+            right: 15px;
+            background: rgba(0,0,0,0.3);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+        
+        /* Visual Timeline */
+        .timeline-section {
+            margin-top: 50px;
+        }
+        
+        .timeline-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 25px;
+            color: #a78bfa;
+        }
+        
+        .timeline {
+            position: relative;
+            height: 120px;
+            background: rgba(255,255,255,0.02);
+            border-radius: 12px;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+        
+        .timeline-scale {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 30px;
+            display: flex;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .scale-mark {
+            flex: 1;
+            text-align: center;
+            font-size: 0.75rem;
+            color: #666;
+            padding-top: 8px;
+        }
+        
+        .timeline-bar {
+            position: absolute;
+            height: 35px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            padding-left: 10px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: white;
+        }
+        
+        .timeline-bar.cxl-bar {
+            top: 15px;
+            left: 0;
+            width: 1%;
+            min-width: 80px;
+            background: linear-gradient(90deg, #22c55e, #16a34a);
+        }
+        
+        .timeline-bar.pcie-bar {
+            top: 55px;
+            left: 0;
+            width: 24%;
+            background: linear-gradient(90deg, #ef4444, #dc2626);
+        }
+        
+        .key-insight {
+            background: linear-gradient(135deg, rgba(34,197,94,0.1), rgba(34,197,94,0.05));
+            border: 1px solid rgba(34,197,94,0.3);
+            border-radius: 16px;
+            padding: 25px 30px;
+            margin-top: 40px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .insight-icon {
+            font-size: 2.5rem;
+        }
+        
+        .insight-content h3 {
+            color: #22c55e;
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+        }
+        
+        .insight-content p {
+            color: #888;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        
+        .insight-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #22c55e;
+            margin-left: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Memory Access Path Comparison</h1>
+        <p class="subtitle">CXL.mem Direct Path vs CPU-Mediated PCIe Swap</p>
+        
+        <div class="paths-container">
+            <!-- PCIe Path -->
+            <div class="path-card">
+                <div class="path-header">
+                    <div class="path-title pcie">PCIe Swap Path</div>
+                    <div class="path-total pcie">~6,000 ns</div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number pcie">1</div>
+                    <div class="step-content">
+                        <div class="step-name">GPU Page Fault</div>
+                        <div class="step-detail">TLB miss â†’ fault signal</div>
+                    </div>
+                    <div class="step-latency pcie">750 ns</div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number pcie">2</div>
+                    <div class="step-content">
+                        <div class="step-name">CPU Interrupt</div>
+                        <div class="step-detail">MSI-X â†’ context switch</div>
+                    </div>
+                    <div class="step-latency pcie">2,000 ns</div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number pcie">3</div>
+                    <div class="step-content">
+                        <div class="step-name">Fault Handler</div>
+                        <div class="step-detail">Kernel page lookup</div>
+                    </div>
+                    <div class="step-latency pcie">750 ns</div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number pcie">4</div>
+                    <div class="step-content">
+                        <div class="step-name">DMA Setup</div>
+                        <div class="step-detail">Descriptor allocation</div>
+                    </div>
+                    <div class="step-latency pcie">500 ns</div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number pcie">5</div>
+                    <div class="step-content">
+                        <div class="step-name">PCIe Transfer</div>
+                        <div class="step-detail">4 KiB @ 32 GB/s</div>
+                    </div>
+                    <div class="step-latency pcie">230 ns</div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number pcie">6</div>
+                    <div class="step-content">
+                        <div class="step-name">TLB Update</div>
+                        <div class="step-detail">Invalidate + install</div>
+                    </div>
+                    <div class="step-latency pcie">750 ns</div>
+                </div>
+            </div>
+            
+            <!-- CXL Path -->
+            <div class="path-card">
+                <div class="path-header">
+                    <div class="path-title cxl">CXL.mem Direct Path</div>
+                    <div class="path-total cxl">~250 ns</div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number cxl">1</div>
+                    <div class="step-content">
+                        <div class="step-name">GPU Load</div>
+                        <div class="step-detail">Shader issues load</div>
+                    </div>
+                    <div class="step-latency cxl">8 ns</div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number cxl">2</div>
+                    <div class="step-content">
+                        <div class="step-name">CXL Request</div>
+                        <div class="step-detail">M2S MemRd formation</div>
+                    </div>
+                    <div class="step-latency cxl">15 ns</div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number cxl">3</div>
+                    <div class="step-content">
+                        <div class="step-name">PHY Transit</div>
+                        <div class="step-detail">SerDes + switch</div>
+                    </div>
+                    <div class="step-latency cxl">50 ns</div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number cxl">4</div>
+                    <div class="step-content">
+                        <div class="step-name">Endpoint DRAM</div>
+                        <div class="step-detail">DDR5 access</div>
+                    </div>
+                    <div class="step-latency cxl">100 ns</div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number cxl">5</div>
+                    <div class="step-content">
+                        <div class="step-name">Return Path</div>
+                        <div class="step-detail">PHY + CXL response</div>
+                    </div>
+                    <div class="step-latency cxl">65 ns</div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number cxl">6</div>
+                    <div class="step-content">
+                        <div class="step-name">GPU Complete</div>
+                        <div class="step-detail">Register writeback</div>
+                    </div>
+                    <div class="step-latency cxl">12 ns</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="comparison-section">
+            <div class="comparison-title">Latency Comparison (Log Scale Visual)</div>
+            
+            <div class="comparison-bars">
+                <div class="comp-row">
+                    <div class="comp-label">CXL.mem (DRAM)</div>
+                    <div class="comp-bar-container">
+                        <div class="comp-bar cxl" style="width: 4%;">
+                            250 ns
+                            <span class="improvement-badge">Baseline</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="comp-row">
+                    <div class="comp-label">PCIe Swap (Best)</div>
+                    <div class="comp-bar-container">
+                        <div class="comp-bar pcie" style="width: 48%;">
+                            3,000 ns
+                            <span class="improvement-badge">12Ã— slower</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="comp-row">
+                    <div class="comp-label">PCIe Swap (Typical)</div>
+                    <div class="comp-bar-container">
+                        <div class="comp-bar pcie" style="width: 96%;">
+                            6,000 ns
+                            <span class="improvement-badge">24Ã— slower</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="comp-row">
+                    <div class="comp-label">PCIe + NVMe</div>
+                    <div class="comp-bar-container">
+                        <div class="comp-bar nvme" style="width: 100%;">
+                            25,000 ns
+                            <span class="improvement-badge">100Ã— slower</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="key-insight">
+            <div class="insight-icon">âš¡</div>
+            <div class="insight-content">
+                <h3>Key Insight: CPU Elimination</h3>
+                <p>CXL.mem removes CPU from the critical path entirely. No interrupts, no context switches, no DMA setup. The GPU issues a load instruction and receives data directly from endpoint DRAM via hardware-managed coherence.</p>
+            </div>
+            <div class="insight-value">24Ã—</div>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MoE Routing Support</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  min-height: 100vh;
+  padding: 2rem;
+  color: #e2e8f0;
+}
+
+.container {
+  max-width: 950px;
+  margin: 0 auto;
+}
+
+/* Header */
+.header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.section-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #ec4899, #db2777);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.35rem 1rem;
+  border-radius: 50px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+
+h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #f8fafc 0%, #94a3b8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  color: #64748b;
+  font-size: 1.1rem;
+}
+
+/* MoE Architecture */
+.moe-arch {
+  background: #1e293b;
+  border-radius: 20px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  border: 1px solid #334155;
+}
+
+.section-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #f8fafc;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.section-title-icon {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #ec4899, #db2777);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+
+/* Architecture Diagram */
+.arch-diagram {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.input-token {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  border-radius: 10px;
+  padding: 0.75rem 2rem;
+  font-weight: 600;
+  color: white;
+  box-shadow: 0 10px 30px -10px rgba(59, 130, 246, 0.5);
+}
+
+.router-box {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  border-radius: 12px;
+  padding: 1rem 2rem;
+  text-align: center;
+  box-shadow: 0 10px 30px -10px rgba(249, 115, 22, 0.5);
+}
+
+.router-label {
+  font-weight: 700;
+  color: white;
+  font-size: 1rem;
+}
+
+.router-sublabel {
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.8);
+}
+
+.arrow-down {
+  color: #64748b;
+  font-size: 1.5rem;
+}
+
+.experts-container {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.expert {
+  width: 60px;
+  height: 60px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.expert.inactive {
+  background: #334155;
+  color: #64748b;
+  border: 1px solid #475569;
+}
+
+.expert.active {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+  box-shadow: 0 5px 20px -5px rgba(34, 197, 94, 0.5);
+  transform: scale(1.1);
+}
+
+.expert-num {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+}
+
+.formula-badge {
+  background: rgba(0,0,0,0.4);
+  border-radius: 10px;
+  padding: 1rem 1.5rem;
+  margin-top: 1rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.formula-text {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9rem;
+  color: #e2e8f0;
+}
+
+.formula-var {
+  color: #f472b6;
+  font-weight: 600;
+}
+
+/* Challenge Section */
+.challenge-section {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05));
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 16px;
+  padding: 1.75rem;
+  margin-bottom: 2rem;
+}
+
+.challenge-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.challenge-icon {
+  font-size: 1.75rem;
+}
+
+.challenge-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #fca5a5;
+}
+
+.challenge-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.challenge-text {
+  color: #cbd5e1;
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.challenge-text strong {
+  color: #f87171;
+}
+
+/* Access Pattern Visual */
+.access-pattern {
+  background: rgba(0,0,0,0.3);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.pattern-title {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.pattern-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 4px;
+}
+
+.pattern-cell {
+  aspect-ratio: 1;
+  border-radius: 4px;
+  background: #334155;
+}
+
+.pattern-cell.hit {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+}
+
+.pattern-caption {
+  font-size: 0.7rem;
+  color: #64748b;
+  margin-top: 0.5rem;
+  text-align: center;
+}
+
+/* Endpoint Approach */
+.approach-section {
+  background: #1e293b;
+  border-radius: 20px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  border: 1px solid #334155;
+}
+
+.approach-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+/* Histogram Visual */
+.histogram-card {
+  background: rgba(0,0,0,0.3);
+  border-radius: 14px;
+  padding: 1.5rem;
+}
+
+.histogram-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #f8fafc;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.histogram-title::before {
+  content: "ðŸ“Š";
+}
+
+.histogram {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 120px;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #334155;
+  position: relative;
+}
+
+.histogram-bar {
+  flex: 1;
+  background: linear-gradient(to top, #8b5cf6, #a78bfa);
+  border-radius: 4px 4px 0 0;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.histogram-bar.high {
+  background: linear-gradient(to top, #22c55e, #4ade80);
+}
+
+.histogram-bar.threshold {
+  background: linear-gradient(to top, #f97316, #fb923c);
+}
+
+.bar-label {
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6rem;
+  color: #64748b;
+}
+
+.threshold-line {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #f97316;
+  border-style: dashed;
+}
+
+.threshold-label {
+  position: absolute;
+  right: 0;
+  transform: translateY(-50%);
+  font-size: 0.65rem;
+  color: #fb923c;
+  background: #1e293b;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+}
+
+/* Prefetch Logic */
+.prefetch-card {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: 14px;
+  padding: 1.5rem;
+}
+
+.prefetch-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #4ade80;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.prefetch-title::before {
+  content: "âš¡";
+}
+
+.prefetch-rule {
+  background: rgba(0,0,0,0.3);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.rule-condition {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85rem;
+  color: #fcd34d;
+  margin-bottom: 0.5rem;
+}
+
+.rule-action {
+  font-size: 0.8rem;
+  color: #86efac;
+}
+
+.prefetch-note {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin-top: 0.5rem;
+}
+
+/* Cache Sizing */
+.cache-section {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(6, 182, 212, 0.05));
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  border-radius: 16px;
+  padding: 1.75rem;
+}
+
+.cache-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.cache-icon {
+  font-size: 1.75rem;
+}
+
+.cache-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #67e8f9;
+}
+
+.cache-scenarios {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.scenario {
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.scenario.optimal {
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.scenario.fallback {
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.scenario-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.scenario-icon {
+  font-size: 1.25rem;
+}
+
+.scenario-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.scenario.optimal .scenario-title { color: #4ade80; }
+.scenario.fallback .scenario-title { color: #fbbf24; }
+
+.scenario-desc {
+  font-size: 0.85rem;
+  color: #cbd5e1;
+  line-height: 1.5;
+  margin-bottom: 0.75rem;
+}
+
+.scenario-result {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  display: inline-block;
+}
+
+.scenario.optimal .scenario-result {
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+}
+
+.scenario.fallback .scenario-result {
+  background: rgba(251, 191, 36, 0.2);
+  color: #fbbf24;
+}
+
+/* Endpoint Routing Diagram */
+.endpoint-routing {
+  margin-top: 1.5rem;
+  background: rgba(0,0,0,0.3);
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.routing-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #f8fafc;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.routing-diagram {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.routing-node {
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.routing-node.request {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  color: white;
+}
+
+.routing-node.endpoint {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  color: white;
+}
+
+.routing-arrow {
+  color: #4ade80;
+  font-size: 1rem;
+}
+
+.endpoint-experts {
+  display: flex;
+  gap: 0.25rem;
+  margin-top: 0.35rem;
+}
+
+.mini-expert {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  background: #22c55e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.5rem;
+  color: white;
+  font-weight: 700;
+}
+
+@media (max-width: 768px) {
+  .challenge-content, .approach-grid, .cache-scenarios {
+    grid-template-columns: 1fr;
+  }
+  .routing-diagram {
+    flex-direction: column;
+  }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="section-badge">Section 7</div>
+    <h1>MoE Routing Support</h1>
+    <p class="subtitle">Mixture-of-experts with intelligent endpoint prefetch</p>
+  </div>
+
+  <!-- MoE Architecture -->
+  <div class="moe-arch">
+    <div class="section-title">
+      <div class="section-title-icon">ðŸ§ </div>
+      Mixture-of-Experts Architecture
+    </div>
+
+    <div class="arch-diagram">
+      <div class="input-token">Input Token</div>
+      <div class="arrow-down">â†“</div>
+      <div class="router-box">
+        <div class="router-label">Learned Router</div>
+        <div class="router-sublabel">Selects K experts per token</div>
+      </div>
+      <div class="arrow-down">â†“</div>
+      
+      <div class="experts-container">
+        <div class="expert active"><span class="expert-num">E1</span>âœ“</div>
+        <div class="expert inactive"><span class="expert-num">E2</span></div>
+        <div class="expert active"><span class="expert-num">E3</span>âœ“</div>
+        <div class="expert inactive"><span class="expert-num">E4</span></div>
+        <div class="expert inactive"><span class="expert-num">E5</span></div>
+        <div class="expert inactive"><span class="expert-num">E6</span></div>
+        <div class="expert inactive"><span class="expert-num">E7</span></div>
+        <div class="expert inactive"><span class="expert-num">E8</span></div>
+      </div>
+
+      <div class="formula-badge">
+        <span class="formula-text"><span class="formula-var">N</span> experts total, <span class="formula-var">K</span> activated per token</span>
+        <span class="formula-text" style="color: #64748b;">|</span>
+        <span class="formula-text">Example: N=8, K=2</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Challenge -->
+  <div class="challenge-section">
+    <div class="challenge-header">
+      <span class="challenge-icon">âš ï¸</span>
+      <span class="challenge-title">The Challenge: Data-Dependent Access</span>
+    </div>
+
+    <div class="challenge-content">
+      <div class="challenge-text">
+        Expert activation depends on <strong>input content</strong>. The router learns which experts handle which types of inputs, but this means access patterns are:
+        <br><br>
+        â€¢ <strong>Data-dependent</strong> â€” can't predict without seeing input<br>
+        â€¢ <strong>Irregular</strong> â€” no fixed pattern to exploit<br>
+        â€¢ <strong>Sparse</strong> â€” only K of N experts active
+      </div>
+      
+      <div class="access-pattern">
+        <div class="pattern-title">Expert Activation Pattern (8 tokens)</div>
+        <div class="pattern-grid">
+          <div class="pattern-cell hit"></div>
+          <div class="pattern-cell"></div>
+          <div class="pattern-cell hit"></div>
+          <div class="pattern-cell"></div>
+          <div class="pattern-cell"></div>
+          <div class="pattern-cell"></div>
+          <div class="pattern-cell"></div>
+          <div class="pattern-cell"></div>
+          
+          <div class="pattern-cell"></div>
+          <div class="pattern-cell hit"></div>
+          <div class="pattern-cell"></div>
+          <div class="pattern-cell"></div>
+          <div class="pattern-cell hit"></div>
+          <div class="pattern-cell"></div>
+          <div class="pattern-cell"></div>
+          <div class="pattern-cell"></div>
+          
+          <div class="pattern-cell hit"></div>
+          <div class="pattern-cell"></div>
+          <div class="pattern-cell"></div>
+          <div class="pattern-cell hit"></div>
+          <div class="pattern-cell"></div>
+          <div class="pattern-cell"></div>
+          <div class="pattern-cell"></div>
+          <div class="pattern-cell"></div>
+          
+          <div class="pattern-cell"></div>
+          <div class="pattern-cell"></div>
+          <div class="pattern-cell hit"></div>
+          <div class="pattern-cell"></div>
+          <div class="pattern-cell"></div>
+          <div class="pattern-cell hit"></div>
+          <div class="pattern-cell"></div>
+          <div class="pattern-cell"></div>
+        </div>
+        <div class="pattern-caption">Rows = tokens, Cols = experts. Orange = activated.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Endpoint Approach -->
+  <div class="approach-section">
+    <div class="section-title">
+      <div class="section-title-icon">ðŸ’¡</div>
+      Endpoint Approach: Routing Histogram
+    </div>
+
+    <div class="approach-grid">
+      <div class="histogram-card">
+        <div class="histogram-title">Expert Activation Frequency</div>
+        <div class="histogram" style="position: relative;">
+          <div class="histogram-bar high" style="height: 85%;"><span class="bar-label">E1</span></div>
+          <div class="histogram-bar" style="height: 40%;"><span class="bar-label">E2</span></div>
+          <div class="histogram-bar high" style="height: 75%;"><span class="bar-label">E3</span></div>
+          <div class="histogram-bar" style="height: 30%;"><span class="bar-label">E4</span></div>
+          <div class="histogram-bar threshold" style="height: 55%;"><span class="bar-label">E5</span></div>
+          <div class="histogram-bar" style="height: 25%;"><span class="bar-label">E6</span></div>
+          <div class="histogram-bar" style="height: 45%;"><span class="bar-label">E7</span></div>
+          <div class="histogram-bar" style="height: 20%;"><span class="bar-label">E8</span></div>
+          <div class="threshold-line" style="bottom: 50%;">
+            <span class="threshold-label">P(act) threshold</span>
+          </div>
+        </div>
+        <p style="font-size: 0.75rem; color: #94a3b8; margin-top: 1rem;">
+          Track frequency per token position or context type
+        </p>
+      </div>
+
+      <div class="prefetch-card">
+        <div class="prefetch-title">Prefetch Strategy</div>
+        
+        <div class="prefetch-rule">
+          <div class="rule-condition">if P(activation) > threshold:</div>
+          <div class="rule-action">â†’ Prefetch expert to endpoint DRAM</div>
+        </div>
+        
+        <div class="prefetch-rule">
+          <div class="rule-condition">if P(activation) < threshold:</div>
+          <div class="rule-action">â†’ Keep in flash, fetch on demand</div>
+        </div>
+
+        <div class="prefetch-note">
+          Histogram updates continuously based on observed routing decisions. 
+          Hot experts stay resident, cold experts stay in flash.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cache Sizing -->
+  <div class="cache-section">
+    <div class="cache-header">
+      <span class="cache-icon">ðŸ’¾</span>
+      <span class="cache-title">Cache Sizing Strategy</span>
+    </div>
+
+    <div class="cache-scenarios">
+      <div class="scenario optimal">
+        <div class="scenario-header">
+          <span class="scenario-icon">âœ“</span>
+          <span class="scenario-title">Optimal: Full Replication</span>
+        </div>
+        <div class="scenario-desc">
+          If endpoint DRAM can hold all experts with replication, no prefetch needed. 
+          Route requests to endpoint with local expert copy.
+        </div>
+        <div class="scenario-result">Zero expert fetch latency</div>
+      </div>
+
+      <div class="scenario fallback">
+        <div class="scenario-header">
+          <span class="scenario-icon">âš¡</span>
+          <span class="scenario-title">Fallback: Histogram Prefetch</span>
+        </div>
+        <div class="scenario-desc">
+          If DRAM < all experts, use histogram to prefetch likely experts. 
+          Cold experts fetched from flash on demand.
+        </div>
+        <div class="scenario-result">P(hit) Ã— 0 + P(miss) Ã— flash_latency</div>
+      </div>
+    </div>
+
+    <div class="endpoint-routing">
+      <div class="routing-title">Route to Endpoint with Local Expert</div>
+      <div class="routing-diagram">
+        <div class="routing-node request">
+          Request<br>
+          <span style="font-size: 0.65rem; opacity: 0.8;">needs E1, E3</span>
+        </div>
+        <span class="routing-arrow">â†’</span>
+        <div class="routing-node endpoint">
+          Endpoint A
+          <div class="endpoint-experts">
+            <div class="mini-expert">1</div>
+            <div class="mini-expert">3</div>
+            <div class="mini-expert">5</div>
+          </div>
+        </div>
+        <span style="color: #64748b; font-size: 0.8rem; margin: 0 0.5rem;">not</span>
+        <div class="routing-node endpoint" style="opacity: 0.5;">
+          Endpoint B
+          <div class="endpoint-experts">
+            <div class="mini-expert">2</div>
+            <div class="mini-expert">4</div>
+            <div class="mini-expert">6</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GQA Per-Head Tracking</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: #ffffff;
+  min-height: 100vh;
+  color: #1a1a1a;
+  padding: 2rem;
+}
+.container { max-width: 1200px; margin: 0 auto; }
+h1 {
+  text-align: center;
+  font-size: 2.2rem;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+.subtitle {
+  text-align: center;
+  color: #555;
+  font-size: 1.15rem;
+  margin-bottom: 2rem;
+}
+.section-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 2rem 0 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e8e8e8;
+}
+.gqa-mapping {
+  background: #fafafa;
+  border-radius: 16px;
+  padding: 1.5rem;
+  border: 2px solid #e8e8e8;
+  margin-bottom: 1.5rem;
+}
+.mapping-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.mapping-row:last-child { margin-bottom: 0; }
+.q-group {
+  display: flex;
+  gap: 4px;
+}
+.q-head {
+  width: 32px;
+  height: 32px;
+  background: #007bff;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.arrow-map {
+  font-size: 1.5rem;
+  color: #999;
+}
+.kv-head-box {
+  background: linear-gradient(135deg, #28a745 50%, #9c27b0 50%);
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  color: white;
+  font-weight: 700;
+  font-size: 1rem;
+}
+.track-indicator {
+  background: #fff3cd;
+  border: 2px dashed #ffc107;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  color: #856404;
+  font-weight: 600;
+}
+.layers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.layer-card {
+  background: #fafafa;
+  border-radius: 12px;
+  padding: 1.25rem;
+  border: 2px solid #e8e8e8;
+}
+.layer-header {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: #333;
+}
+.kv-heads-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.kv-mini {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #28a745 50%, #9c27b0 50%);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.queue-detail {
+  background: #fafafa;
+  border-radius: 16px;
+  padding: 1.5rem;
+  border: 2px solid #e8e8e8;
+  margin-bottom: 1.5rem;
+}
+.queue-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.queue-label {
+  background: #333;
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+.lru-visual {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+.lru-entry {
+  flex-shrink: 0;
+  background: #fff;
+  border: 2px solid #ddd;
+  border-radius: 10px;
+  padding: 0.75rem;
+  min-width: 110px;
+  text-align: center;
+}
+.lru-entry.hot {
+  border-color: #dc3545;
+  background: #fff5f5;
+}
+.lru-entry.warm {
+  border-color: #ffc107;
+  background: #fffef5;
+}
+.lru-entry.cold {
+  border-color: #6c757d;
+  background: #f8f9fa;
+}
+.entry-pos {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 0.25rem;
+}
+.entry-field {
+  font-size: 0.85rem;
+  color: #666;
+  margin: 2px 0;
+}
+.entry-field span {
+  font-weight: 600;
+  color: #333;
+}
+.lru-arrow {
+  font-size: 1.3rem;
+  color: #aaa;
+  flex-shrink: 0;
+}
+.evict-zone {
+  background: #f8d7da;
+  border: 2px dashed #dc3545;
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  text-align: center;
+  color: #721c24;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.summary-box {
+  background: #e7f3ff;
+  border: 2px solid #b6d4fe;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-top: 1.5rem;
+}
+.summary-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  color: #0a58ca;
+}
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+.summary-item {
+  font-size: 1.05rem;
+}
+.summary-item strong {
+  color: #0a58ca;
+}
+.total-calc {
+  text-align: center;
+  font-size: 1.2rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  font-family: 'Fira Code', monospace;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Per-Head Tracking with GQA</h1>
+  <p class="subtitle">Llama-70B: 64 Query Heads â†’ 8 KV-Heads Ã— 80 Layers = 640 LRU Queues</p>
+
+  <div class="section-title">1. GQA Grouping Defines Tracking Unit</div>
+  <div class="gqa-mapping">
+    <div class="mapping-row">
+      <div class="q-group">
+        <div class="q-head">Q0</div>
+        <div class="q-head">Q1</div>
+        <div class="q-head">Q2</div>
+        <div class="q-head">Q3</div>
+        <div class="q-head">Q4</div>
+        <div class="q-head">Q5</div>
+        <div class="q-head">Q6</div>
+        <div class="q-head">Q7</div>
+      </div>
+      <div class="arrow-map">â†’</div>
+      <div class="kv-head-box">KV-Head 0</div>
+      <div class="arrow-map">â†’</div>
+      <div class="track-indicator">LRU Queue [layer, 0]</div>
+    </div>
+    <div class="mapping-row">
+      <div class="q-group">
+        <div class="q-head">Q8</div>
+        <div class="q-head">Q9</div>
+        <div class="q-head">Q10</div>
+        <div class="q-head">Q11</div>
+        <div class="q-head">Q12</div>
+        <div class="q-head">Q13</div>
+        <div class="q-head">Q14</div>
+        <div class="q-head">Q15</div>
+      </div>
+      <div class="arrow-map">â†’</div>
+      <div class="kv-head-box">KV-Head 1</div>
+      <div class="arrow-map">â†’</div>
+      <div class="track-indicator">LRU Queue [layer, 1]</div>
+    </div>
+    <div style="text-align:center;color:#888;font-size:1.1rem;margin:0.5rem 0">â‹®</div>
+    <div class="mapping-row">
+      <div class="q-group">
+        <div class="q-head">Q56</div>
+        <div class="q-head">Q57</div>
+        <div class="q-head">Q58</div>
+        <div class="q-head">Q59</div>
+        <div class="q-head">Q60</div>
+        <div class="q-head">Q61</div>
+        <div class="q-head">Q62</div>
+        <div class="q-head">Q63</div>
+      </div>
+      <div class="arrow-map">â†’</div>
+      <div class="kv-head-box">KV-Head 7</div>
+      <div class="arrow-map">â†’</div>
+      <div class="track-indicator">LRU Queue [layer, 7]</div>
+    </div>
+  </div>
+
+  <div class="section-title">2. 640 Independent LRU Queues</div>
+  <div class="layers-grid">
+    <div class="layer-card">
+      <div class="layer-header">Layer 0</div>
+      <div class="kv-heads-row">
+        <div class="kv-mini">0</div>
+        <div class="kv-mini">1</div>
+        <div class="kv-mini">2</div>
+        <div class="kv-mini">3</div>
+        <div class="kv-mini">4</div>
+        <div class="kv-mini">5</div>
+        <div class="kv-mini">6</div>
+        <div class="kv-mini">7</div>
+      </div>
+    </div>
+    <div class="layer-card">
+      <div class="layer-header">Layer 1</div>
+      <div class="kv-heads-row">
+        <div class="kv-mini">0</div>
+        <div class="kv-mini">1</div>
+        <div class="kv-mini">2</div>
+        <div class="kv-mini">3</div>
+        <div class="kv-mini">4</div>
+        <div class="kv-mini">5</div>
+        <div class="kv-mini">6</div>
+        <div class="kv-mini">7</div>
+      </div>
+    </div>
+    <div class="layer-card">
+      <div class="layer-header">Layer 2 ... 79</div>
+      <div class="kv-heads-row">
+        <div class="kv-mini">0</div>
+        <div class="kv-mini">1</div>
+        <div class="kv-mini">2</div>
+        <div class="kv-mini">3</div>
+        <div class="kv-mini">4</div>
+        <div class="kv-mini">5</div>
+        <div class="kv-mini">6</div>
+        <div class="kv-mini">7</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">3. What Each Queue Tracks</div>
+  <div class="queue-detail">
+    <div class="queue-header">
+      <div class="queue-label">Queue [Layer 42, KV-Head 3]</div>
+      <span style="color:#666;font-size:1rem">â† One of 640 queues</span>
+    </div>
+    <div class="lru-visual">
+      <div class="lru-entry hot">
+        <div class="entry-pos">pos: 127891</div>
+        <div class="entry-field">access: <span>847</span></div>
+        <div class="entry-field">attn: <span>0.92</span></div>
+      </div>
+      <div class="lru-arrow">â†’</div>
+      <div class="lru-entry hot">
+        <div class="entry-pos">pos: 0</div>
+        <div class="entry-field">access: <span>512</span></div>
+        <div class="entry-field">attn: <span>0.88</span></div>
+      </div>
+      <div class="lru-arrow">â†’</div>
+      <div class="lru-entry warm">
+        <div class="entry-pos">pos: 1024</div>
+        <div class="entry-field">access: <span>234</span></div>
+        <div class="entry-field">attn: <span>0.45</span></div>
+      </div>
+      <div class="lru-arrow">â†’</div>
+      <div class="lru-entry warm">
+        <div class="entry-pos">pos: 89012</div>
+        <div class="entry-field">access: <span>89</span></div>
+        <div class="entry-field">attn: <span>0.31</span></div>
+      </div>
+      <div class="lru-arrow">â†’</div>
+      <div class="lru-entry cold">
+        <div class="entry-pos">pos: 45678</div>
+        <div class="entry-field">access: <span>12</span></div>
+        <div class="entry-field">attn: <span>0.08</span></div>
+      </div>
+      <div class="lru-arrow">â†’</div>
+      <div class="evict-zone">EVICT<br>CANDIDATES</div>
+    </div>
+  </div>
+
+  <div class="summary-box">
+    <div class="summary-title">Per-Entry Metadata (8 bytes)</div>
+    <div class="summary-grid">
+      <div class="summary-item"><strong>position_id</strong> â€” u32 (4B)</div>
+      <div class="summary-item"><strong>access_count</strong> â€” u16 (2B)</div>
+      <div class="summary-item"><strong>attention_score</strong> â€” fp16 (2B)</div>
+    </div>
+    <div class="total-calc">
+      640 queues Ã— 131,072 positions Ã— 8 bytes = <strong>640 MB</strong> metadata
+    </div>
+  </div>
+</div>
+</body>
+</html>

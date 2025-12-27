@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KV-Cache Math Explainer</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: system-ui, sans-serif; background: linear-gradient(135deg, #0f172a, #1e293b); min-height: 100vh; color: #e2e8f0; }</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState } = React;
+function KVCacheMath() {
+  const [layers, setLayers] = useState(80);
+  const [kvHeads, setKvHeads] = useState(8);
+  const [dHead, setDHead] = useState(128);
+  const [seqLen, setSeqLen] = useState(32768);
+  const [dtype, setDtype] = useState(2);
+  
+  const kvSize = 2 * layers * kvHeads * dHead * seqLen * dtype;
+  const formatBytes = (b) => b >= 1e9 ? (b/1e9).toFixed(2) + ' GB' : (b/1e6).toFixed(2) + ' MB';
+  
+  const styles = {
+    container: { maxWidth: '700px', margin: '0 auto', padding: '2rem' },
+    header: { textAlign: 'center', marginBottom: '2rem' },
+    badge: { display: 'inline-block', padding: '0.25rem 0.75rem', background: 'rgba(59,130,246,0.2)', color: '#60a5fa', fontSize: '0.75rem', fontFamily: 'monospace', borderRadius: '20px', marginBottom: '0.5rem' },
+    formula: { background: '#0f172a', borderRadius: '12px', padding: '1.5rem', marginBottom: '2rem', textAlign: 'center' },
+    formulaText: { fontFamily: 'monospace', fontSize: '1rem', color: '#60a5fa', marginBottom: '1rem' },
+    slider: { width: '100%', marginTop: '0.5rem' },
+    paramGrid: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '2rem' },
+    param: { background: '#1e293b', borderRadius: '12px', padding: '1rem' },
+    paramLabel: { fontSize: '0.875rem', color: '#94a3b8', marginBottom: '0.25rem' },
+    paramValue: { fontSize: '1.25rem', fontWeight: 700, color: '#60a5fa', fontFamily: 'monospace' },
+    result: { background: 'linear-gradient(135deg, #10b981, #059669)', borderRadius: '16px', padding: '2rem', textAlign: 'center' },
+    resultValue: { fontSize: '3rem', fontWeight: 700, color: 'white' },
+    resultLabel: { color: 'rgba(255,255,255,0.8)', marginTop: '0.5rem' }
+  };
+
+  return (
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <div style={styles.badge}>INTERACTIVE CALCULATOR</div>
+        <h1 style={{fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.5rem'}}>KV-Cache Size Calculator</h1>
+      </div>
+      <div style={styles.formula}>
+        <div style={styles.formulaText}>KV_size = 2 × L × n_kv × d_head × seq_len × sizeof(dtype)</div>
+      </div>
+      <div style={styles.paramGrid}>
+        <div style={styles.param}>
+          <div style={styles.paramLabel}>Layers (L)</div>
+          <div style={styles.paramValue}>{layers}</div>
+          <input type="range" min="32" max="128" value={layers} onChange={e => setLayers(+e.target.value)} style={styles.slider} />
+        </div>
+        <div style={styles.param}>
+          <div style={styles.paramLabel}>KV Heads</div>
+          <div style={styles.paramValue}>{kvHeads}</div>
+          <input type="range" min="1" max="32" value={kvHeads} onChange={e => setKvHeads(+e.target.value)} style={styles.slider} />
+        </div>
+        <div style={styles.param}>
+          <div style={styles.paramLabel}>Head Dim</div>
+          <div style={styles.paramValue}>{dHead}</div>
+          <input type="range" min="64" max="256" step="64" value={dHead} onChange={e => setDHead(+e.target.value)} style={styles.slider} />
+        </div>
+        <div style={styles.param}>
+          <div style={styles.paramLabel}>Sequence Length</div>
+          <div style={styles.paramValue}>{seqLen.toLocaleString()}</div>
+          <input type="range" min="4096" max="131072" step="4096" value={seqLen} onChange={e => setSeqLen(+e.target.value)} style={styles.slider} />
+        </div>
+      </div>
+      <div style={styles.result}>
+        <div style={styles.resultValue}>{formatBytes(kvSize)}</div>
+        <div style={styles.resultLabel}>Total KV-Cache Size (per user)</div>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<KVCacheMath />);
+</script>
+</body>
+</html>

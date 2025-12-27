@@ -7,23 +7,53 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .figure-embed {
+      background: var(--bg-card);
+      border: 1px solid var(--border-primary);
+      border-radius: 12px;
+      margin: 2rem 0;
+      overflow: hidden;
+    }
+    .figure-embed-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.5rem;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border-primary);
+    }
+    .figure-embed-label {
+      font-family: var(--font-mono);
+      font-size: 0.9rem;
+      color: var(--accent-cyan);
+    }
+    .figure-embed-link {
+      font-size: 0.85rem;
+      color: var(--accent-purple);
+      text-decoration: none;
+    }
+    .figure-embed-link:hover { text-decoration: underline; }
+    .figure-embed iframe {
+      width: 100%;
+      height: 550px;
+      border: none;
+      background: #fff;
+    }
+    .figure-embed.tall iframe { height: 700px; }
+  </style>
 </head>
 <body>
-  <div class="watermark">
-    © 2025 Subramaniyam (Sam) Pooni<br>
-    All Rights Reserved<br>
-    Proprietary & Confidential
-  </div>
+  <div class="watermark">© 2025 Subramaniyam (Sam) Pooni<br>All Rights Reserved<br>Proprietary & Confidential</div>
 
   <nav class="nav">
     <div class="nav-inner">
       <a href="../index.html" class="nav-brand"><span class="nav-brand-icon">⚡</span> KV-Cache Architecture</a>
       <div class="nav-links">
-        <a href="ch00-executive-summary.html" class="nav-link">Summary</a>
-        <a href="ch02-background.html" class="nav-link">Background</a>
-        <a href="ch03-architecture.html" class="nav-link active">Architecture</a>
-        <a href="ch04-latency.html" class="nav-link">Latency</a>
-        <a href="ch07-kv-cache.html" class="nav-link">KV-Cache</a>
+        <a href="ch00-executive-summary.html" class="nav-link"><span class="nav-chapter-num">0</span> Summary</a>
+        <a href="ch03-architecture.html" class="nav-link active"><span class="nav-chapter-num">3</span> Architecture</a>
+        <a href="ch07-kv-cache.html" class="nav-link"><span class="nav-chapter-num">7</span> KV-Cache</a>
+        <a href="../figures/index.html" class="nav-link">📊 Figures</a>
         <a href="../appendix/index.html" class="nav-link">Appendix</a>
       </div>
     </div>
@@ -33,471 +63,141 @@
     <div class="container">
       <header class="chapter-header">
         <div class="chapter-label">Chapter 3</div>
-        <h1 class="chapter-title">Distributed Endpoint Architecture Overview</h1>
-        <p class="chapter-subtitle">Memory controller offloading, computational storage devices, and cache-coherent interconnects using CXL 3.0, UCIe, and UEC technologies.</p>
+        <h1 class="chapter-title">Distributed Endpoint Architecture</h1>
+        <p class="chapter-subtitle">CXL 3.0 computational storage endpoints with controller-resident intelligence for autonomous KV-cache management.</p>
       </header>
 
-      <h2>3.1 Core Concepts</h2>
-
-      <p>The distributed endpoint architecture fundamentally reimagines memory expansion for GPU accelerators. Instead of passive memory pools managed by the host CPU, we deploy <strong>intelligent computational storage endpoints</strong> that autonomously manage data placement, predict access patterns, and execute prefetch operations without CPU involvement.</p>
-
-      <h3>Memory Controller Offloading</h3>
-
-      <p>Traditional memory expansion architectures place the CPU in the critical path for every data movement operation. When a GPU needs data from external memory, it must:</p>
-
-      <ol>
-        <li>Generate a page fault or explicit request</li>
-        <li>Interrupt the CPU to handle the fault</li>
-        <li>Wait for CPU to set up DMA transfer</li>
-        <li>Transfer data through PCIe</li>
-        <li>Update GPU page tables and resume</li>
-      </ol>
-
-      <p>This path takes 5-10 μs—<strong>50-100× slower than HBM access</strong>. Our architecture eliminates CPU involvement entirely by offloading memory management intelligence to the endpoints themselves.</p>
-
-      <div class="figure">
-        <div class="figure-label">Figure 3.1 — Memory Management Paradigm Comparison</div>
-        <div class="comparison-grid">
-          <div style="background: rgba(248, 81, 73, 0.06); border: 2px solid var(--accent-red); border-radius: 12px; padding: 1.5rem;">
-            <h4 style="margin-top: 0; color: var(--accent-red);">Traditional: CPU-Managed</h4>
-            <div style="text-align: center; margin: 1.5rem 0;">
-              <div style="display: inline-flex; flex-direction: column; gap: 0.5rem; align-items: center;">
-                <div style="padding: 0.75rem 1.5rem; background: rgba(63,185,80,0.15); border: 2px solid var(--accent-green); border-radius: 8px; color: var(--accent-green); font-weight: 500;">GPU</div>
-                <div style="color: var(--text-muted);">↓ fault</div>
-                <div style="padding: 0.75rem 1.5rem; background: rgba(139,148,158,0.15); border: 2px solid var(--text-muted); border-radius: 8px; color: var(--text-secondary); font-weight: 500;">CPU</div>
-                <div style="color: var(--text-muted);">↓ DMA</div>
-                <div style="padding: 0.75rem 1.5rem; background: rgba(163,113,247,0.15); border: 2px solid var(--accent-purple); border-radius: 8px; color: var(--accent-purple); font-weight: 500;">Memory</div>
-              </div>
-            </div>
-            <ul style="font-size: 0.9rem; margin-bottom: 0; color: var(--text-secondary);">
-              <li>CPU in critical path for every access</li>
-              <li>5-10 μs latency per operation</li>
-              <li>No predictive prefetching capability</li>
-              <li>System RAM contention with OS</li>
-            </ul>
-          </div>
-          <div style="background: rgba(63, 185, 80, 0.06); border: 2px solid var(--accent-green); border-radius: 12px; padding: 1.5rem;">
-            <h4 style="margin-top: 0; color: var(--accent-green);">Our Approach: Endpoint-Managed</h4>
-            <div style="text-align: center; margin: 1.5rem 0;">
-              <div style="display: inline-flex; flex-direction: column; gap: 0.5rem; align-items: center;">
-                <div style="padding: 0.75rem 1.5rem; background: rgba(63,185,80,0.15); border: 2px solid var(--accent-green); border-radius: 8px; color: var(--accent-green); font-weight: 500;">GPU</div>
-                <div style="color: var(--accent-cyan);">↓ CXL.mem</div>
-                <div style="padding: 0.75rem 1.5rem; background: rgba(210,153,34,0.15); border: 2px solid var(--accent-orange); border-radius: 8px; color: var(--accent-orange); font-weight: 500;">Smart Endpoint</div>
-              </div>
-            </div>
-            <ul style="font-size: 0.9rem; margin-bottom: 0; color: var(--text-secondary);">
-              <li>Direct GPU ↔ Endpoint communication</li>
-              <li>250 ns latency (40× faster)</li>
-              <li>Autonomous prefetch + eviction</li>
-              <li>Dedicated memory pool</li>
-            </ul>
-          </div>
-        </div>
-        <div class="figure-caption">Eliminating CPU from the data path reduces latency by 40× and enables intelligent prefetching based on attention patterns.</div>
+      <div class="stats-grid" style="margin-bottom: 3rem;">
+        <div class="stat-box"><div class="stat-value">11</div><div class="stat-label">Figures in Chapter</div></div>
+        <div class="stat-box"><div class="stat-value">250 ns</div><div class="stat-label">CXL Latency</div></div>
+        <div class="stat-box"><div class="stat-value">65×</div><div class="stat-label">vs PCIe DMA</div></div>
+        <div class="stat-box"><div class="stat-value">1 TB</div><div class="stat-label">DRAM Capacity</div></div>
       </div>
 
-      <h3>Computational Storage Devices (CSDs)</h3>
+      <!-- Section 3.1: Core Concept -->
+      <h2>3.1 Controller Offloading Concept</h2>
+      
+      <p>Instead of passive memory managed by CPU, we deploy <strong>intelligent computational storage endpoints</strong> with their own ARM processors that autonomously manage cache placement, eviction, and prefetching.</p>
 
-      <p>Each endpoint is a <strong>Computational Storage Device</strong>—not merely a memory expander but an intelligent subsystem with its own processing capability. The endpoint architecture includes:</p>
-
-      <div class="figure">
-        <div class="figure-label">Figure 3.2 — Endpoint Internal Architecture</div>
-        <div style="background: var(--bg-tertiary); border-radius: 12px; padding: 2rem; margin: 1rem 0;">
-          <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem;">
-            <!-- Controller Section -->
-            <div style="background: rgba(88,166,255,0.1); border: 2px solid var(--accent-cyan); border-radius: 10px; padding: 1.5rem;">
-              <div style="font-size: 0.85rem; color: var(--accent-cyan); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 1rem;">Controller Complex</div>
-              <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                <div style="padding: 0.5rem; background: var(--bg-card); border-radius: 6px; text-align: center;">
-                  <div style="font-weight: 600; color: var(--text-primary);">ARM Cortex-A78</div>
-                  <div style="font-size: 0.8rem; color: var(--text-muted);">4-8 cores @ 3 GHz</div>
-                </div>
-                <div style="padding: 0.5rem; background: var(--bg-card); border-radius: 6px; text-align: center;">
-                  <div style="font-weight: 600; color: var(--text-primary);">L3 Cache</div>
-                  <div style="font-size: 0.8rem; color: var(--text-muted);">4 MB shared</div>
-                </div>
-                <div style="padding: 0.5rem; background: var(--bg-card); border-radius: 6px; text-align: center;">
-                  <div style="font-weight: 600; color: var(--text-primary);">CXL Controller</div>
-                  <div style="font-size: 0.8rem; color: var(--text-muted);">Type-3 Device</div>
-                </div>
-              </div>
-            </div>
-            <!-- Memory Section -->
-            <div>
-              <div style="display: grid; grid-template-rows: 1fr 1fr; gap: 1rem;">
-                <div style="background: rgba(63,185,80,0.1); border: 2px solid var(--accent-green); border-radius: 10px; padding: 1rem;">
-                  <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                      <div style="font-weight: 600; color: var(--accent-green);">DDR5 DRAM</div>
-                      <div style="font-size: 0.85rem; color: var(--text-muted);">Hot tier for KV-cache</div>
-                    </div>
-                    <div style="text-align: right;">
-                      <div style="font-family: var(--font-mono); font-size: 1.25rem; color: var(--text-primary);">256 GB</div>
-                      <div style="font-size: 0.8rem; color: var(--text-muted);">DDR5-5600</div>
-                    </div>
-                  </div>
-                  <div style="margin-top: 0.75rem; height: 8px; background: var(--bg-primary); border-radius: 4px; overflow: hidden;">
-                    <div style="width: 70%; height: 100%; background: var(--accent-green);"></div>
-                  </div>
-                  <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">~180 GB used for active KV-cache</div>
-                </div>
-                <div style="background: rgba(163,113,247,0.1); border: 2px solid var(--accent-purple); border-radius: 10px; padding: 1rem;">
-                  <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                      <div style="font-weight: 600; color: var(--accent-purple);">NVMe Flash</div>
-                      <div style="font-size: 0.85rem; color: var(--text-muted);">Cold tier + model weights</div>
-                    </div>
-                    <div style="text-align: right;">
-                      <div style="font-family: var(--font-mono); font-size: 1.25rem; color: var(--text-primary);">4 TB</div>
-                      <div style="font-size: 0.8rem; color: var(--text-muted);">PCIe Gen5 x4</div>
-                    </div>
-                  </div>
-                  <div style="margin-top: 0.75rem; height: 8px; background: var(--bg-primary); border-radius: 4px; overflow: hidden;">
-                    <div style="width: 25%; height: 100%; background: var(--accent-purple);"></div>
-                  </div>
-                  <div style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">~1 TB used for cold KV + overflow</div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <!-- Bandwidth specs -->
-          <div style="display: flex; justify-content: space-around; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-primary);">
-            <div style="text-align: center;">
-              <div style="font-family: var(--font-mono); font-size: 1.1rem; color: var(--accent-cyan);">64 GB/s</div>
-              <div style="font-size: 0.8rem; color: var(--text-muted);">CXL Uplink (×16 Gen5)</div>
-            </div>
-            <div style="text-align: center;">
-              <div style="font-family: var(--font-mono); font-size: 1.1rem; color: var(--accent-green);">89.6 GB/s</div>
-              <div style="font-size: 0.8rem; color: var(--text-muted);">DDR5 Bandwidth</div>
-            </div>
-            <div style="text-align: center;">
-              <div style="font-family: var(--font-mono); font-size: 1.1rem; color: var(--accent-purple);">14 GB/s</div>
-              <div style="font-size: 0.8rem; color: var(--text-muted);">NVMe Bandwidth</div>
-            </div>
-          </div>
+      <div class="comparison-grid">
+        <div class="card" style="border-color: var(--accent-red);">
+          <h4 style="color: var(--accent-red); margin-top: 0;">❌ Traditional: CPU-Managed</h4>
+          <ul style="font-size: 0.9rem; margin-bottom: 0;">
+            <li>CPU in critical path</li>
+            <li>5-10 μs latency</li>
+            <li>No predictive prefetch</li>
+            <li>System RAM contention</li>
+          </ul>
         </div>
-        <div class="figure-caption">Each endpoint contains ARM compute for intelligent cache management, high-bandwidth DDR5 for hot data, and NVMe flash for capacity. The CXL controller provides direct GPU access via load/store semantics.</div>
-      </div>
-
-      <h3>Cache-Coherent Interconnects</h3>
-
-      <p>The key enabler for low-latency memory expansion is <strong>cache coherency</strong>. Unlike traditional PCIe devices that require explicit DMA operations, CXL devices participate in the system's cache coherence protocol, enabling:</p>
-
-      <ul>
-        <li><strong>Load/Store Semantics</strong>: GPU accesses CXL memory with regular memory instructions—no special APIs</li>
-        <li><strong>Hardware Coherence</strong>: No software cache management or explicit flushes required</li>
-        <li><strong>Fine-Grained Access</strong>: Cache-line granularity (64B) instead of page granularity (4KB)</li>
-        <li><strong>Low Latency</strong>: 250 ns round-trip vs 5-10 μs for DMA</li>
-      </ul>
-
-      <p>See <a href="../appendix/f-cxl-technology.html">Appendix F: CXL Technology Primer</a> for detailed protocol specifications.</p>
-
-      <h2>3.2 Technology Stack</h2>
-
-      <p>The architecture leverages three emerging interconnect standards that together enable scalable, low-latency memory pooling:</p>
-
-      <h3>CXL 3.0 (Compute Express Link)</h3>
-
-      <p>CXL is the foundation of our architecture, providing cache-coherent memory access over PCIe physical layer. CXL 3.0 specifically adds critical capabilities for our use case:</p>
-
-      <div class="figure">
-        <div class="figure-label">Figure 3.3 — CXL Protocol Sub-Types</div>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Protocol</th>
-                <th>Direction</th>
-                <th>Purpose</th>
-                <th>Our Usage</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><strong>CXL.io</strong></td>
-                <td>Bidirectional</td>
-                <td>PCIe-equivalent I/O (config, interrupts, DMA)</td>
-                <td>Control plane, endpoint configuration</td>
-              </tr>
-              <tr>
-                <td><strong>CXL.cache</strong></td>
-                <td>Device → Host</td>
-                <td>Device caches host memory coherently</td>
-                <td>Not primary (accelerator-focused)</td>
-              </tr>
-              <tr>
-                <td><strong style="color: var(--accent-cyan);">CXL.mem</strong></td>
-                <td>Host → Device</td>
-                <td>Host accesses device memory coherently</td>
-                <td class="highlight"><strong>Primary protocol for KV-cache</strong></td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="figure-caption">CXL.mem is the critical protocol enabling GPU load/store access to endpoint DRAM. CXL.io handles configuration and hint delivery.</div>
-      </div>
-
-      <p><strong>CXL 3.0 Key Features:</strong></p>
-
-      <ul>
-        <li><strong>Multi-headed devices</strong>: Single endpoint accessible by multiple hosts</li>
-        <li><strong>Fabric switching</strong>: Non-blocking switches for bandwidth aggregation</li>
-        <li><strong>Enhanced coherence</strong>: Back-invalidate for shared memory scenarios</li>
-        <li><strong>Hardware memory pooling</strong>: Dynamic capacity allocation</li>
-      </ul>
-
-      <h3>UCIe (Universal Chiplet Interconnect Express)</h3>
-
-      <p>UCIe enables die-to-die communication within a package, relevant for future integrated solutions:</p>
-
-      <div class="callout definition">
-        <div class="callout-title">🔌 UCIe Overview</div>
-        <p>UCIe standardizes chiplet interconnects, allowing memory controller dies to be placed adjacent to compute dies within the same package. This could enable "on-package" CXL memory with even lower latency than discrete endpoints.</p>
-        <p style="margin-bottom: 0;"><strong>Bandwidth:</strong> Up to 32 GT/s per lane, 1.3 TB/s for ×16 standard package</p>
-      </div>
-
-      <h3>UEC (Ultra Ethernet Consortium)</h3>
-
-      <p>For multi-node deployments, UEC provides the fabric layer connecting GPU nodes to distributed memory pools:</p>
-
-      <ul>
-        <li><strong>Ultra-low latency</strong>: Sub-microsecond fabric traversal</li>
-        <li><strong>RDMA-native</strong>: Zero-copy data movement</li>
-        <li><strong>Congestion management</strong>: Optimized for bursty AI traffic patterns</li>
-        <li><strong>Scale-out</strong>: Rack and cluster-level memory pooling</li>
-      </ul>
-
-      <h2>3.3 System Topology</h2>
-
-      <p>We define two primary deployment configurations based on scale requirements:</p>
-
-      <h3>Single-Node Configuration</h3>
-
-      <p>The baseline deployment attaches 4 CXL endpoints to a single GPU server via a CXL switch:</p>
-
-      <div class="figure">
-        <div class="figure-label">Figure 3.4 — Single-Node Topology (4 Endpoints)</div>
-        <div style="background: var(--bg-tertiary); border-radius: 12px; padding: 2rem;">
-          <!-- GPU + CPU Row -->
-          <div style="display: flex; justify-content: center; gap: 2rem; margin-bottom: 1.5rem;">
-            <div style="padding: 1rem 2rem; background: rgba(139,148,158,0.1); border: 2px solid var(--text-muted); border-radius: 10px; text-align: center;">
-              <div style="font-weight: 600; color: var(--text-secondary);">Host CPU</div>
-              <div style="font-size: 0.8rem; color: var(--text-muted);">Control Plane</div>
-            </div>
-            <div style="padding: 1rem 2rem; background: rgba(63,185,80,0.15); border: 2px solid var(--accent-green); border-radius: 10px; text-align: center;">
-              <div style="font-weight: 600; color: var(--accent-green);">B200 GPU</div>
-              <div style="font-size: 0.8rem; color: var(--text-muted);">192 GB HBM3e</div>
-            </div>
-          </div>
-          
-          <!-- Connection lines -->
-          <div style="text-align: center; color: var(--text-muted); margin-bottom: 0.5rem;">
-            <div style="font-size: 0.85rem;">PCIe Gen5 ×16</div>
-            <div>↓</div>
-          </div>
-          
-          <!-- CXL Switch -->
-          <div style="max-width: 500px; margin: 0 auto 1.5rem;">
-            <div style="padding: 1rem; background: rgba(163,113,247,0.15); border: 2px solid var(--accent-purple); border-radius: 10px; text-align: center;">
-              <div style="font-weight: 600; color: var(--accent-purple);">CXL 3.0 Switch</div>
-              <div style="font-size: 0.8rem; color: var(--text-muted);">8-Port Non-Blocking Fabric</div>
-            </div>
-          </div>
-          
-          <!-- Connection lines -->
-          <div style="display: flex; justify-content: center; gap: 4rem; margin-bottom: 0.5rem; color: var(--text-muted);">
-            <span>↓</span><span>↓</span><span>↓</span><span>↓</span>
-          </div>
-          
-          <!-- Endpoints -->
-          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; max-width: 700px; margin: 0 auto;">
-            <div style="padding: 1rem; background: rgba(210,153,34,0.1); border: 2px solid var(--accent-orange); border-radius: 10px; text-align: center;">
-              <div style="font-weight: 600; color: var(--accent-orange); font-size: 0.9rem;">Endpoint 0</div>
-              <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">256 GB DDR5</div>
-              <div style="font-size: 0.75rem; color: var(--text-muted);">4 TB NVMe</div>
-            </div>
-            <div style="padding: 1rem; background: rgba(210,153,34,0.1); border: 2px solid var(--accent-orange); border-radius: 10px; text-align: center;">
-              <div style="font-weight: 600; color: var(--accent-orange); font-size: 0.9rem;">Endpoint 1</div>
-              <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">256 GB DDR5</div>
-              <div style="font-size: 0.75rem; color: var(--text-muted);">4 TB NVMe</div>
-            </div>
-            <div style="padding: 1rem; background: rgba(210,153,34,0.1); border: 2px solid var(--accent-orange); border-radius: 10px; text-align: center;">
-              <div style="font-weight: 600; color: var(--accent-orange); font-size: 0.9rem;">Endpoint 2</div>
-              <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">256 GB DDR5</div>
-              <div style="font-size: 0.75rem; color: var(--text-muted);">4 TB NVMe</div>
-            </div>
-            <div style="padding: 1rem; background: rgba(210,153,34,0.1); border: 2px solid var(--accent-orange); border-radius: 10px; text-align: center;">
-              <div style="font-weight: 600; color: var(--accent-orange); font-size: 0.9rem;">Endpoint 3</div>
-              <div style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">256 GB DDR5</div>
-              <div style="font-size: 0.75rem; color: var(--text-muted);">4 TB NVMe</div>
-            </div>
-          </div>
-          
-          <!-- Aggregate Stats -->
-          <div style="display: flex; justify-content: center; gap: 3rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-primary);">
-            <div style="text-align: center;">
-              <div style="font-family: var(--font-mono); font-size: 1.5rem; color: var(--accent-cyan);">1 TB</div>
-              <div style="font-size: 0.85rem; color: var(--text-muted);">Total DRAM</div>
-            </div>
-            <div style="text-align: center;">
-              <div style="font-family: var(--font-mono); font-size: 1.5rem; color: var(--accent-cyan);">256 GB/s</div>
-              <div style="font-size: 0.85rem; color: var(--text-muted);">Aggregate BW</div>
-            </div>
-            <div style="text-align: center;">
-              <div style="font-family: var(--font-mono); font-size: 1.5rem; color: var(--accent-cyan);">16 TB</div>
-              <div style="font-size: 0.85rem; color: var(--text-muted);">Flash Capacity</div>
-            </div>
-            <div style="text-align: center;">
-              <div style="font-family: var(--font-mono); font-size: 1.5rem; color: var(--accent-cyan);">250 ns</div>
-              <div style="font-size: 0.85rem; color: var(--text-muted);">DRAM Latency</div>
-            </div>
-          </div>
-        </div>
-        <div class="figure-caption">Four CXL endpoints provide 6× memory expansion (192 GB HBM + 1 TB CXL = 1.2 TB effective). The non-blocking switch enables full 256 GB/s aggregate bandwidth.</div>
-      </div>
-
-      <div class="stats-grid" style="margin: 2rem 0;">
-        <div class="stat-box">
-          <div class="stat-value">1.2 TB</div>
-          <div class="stat-label">Total Capacity</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-value">8+</div>
-          <div class="stat-label">Users @ 128K</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-value">256 GB/s</div>
-          <div class="stat-label">CXL Bandwidth</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-value">~$45K</div>
-          <div class="stat-label">Total Cost</div>
+        <div class="card" style="border-color: var(--accent-green);">
+          <h4 style="color: var(--accent-green); margin-top: 0;">✓ Our Approach: Endpoint-Managed</h4>
+          <ul style="font-size: 0.9rem; margin-bottom: 0;">
+            <li>Direct GPU ↔ Endpoint</li>
+            <li>250 ns latency (40× faster)</li>
+            <li>Autonomous prefetch</li>
+            <li>Dedicated memory pool</li>
+          </ul>
         </div>
       </div>
 
-      <h3>Multi-Node Disaggregated Cluster</h3>
-
-      <p>For larger deployments, multiple GPU nodes share a fabric-attached memory pool:</p>
-
-      <div class="figure">
-        <div class="figure-label">Figure 3.5 — Multi-Node Disaggregated Architecture</div>
-        <div style="background: var(--bg-tertiary); border-radius: 12px; padding: 2rem;">
-          <!-- GPU Nodes Row -->
-          <div style="display: flex; justify-content: center; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
-            <div style="padding: 1rem; background: rgba(63,185,80,0.1); border: 2px solid var(--accent-green); border-radius: 10px; text-align: center; min-width: 100px;">
-              <div style="font-size: 0.85rem; font-weight: 600; color: var(--accent-green);">GPU Node 0</div>
-              <div style="font-size: 0.75rem; color: var(--text-muted);">B200 × 8</div>
-            </div>
-            <div style="padding: 1rem; background: rgba(63,185,80,0.1); border: 2px solid var(--accent-green); border-radius: 10px; text-align: center; min-width: 100px;">
-              <div style="font-size: 0.85rem; font-weight: 600; color: var(--accent-green);">GPU Node 1</div>
-              <div style="font-size: 0.75rem; color: var(--text-muted);">B200 × 8</div>
-            </div>
-            <div style="padding: 1rem; background: rgba(63,185,80,0.1); border: 2px solid var(--accent-green); border-radius: 10px; text-align: center; min-width: 100px;">
-              <div style="font-size: 0.85rem; font-weight: 600; color: var(--accent-green);">GPU Node 2</div>
-              <div style="font-size: 0.75rem; color: var(--text-muted);">B200 × 8</div>
-            </div>
-            <div style="padding: 1rem; background: rgba(63,185,80,0.1); border: 2px solid var(--accent-green); border-radius: 10px; text-align: center; min-width: 100px;">
-              <div style="font-size: 0.85rem; font-weight: 600; color: var(--accent-green);">GPU Node 3</div>
-              <div style="font-size: 0.75rem; color: var(--text-muted);">B200 × 8</div>
-            </div>
-          </div>
-          
-          <!-- Fabric -->
-          <div style="max-width: 600px; margin: 0 auto 1.5rem;">
-            <div style="padding: 1rem; background: rgba(88,166,255,0.15); border: 2px solid var(--accent-cyan); border-radius: 10px; text-align: center;">
-              <div style="font-weight: 600; color: var(--accent-cyan);">UEC Fabric Layer</div>
-              <div style="font-size: 0.8rem; color: var(--text-muted);">400 GbE × 4 per node • RDMA • Sub-μs latency</div>
-            </div>
-          </div>
-          
-          <!-- Memory Pool -->
-          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; max-width: 700px; margin: 0 auto;">
-            <div style="padding: 0.75rem; background: rgba(210,153,34,0.1); border: 2px solid var(--accent-orange); border-radius: 8px; text-align: center;">
-              <div style="font-size: 0.8rem; font-weight: 600; color: var(--accent-orange);">Pool 0</div>
-              <div style="font-size: 0.7rem; color: var(--text-muted);">2 TB</div>
-            </div>
-            <div style="padding: 0.75rem; background: rgba(210,153,34,0.1); border: 2px solid var(--accent-orange); border-radius: 8px; text-align: center;">
-              <div style="font-size: 0.8rem; font-weight: 600; color: var(--accent-orange);">Pool 1</div>
-              <div style="font-size: 0.7rem; color: var(--text-muted);">2 TB</div>
-            </div>
-            <div style="padding: 0.75rem; background: rgba(210,153,34,0.1); border: 2px solid var(--accent-orange); border-radius: 8px; text-align: center;">
-              <div style="font-size: 0.8rem; font-weight: 600; color: var(--accent-orange);">Pool 2</div>
-              <div style="font-size: 0.7rem; color: var(--text-muted);">2 TB</div>
-            </div>
-            <div style="padding: 0.75rem; background: rgba(210,153,34,0.1); border: 2px solid var(--accent-orange); border-radius: 8px; text-align: center;">
-              <div style="font-size: 0.8rem; font-weight: 600; color: var(--accent-orange);">Pool 3</div>
-              <div style="font-size: 0.7rem; color: var(--text-muted);">2 TB</div>
-            </div>
-          </div>
-          
-          <!-- Aggregate Stats -->
-          <div style="display: flex; justify-content: center; gap: 3rem; margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-primary);">
-            <div style="text-align: center;">
-              <div style="font-family: var(--font-mono); font-size: 1.3rem; color: var(--accent-cyan);">8 TB</div>
-              <div style="font-size: 0.8rem; color: var(--text-muted);">Pooled DRAM</div>
-            </div>
-            <div style="text-align: center;">
-              <div style="font-family: var(--font-mono); font-size: 1.3rem; color: var(--accent-cyan);">1.6 TB/s</div>
-              <div style="font-size: 0.8rem; color: var(--text-muted);">Cross-Section BW</div>
-            </div>
-            <div style="text-align: center;">
-              <div style="font-family: var(--font-mono); font-size: 1.3rem; color: var(--accent-cyan);">500 ns</div>
-              <div style="font-size: 0.8rem; color: var(--text-muted);">Fabric Latency</div>
-            </div>
-          </div>
+      <div class="figure-embed tall">
+        <div class="figure-embed-header">
+          <span class="figure-embed-label">Figure 3.1 — Complete System Architecture</span>
+          <a href="../figures/ch03-architecture/diagram-architecture-html.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
         </div>
-        <div class="figure-caption">Multi-node deployment enables rack-scale memory pooling with dynamic allocation. Any GPU can access any memory pool through the UEC fabric.</div>
+        <iframe src="../figures/ch03-architecture/diagram-architecture-html.html"></iframe>
       </div>
 
-      <h3>Topology Comparison</h3>
-
+      <!-- Section 3.2: Endpoint Architecture -->
+      <h2>3.2 Endpoint Internal Architecture</h2>
+      
       <div class="table-wrapper">
         <table>
           <thead>
-            <tr>
-              <th>Metric</th>
-              <th>Single-Node (4 EP)</th>
-              <th>Multi-Node (32 EP)</th>
-            </tr>
+            <tr><th>Component</th><th>Specification</th><th>Purpose</th></tr>
           </thead>
           <tbody>
-            <tr>
-              <td>Total DRAM Capacity</td>
-              <td class="mono">1 TB</td>
-              <td class="mono highlight">8 TB</td>
-            </tr>
-            <tr>
-              <td>Aggregate Bandwidth</td>
-              <td class="mono">256 GB/s</td>
-              <td class="mono highlight">1.6 TB/s</td>
-            </tr>
-            <tr>
-              <td>Memory Latency (DRAM)</td>
-              <td class="mono highlight">250 ns</td>
-              <td class="mono">500 ns - 2 μs</td>
-            </tr>
-            <tr>
-              <td>Users @ 128K Context</td>
-              <td class="mono">8-12</td>
-              <td class="mono highlight">100+</td>
-            </tr>
-            <tr>
-              <td>Deployment Complexity</td>
-              <td class="highlight">Low</td>
-              <td class="warning">Medium-High</td>
-            </tr>
-            <tr>
-              <td>Use Case</td>
-              <td>Single-model serving</td>
-              <td>Multi-tenant, high-availability</td>
-            </tr>
+            <tr><td>Controller</td><td class="mono">ARM Cortex-A78 (4-8 cores)</td><td>Cache management intelligence</td></tr>
+            <tr><td>DRAM</td><td class="mono">256 GB DDR5-5600</td><td>Hot KV-cache tier</td></tr>
+            <tr><td>Flash</td><td class="mono">4 TB NVMe Gen5</td><td>Cold tier + overflow</td></tr>
+            <tr><td>CXL Controller</td><td class="mono">Type-3 Device</td><td>GPU memory access</td></tr>
+            <tr><td>Uplink</td><td class="mono">×16 PCIe Gen5 (64 GB/s)</td><td>Host connection</td></tr>
           </tbody>
         </table>
       </div>
 
-      <div class="callout note">
-        <div class="callout-title">📋 Deployment Recommendation</div>
-        <p style="margin-bottom: 0;">Start with the <strong>single-node configuration</strong> for initial deployments. It provides 6× memory expansion with minimal complexity. Scale to multi-node only when serving 50+ concurrent users or requiring cross-node KV-cache sharing for multi-tenant isolation.</p>
+      <div class="figure-embed">
+        <div class="figure-embed-header">
+          <span class="figure-embed-label">Figure 3.2 — Endpoint Internal Components</span>
+          <a href="../figures/ch03-architecture/endpoint-diagram.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
+        </div>
+        <iframe src="../figures/ch03-architecture/endpoint-diagram.html"></iframe>
+      </div>
+
+      <!-- Section 3.3: CXL Architecture -->
+      <h2>3.3 CXL 3.0 Architecture</h2>
+      
+      <p>CXL (Compute Express Link) provides cache-coherent memory access with load/store semantics—no explicit DMA required.</p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Protocol</th><th>Direction</th><th>Purpose</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>CXL.io</strong></td><td>Bidirectional</td><td>PCIe-equivalent I/O, config, interrupts</td></tr>
+            <tr><td><strong>CXL.cache</strong></td><td>Device → Host</td><td>Device caches host memory</td></tr>
+            <tr><td style="color: var(--accent-cyan);"><strong>CXL.mem</strong></td><td>Host → Device</td><td>Host accesses device memory (our primary)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="figure-embed tall">
+        <div class="figure-embed-header">
+          <span class="figure-embed-label">Figure 3.3 — CXL Architecture Diagram</span>
+          <a href="../figures/ch03-architecture/cxl-architecture-diagram.html" target="_blank" class="figure-embed-link">View TSX Source ↗</a>
+        </div>
+        <iframe src="../figures/ch03-architecture/cxl-architecture-diagram.html" style="background: #1a1a2e;"></iframe>
+      </div>
+
+      <!-- Section 3.4: Memory Hierarchy -->
+      <h2>3.4 Three-Tier Memory Hierarchy</h2>
+      
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Tier</th><th>Media</th><th>Capacity</th><th>Latency</th><th>Contents</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Tier 0</td><td>GPU HBM (Pinned)</td><td class="mono">~5 GB</td><td class="mono highlight">100 ns</td><td>Model weights, active layer</td></tr>
+            <tr><td>Tier 1</td><td>GPU HBM (Evictable)</td><td class="mono">~37 GB</td><td class="mono highlight">100 ns</td><td>Hot KV-cache entries</td></tr>
+            <tr><td>Tier 2</td><td>CXL DRAM</td><td class="mono">1 TB</td><td class="mono">250 ns</td><td>Warm KV-cache entries</td></tr>
+            <tr><td>Tier 3</td><td>NVMe Flash</td><td class="mono">16 TB</td><td class="mono warning">25 μs</td><td>Cold entries, overflow</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="figure-embed">
+        <div class="figure-embed-header">
+          <span class="figure-embed-label">Figure 3.4 — Memory Hierarchy Visualization</span>
+          <a href="../figures/ch03-architecture/figure-3-2-memory-hierarchy.html" target="_blank" class="figure-embed-link">View TSX Source ↗</a>
+        </div>
+        <iframe src="../figures/ch03-architecture/figure-3-2-memory-hierarchy.html" style="background: #1a1a2e;"></iframe>
+      </div>
+
+      <!-- Section 3.5: Topology -->
+      <h2>3.5 System Topology (4 Endpoints)</h2>
+
+      <div class="callout insight">
+        <div class="callout-title">💡 Why 4 Endpoints?</div>
+        <p style="margin-bottom: 0;">4 endpoints provide optimal cost/performance balance: <strong>1 TB DRAM</strong>, <strong>256 GB/s aggregate bandwidth</strong>, and <strong>~$5K cost</strong>. Adding more endpoints yields diminishing returns due to switch overhead.</p>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-box"><div class="stat-value">1.2 TB</div><div class="stat-label">Total Capacity</div></div>
+        <div class="stat-box"><div class="stat-value">256 GB/s</div><div class="stat-label">Aggregate BW</div></div>
+        <div class="stat-box"><div class="stat-value">250 ns</div><div class="stat-label">DRAM Latency</div></div>
+        <div class="stat-box"><div class="stat-value">~$5K</div><div class="stat-label">Per Endpoint</div></div>
       </div>
 
       <!-- Chapter Navigation -->
@@ -507,7 +207,7 @@
           <span class="chapter-nav-title">Chapter 2: Background</span>
         </a>
         <a href="ch04-latency.html" class="chapter-nav-btn next">
-          <span class="chapter-nav-label">Next Chapter →</span>
+          <span class="chapter-nav-label">Next →</span>
           <span class="chapter-nav-title">Chapter 4: Latency Analysis</span>
         </a>
       </div>
@@ -517,12 +217,10 @@
       <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-primary);">
         <p style="font-size: 0.8rem; color: var(--text-muted);">
           © 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.<br>
-          This document contains proprietary and confidential information.<br>
-          Unauthorized reproduction or distribution is strictly prohibited.
+          This document contains proprietary and confidential information.
         </p>
       </div>
-      <p>Distributed Endpoint Architecture for KV-Cache Offloading in LLM Inference</p>
-      <p style="margin-top: 0.5rem;">Technical Documentation v3.0 — December 2025</p>
+      <p>KV-Cache Offloading Architecture — v3.0</p>
     </footer>
   </div>
 </body>

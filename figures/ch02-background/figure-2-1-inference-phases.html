@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Figure 2.1 — LLM Inference Phases</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, sans-serif; background: linear-gradient(135deg, #0f172a, #1e293b); min-height: 100vh; color: #e2e8f0; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+function InferencePhasesVisual() {
+  const [step, setStep] = useState(0);
+  const [autoPlay, setAutoPlay] = useState(false);
+  
+  useEffect(() => {
+    if (autoPlay && step < 6) {
+      const timer = setTimeout(() => setStep(s => s + 1), 1500);
+      return () => clearTimeout(timer);
+    } else if (step >= 6) {
+      setAutoPlay(false);
+    }
+  }, [autoPlay, step]);
+
+  const promptTokens = ['Explain', 'quantum', 'computing', 'in', 'simple', 'terms'];
+  const outputTokens = ['Quantum', 'computing', 'uses', 'qubits', '...'];
+  
+  const styles = {
+    container: { maxWidth: '1000px', margin: '0 auto', padding: '2rem' },
+    header: { textAlign: 'center', marginBottom: '2rem' },
+    badge: { display: 'inline-block', padding: '0.25rem 0.75rem', background: 'rgba(59,130,246,0.2)', color: '#60a5fa', fontSize: '0.75rem', fontFamily: 'monospace', borderRadius: '20px', marginBottom: '0.5rem' },
+    title: { fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.5rem' },
+    subtitle: { color: '#94a3b8' },
+    btnGroup: { display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '2rem' },
+    btnPlay: { padding: '0.5rem 1rem', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 },
+    btnReset: { padding: '0.5rem 1rem', background: '#334155', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 },
+    grid: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.5rem', marginBottom: '2rem' },
+    card: { background: '#1e293b', borderRadius: '16px', padding: '1.5rem', border: '2px solid #334155', transition: 'all 0.3s' },
+    cardActive: (color) => ({ borderColor: color, boxShadow: `0 0 30px ${color}33` }),
+    cardHeader: { display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' },
+    cardNum: (bg) => ({ width: 36, height: 36, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: 'white', background: bg }),
+    cardTitle: (color) => ({ fontSize: '1.1rem', fontWeight: 600, color }),
+    cardSubtitle: { fontSize: '0.8rem', color: '#64748b' },
+    tokenBox: { background: '#0f172a', borderRadius: '12px', padding: '1rem', marginBottom: '1rem' },
+    tokenLabel: { fontSize: '0.75rem', color: '#64748b', marginBottom: '0.5rem' },
+    tokenGrid: { display: 'flex', flexWrap: 'wrap', gap: '0.5rem' },
+    token: (active, color) => ({ padding: '0.375rem 0.75rem', borderRadius: '8px', fontFamily: 'monospace', fontSize: '0.875rem', background: active ? color : '#334155', color: active ? 'white' : '#94a3b8', transition: 'all 0.3s' }),
+    kvBar: (active) => ({ height: 32, borderRadius: 4, background: active ? '#3b82f6' : '#334155', transition: 'all 0.3s' }),
+    statusMsg: (color) => ({ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color, fontSize: '0.875rem' }),
+    comparisonTable: { background: '#1e293b', borderRadius: '16px', overflow: 'hidden' },
+    tableRow: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', borderBottom: '1px solid #334155' },
+    tableHeader: { padding: '1rem', background: '#0f172a', fontWeight: 600, textAlign: 'center' },
+    tableCell: { padding: '1rem', textAlign: 'center' },
+    highlight: (color) => ({ color, fontWeight: 600 })
+  };
+
+  return (
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <div style={styles.badge}>FIGURE 2.1</div>
+        <h1 style={styles.title}>LLM Inference: Two Phases</h1>
+        <p style={styles.subtitle}>Visualizing the fundamental difference between prefill and decode</p>
+      </div>
+
+      <div style={styles.btnGroup}>
+        <button style={styles.btnPlay} onClick={() => { setStep(0); setAutoPlay(true); }}>▶ Play Animation</button>
+        <button style={styles.btnReset} onClick={() => setStep(0)}>↺ Reset</button>
+      </div>
+
+      <div style={styles.grid}>
+        {/* Prefill Phase */}
+        <div style={{...styles.card, ...(step >= 1 && step <= 2 ? styles.cardActive('#10b981') : {})}}>
+          <div style={styles.cardHeader}>
+            <div style={styles.cardNum('#10b981')}>1</div>
+            <div>
+              <div style={styles.cardTitle('#10b981')}>Prefill Phase</div>
+              <div style={styles.cardSubtitle}>Parallel • Compute-bound</div>
+            </div>
+          </div>
+          <div style={styles.tokenBox}>
+            <div style={styles.tokenLabel}>Input Prompt (N=6 tokens)</div>
+            <div style={styles.tokenGrid}>
+              {promptTokens.map((token, i) => (
+                <div key={i} style={styles.token(step >= 1, '#10b981')}>{token}</div>
+              ))}
+            </div>
+            {step >= 1 && <div style={styles.statusMsg('#10b981')}>⚡ Processing ALL tokens in parallel</div>}
+          </div>
+          <div style={styles.tokenBox}>
+            <div style={styles.tokenLabel}>KV-Cache Generation</div>
+            <div style={{display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 4}}>
+              {promptTokens.map((_, i) => (
+                <div key={i} style={{textAlign: 'center'}}>
+                  <div style={styles.kvBar(step >= 2)}></div>
+                  <div style={{fontSize: '0.7rem', color: '#64748b', marginTop: 4}}>K{i}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Decode Phase */}
+        <div style={{...styles.card, ...(step >= 3 ? styles.cardActive('#f59e0b') : {})}}>
+          <div style={styles.cardHeader}>
+            <div style={styles.cardNum('#f59e0b')}>2</div>
+            <div>
+              <div style={styles.cardTitle('#f59e0b')}>Decode Phase</div>
+              <div style={styles.cardSubtitle}>Sequential • Memory-bound</div>
+            </div>
+          </div>
+          <div style={styles.tokenBox}>
+            <div style={styles.tokenLabel}>Output Generation (one at a time)</div>
+            <div style={styles.tokenGrid}>
+              {outputTokens.map((token, i) => (
+                <div key={i} style={styles.token(step >= 3 + i, '#f59e0b')}>{token}</div>
+              ))}
+            </div>
+            {step >= 3 && <div style={styles.statusMsg('#f59e0b')}>🔄 One token per forward pass</div>}
+          </div>
+          <div style={styles.tokenBox}>
+            <div style={styles.tokenLabel}>KV-Cache Access Pattern</div>
+            <div style={{fontSize: '0.875rem', color: '#94a3b8'}}>
+              Each decode step reads <span style={{color: '#f59e0b', fontWeight: 600}}>entire cache</span> to compute attention
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Comparison Table */}
+      <div style={styles.comparisonTable}>
+        <div style={styles.tableRow}>
+          <div style={styles.tableHeader}>Metric</div>
+          <div style={{...styles.tableHeader, color: '#10b981'}}>Prefill</div>
+          <div style={{...styles.tableHeader, color: '#f59e0b'}}>Decode</div>
+        </div>
+        <div style={styles.tableRow}>
+          <div style={styles.tableCell}>Parallelism</div>
+          <div style={{...styles.tableCell, ...styles.highlight('#10b981')}}>All N tokens</div>
+          <div style={{...styles.tableCell, ...styles.highlight('#f59e0b')}}>1 token</div>
+        </div>
+        <div style={styles.tableRow}>
+          <div style={styles.tableCell}>Bottleneck</div>
+          <div style={{...styles.tableCell, ...styles.highlight('#10b981')}}>Compute (FLOPs)</div>
+          <div style={{...styles.tableCell, ...styles.highlight('#f59e0b')}}>Memory (bandwidth)</div>
+        </div>
+        <div style={{...styles.tableRow, borderBottom: 'none'}}>
+          <div style={styles.tableCell}>KV-Cache</div>
+          <div style={{...styles.tableCell, ...styles.highlight('#10b981')}}>Write once</div>
+          <div style={{...styles.tableCell, ...styles.highlight('#f59e0b')}}>Read every step</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<InferencePhasesVisual />);
+</script>
+</body>
+</html>

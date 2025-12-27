@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RoPE Prefetch Strategy</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: #ffffff;
+  color: #1a1a1a;
+  padding: 2.5rem;
+  line-height: 1.5;
+}
+.container { max-width: 950px; margin: 0 auto; }
+h1 {
+  font-size: 2.2rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+.subtitle {
+  text-align: center;
+  color: #555;
+  font-size: 1.15rem;
+  margin-bottom: 2.5rem;
+}
+.section {
+  margin-bottom: 2.5rem;
+}
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+.section-num {
+  width: 36px;
+  height: 36px;
+  background: #6f42c1;
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.section-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+.card {
+  background: #fafafa;
+  border: 2px solid #e8e8e8;
+  border-radius: 14px;
+  padding: 1.5rem;
+}
+.rope-viz {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+.decay-chart {
+  width: 100%;
+  max-width: 700px;
+  height: 200px;
+  background: #fff;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+}
+.decay-curve {
+  position: absolute;
+  bottom: 40px;
+  left: 50px;
+  right: 50px;
+  height: 140px;
+}
+.decay-svg {
+  width: 100%;
+  height: 100%;
+}
+.axis-label {
+  position: absolute;
+  font-size: 0.9rem;
+  color: #666;
+}
+.axis-label.y { 
+  left: 8px; 
+  top: 50%; 
+  transform: rotate(-90deg) translateX(-50%);
+  transform-origin: left center;
+}
+.axis-label.x { 
+  bottom: 8px; 
+  left: 50%; 
+  transform: translateX(-50%); 
+}
+.query-marker {
+  position: absolute;
+  bottom: 35px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.query-label {
+  margin-top: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #dc3545;
+}
+.rope-explanation {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.rope-point {
+  background: #fff;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  max-width: 300px;
+}
+.rope-point-title {
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-bottom: 0.3rem;
+  color: #6f42c1;
+}
+.rope-point-desc {
+  font-size: 0.95rem;
+  color: #555;
+}
+.prefetch-viz {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+.position-line {
+  width: 100%;
+  max-width: 800px;
+  position: relative;
+  padding: 2rem 0;
+}
+.line-base {
+  height: 4px;
+  background: #ddd;
+  border-radius: 2px;
+  position: relative;
+}
+.prefetch-window {
+  position: absolute;
+  top: -8px;
+  height: 20px;
+  background: rgba(111, 66, 193, 0.2);
+  border: 2px solid #6f42c1;
+  border-radius: 4px;
+}
+.window-label {
+  position: absolute;
+  top: -35px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #6f42c1;
+  white-space: nowrap;
+}
+.position-markers {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1rem;
+  padding: 0 2%;
+}
+.pos-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+.pos-tick {
+  width: 2px;
+  height: 12px;
+  background: #999;
+}
+.pos-label {
+  font-size: 0.85rem;
+  color: #666;
+  font-family: 'Fira Code', monospace;
+}
+.current-pos {
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 24px;
+  background: #dc3545;
+  border-radius: 50%;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 10px rgba(220,53,69,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.pos-p-label {
+  position: absolute;
+  top: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1rem;
+  font-weight: 700;
+  color: #dc3545;
+}
+.window-edges {
+  position: absolute;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.edge-label {
+  position: absolute;
+  top: 28px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #6f42c1;
+  font-family: 'Fira Code', monospace;
+}
+.edge-label.left { left: calc(25% - 20px); }
+.edge-label.right { right: calc(25% - 20px); }
+.token-slots {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  flex-wrap: wrap;
+  max-width: 800px;
+}
+.token-slot {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: 'Fira Code', monospace;
+}
+.token-slot.cached { background: #d4edda; color: #155724; border: 2px solid #28a745; }
+.token-slot.prefetch { background: #e7d4f7; color: #4a1a7a; border: 2px solid #6f42c1; }
+.token-slot.current { background: #dc3545; color: white; border: 2px solid #a71d2a; }
+.token-slot.storage { background: #f8f9fa; color: #666; border: 2px solid #ddd; }
+.slot-legend {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+}
+.legend-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+}
+.formula-card {
+  background: #f8f5ff;
+  border: 2px solid #d4c4f0;
+  border-radius: 12px;
+  padding: 1.25rem;
+  text-align: center;
+}
+.formula-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #6f42c1;
+  margin-bottom: 0.75rem;
+}
+.formula-content {
+  font-family: 'Fira Code', monospace;
+  font-size: 1.2rem;
+  color: #333;
+  background: #fff;
+  padding: 1rem;
+  border-radius: 8px;
+  display: inline-block;
+}
+.formula-note {
+  font-size: 0.95rem;
+  color: #666;
+  margin-top: 0.75rem;
+}
+.attn-dist {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+}
+.dist-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 3px;
+  height: 120px;
+  padding: 1rem;
+  background: #fff;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+}
+.dist-bar {
+  width: 28px;
+  background: linear-gradient(to top, #6f42c1, #a78bda);
+  border-radius: 4px 4px 0 0;
+  position: relative;
+}
+.dist-bar.in-window {
+  background: linear-gradient(to top, #28a745, #5dd879);
+}
+.dist-bar.current {
+  background: linear-gradient(to top, #dc3545, #f06878);
+}
+.dist-label {
+  text-align: center;
+  margin-top: 0.75rem;
+  font-size: 0.95rem;
+  color: #555;
+}
+.dist-label strong {
+  color: #28a745;
+}
+.w-selection {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.w-option {
+  background: #fff;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 1rem;
+  text-align: center;
+}
+.w-option.recommended {
+  border-color: #28a745;
+  background: #f8fff8;
+}
+.w-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-family: 'Fira Code', monospace;
+}
+.w-option.recommended .w-value { color: #28a745; }
+.w-coverage {
+  font-size: 0.95rem;
+  color: #555;
+  margin-top: 0.25rem;
+}
+.w-tradeoff {
+  font-size: 0.85rem;
+  color: #888;
+  margin-top: 0.5rem;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>RoPE-Aware Prefetching</h1>
+  <p class="subtitle">Exploiting position encoding locality for predictive cache loading</p>
+
+  <!-- Section 1: RoPE Attention Decay -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">1</div>
+      <div class="section-title">RoPE Creates Distance-Dependent Attention</div>
+    </div>
+    <div class="card">
+      <div class="rope-viz">
+        <div class="decay-chart">
+          <span class="axis-label y">Attention</span>
+          <span class="axis-label x">Relative Position (distance from query)</span>
+          <div class="decay-curve">
+            <svg class="decay-svg" viewBox="0 0 600 140" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="curveGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" style="stop-color:#6f42c1;stop-opacity:0.3" />
+                  <stop offset="100%" style="stop-color:#6f42c1;stop-opacity:0.05" />
+                </linearGradient>
+              </defs>
+              <path d="M0,140 L0,120 Q75,115 150,90 T300,10 T450,90 Q525,115 600,120 L600,140 Z" fill="url(#curveGrad)" />
+              <path d="M0,120 Q75,115 150,90 T300,10 T450,90 Q525,115 600,120" fill="none" stroke="#6f42c1" stroke-width="3" />
+              <circle cx="300" cy="10" r="6" fill="#dc3545" />
+            </svg>
+          </div>
+          <div class="query-marker">
+            <div class="query-label">Query Position</div>
+          </div>
+        </div>
+        <div class="rope-explanation">
+          <div class="rope-point">
+            <div class="rope-point-title">Rotary Encoding</div>
+            <div class="rope-point-desc">RoPE encodes position by rotating Q/K vectors. Nearby positions have similar rotations â†’ higher dot product.</div>
+          </div>
+          <div class="rope-point">
+            <div class="rope-point-title">Locality Bias</div>
+            <div class="rope-point-desc">On average, ~70% of attention mass falls within Â±W positions of the query, even for long contexts.</div>
+          </div>
+          <div class="rope-point">
+            <div class="rope-point-title">Predictable Access</div>
+            <div class="rope-point-desc">If GPU requests position P, it will likely need PÂ±W soon. Prefetch proactively.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: Prefetch Window -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">2</div>
+      <div class="section-title">Prefetch Window Strategy</div>
+    </div>
+    <div class="card">
+      <div class="prefetch-viz">
+        <div class="formula-card">
+          <div class="formula-title">Prefetch Rule</div>
+          <div class="formula-content">GPU accesses P â†’ Prefetch [P âˆ’ W, P + W]</div>
+          <div class="formula-note">W = window size, tuned per model based on attention distribution</div>
+        </div>
+        
+        <div class="position-line">
+          <div class="line-base">
+            <div class="prefetch-window" style="left: 25%; width: 50%;">
+              <div class="window-label">Prefetch Window (2W)</div>
+            </div>
+            <div class="current-pos">P</div>
+            <div class="pos-p-label">Current Access</div>
+            <div class="window-edges">
+              <span class="edge-label left">Pâˆ’W</span>
+              <span class="edge-label right">P+W</span>
+            </div>
+          </div>
+          <div class="position-markers">
+            <div class="pos-marker"><div class="pos-tick"></div><div class="pos-label">Pâˆ’2W</div></div>
+            <div class="pos-marker"><div class="pos-tick"></div><div class="pos-label">Pâˆ’W</div></div>
+            <div class="pos-marker"><div class="pos-tick"></div><div class="pos-label">P</div></div>
+            <div class="pos-marker"><div class="pos-tick"></div><div class="pos-label">P+W</div></div>
+            <div class="pos-marker"><div class="pos-tick"></div><div class="pos-label">P+2W</div></div>
+          </div>
+        </div>
+
+        <div class="token-slots">
+          <div class="token-slot storage">48</div>
+          <div class="token-slot storage">49</div>
+          <div class="token-slot prefetch">50</div>
+          <div class="token-slot prefetch">51</div>
+          <div class="token-slot prefetch">52</div>
+          <div class="token-slot prefetch">53</div>
+          <div class="token-slot prefetch">54</div>
+          <div class="token-slot current">55</div>
+          <div class="token-slot prefetch">56</div>
+          <div class="token-slot prefetch">57</div>
+          <div class="token-slot prefetch">58</div>
+          <div class="token-slot prefetch">59</div>
+          <div class="token-slot prefetch">60</div>
+          <div class="token-slot storage">61</div>
+          <div class="token-slot storage">62</div>
+        </div>
+        <div class="slot-legend">
+          <div class="legend-item"><div class="legend-dot" style="background:#dc3545"></div>Current Access (P=55)</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#e7d4f7;border:2px solid #6f42c1"></div>Prefetch Zone (W=5)</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#f8f9fa;border:2px solid #ddd"></div>On Storage</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 3: Choosing W -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">3</div>
+      <div class="section-title">Empirical Window Size Selection</div>
+    </div>
+    <div class="card">
+      <div class="attn-dist">
+        <div class="dist-bars">
+          <div class="dist-bar" style="height:15%"></div>
+          <div class="dist-bar" style="height:22%"></div>
+          <div class="dist-bar" style="height:35%"></div>
+          <div class="dist-bar in-window" style="height:55%"></div>
+          <div class="dist-bar in-window" style="height:78%"></div>
+          <div class="dist-bar in-window" style="height:92%"></div>
+          <div class="dist-bar current" style="height:100%"></div>
+          <div class="dist-bar in-window" style="height:88%"></div>
+          <div class="dist-bar in-window" style="height:72%"></div>
+          <div class="dist-bar in-window" style="height:50%"></div>
+          <div class="dist-bar" style="height:30%"></div>
+          <div class="dist-bar" style="height:18%"></div>
+          <div class="dist-bar" style="height:12%"></div>
+        </div>
+        <div class="dist-label">Attention mass distribution Â· <strong>Green = within prefetch window</strong></div>
+      </div>
+      
+      <div class="w-selection">
+        <div class="w-option">
+          <div class="w-value">W = 32</div>
+          <div class="w-coverage">~50% attention captured</div>
+          <div class="w-tradeoff">Low bandwidth, more misses</div>
+        </div>
+        <div class="w-option recommended">
+          <div class="w-value">W = 128</div>
+          <div class="w-coverage">~75% attention captured</div>
+          <div class="w-tradeoff">âœ“ Balanced for Llama-70B</div>
+        </div>
+        <div class="w-option">
+          <div class="w-value">W = 512</div>
+          <div class="w-coverage">~90% attention captured</div>
+          <div class="w-tradeoff">High bandwidth overhead</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

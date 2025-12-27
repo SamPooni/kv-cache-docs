@@ -1,0 +1,31 @@
+================================================================================
+CH02 - BACKGROUND - FIGURE INDEX
+================================================================================
+
+Fig 2.1: Prefill Phase
+      Source: figure-2-1-inference-phases.tsx -> Prefill Phase
+      Source: section-2-1-inference-fundamentals.tsx -> Prefill Phase
+
+Fig 2.2: Decode Phase
+      Source: figure-2-1-inference-phases.tsx -> Decode Phase
+      Source: section-2-1-inference-fundamentals.tsx -> Decode Phase
+
+Fig 2.3: Phase Comparison
+      Source: figure-2-1-inference-phases.tsx -> Performance Comparison
+
+Fig 2.4: Why KV-Cache Exists (With vs Without)
+      Source: figure-2-3-why-kv-cache.tsx
+
+Fig 2.5: KV-Cache Growth Chart
+      Source: figure-2-2-kv-cache-growth.tsx
+
+Fig 2.6: Decode Memory Access Pattern
+      Source: visual-appendix.html -> Diagram 4.2
+
+Fig 2.7: Roofline Model
+      Source: figure-2-4-roofline.tsx
+
+Fig 2.8: Current Approaches Comparison Matrix
+      Source: current-approaches-comparison.tsx
+
+TOTAL: 8 figures

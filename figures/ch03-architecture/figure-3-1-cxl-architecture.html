@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CXL Architecture Diagram</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: system-ui, sans-serif; background: linear-gradient(135deg, #0f172a, #1e293b); min-height: 100vh; color: #e2e8f0; }</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState } = React;
+function CXLArchitecture() {
+  const [highlight, setHighlight] = useState(null);
+  const components = [
+    { id: 'gpu', name: 'GPU (B200)', x: 50, y: 50, w: 150, h: 80, color: '#10b981', desc: '192GB HBM3e, 8TB/s bandwidth' },
+    { id: 'switch', name: 'CXL Switch', x: 250, y: 150, w: 120, h: 60, color: '#3b82f6', desc: 'PCIe Gen5 x16 lanes' },
+    { id: 'ep1', name: 'Endpoint 1', x: 50, y: 280, w: 100, h: 60, color: '#8b5cf6', desc: '256GB DDR5 + 4TB NVMe' },
+    { id: 'ep2', name: 'Endpoint 2', x: 180, y: 280, w: 100, h: 60, color: '#8b5cf6', desc: '256GB DDR5 + 4TB NVMe' },
+    { id: 'ep3', name: 'Endpoint 3', x: 310, y: 280, w: 100, h: 60, color: '#8b5cf6', desc: '256GB DDR5 + 4TB NVMe' },
+    { id: 'ep4', name: 'Endpoint 4', x: 440, y: 280, w: 100, h: 60, color: '#8b5cf6', desc: '256GB DDR5 + 4TB NVMe' }
+  ];
+  const styles = {
+    container: { maxWidth: '700px', margin: '0 auto', padding: '2rem' },
+    header: { textAlign: 'center', marginBottom: '2rem' },
+    diagram: { background: '#1e293b', borderRadius: '16px', padding: '1rem', position: 'relative', height: 400 },
+    box: (c, highlighted) => ({ position: 'absolute', left: c.x, top: c.y, width: c.w, height: c.h, background: highlighted ? c.color : '#0f172a', border: `2px solid ${c.color}`, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', fontSize: '0.8rem', fontWeight: 600, textAlign: 'center' }),
+    line: { position: 'absolute', background: '#64748b', zIndex: 0 },
+    info: { background: '#0f172a', borderRadius: '12px', padding: '1rem', marginTop: '1rem' },
+    stats: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', marginTop: '1rem' },
+    stat: { background: '#1e293b', borderRadius: '8px', padding: '0.75rem', textAlign: 'center' },
+    statVal: { fontSize: '1.1rem', fontWeight: 700, color: '#60a5fa' },
+    statLabel: { fontSize: '0.7rem', color: '#64748b' }
+  };
+  return (
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <h1 style={{fontSize: '1.5rem', fontWeight: 700}}>CXL System Architecture</h1>
+        <p style={{color: '#94a3b8', fontSize: '0.875rem'}}>Click components to learn more</p>
+      </div>
+      <div style={styles.diagram}>
+        <div style={{...styles.line, left: 125, top: 130, width: 2, height: 50}}></div>
+        <div style={{...styles.line, left: 125, top: 180, width: 185, height: 2}}></div>
+        <div style={{...styles.line, left: 310, top: 180, width: 2, height: 100}}></div>
+        {[100, 230, 360, 490].map((x, i) => (
+          <div key={i} style={{...styles.line, left: x, top: 210, width: 2, height: 70}}></div>
+        ))}
+        {components.map(c => (
+          <div key={c.id} style={styles.box(c, highlight === c.id)} onClick={() => setHighlight(c.id)} onMouseEnter={() => setHighlight(c.id)} onMouseLeave={() => setHighlight(null)}>
+            {c.name}
+          </div>
+        ))}
+      </div>
+      <div style={styles.info}>
+        {highlight ? (
+          <div><strong style={{color: components.find(c => c.id === highlight)?.color}}>{components.find(c => c.id === highlight)?.name}</strong>: {components.find(c => c.id === highlight)?.desc}</div>
+        ) : (
+          <div style={{color: '#64748b'}}>Hover over components for details</div>
+        )}
+      </div>
+      <div style={styles.stats}>
+        <div style={styles.stat}><div style={styles.statVal}>1 TB</div><div style={styles.statLabel}>Total DRAM</div></div>
+        <div style={styles.stat}><div style={styles.statVal}>256 GB/s</div><div style={styles.statLabel}>Aggregate BW</div></div>
+        <div style={styles.stat}><div style={styles.statVal}>250 ns</div><div style={styles.statLabel}>Latency</div></div>
+        <div style={styles.stat}><div style={styles.statVal}>~$20K</div><div style={styles.statLabel}>Total Cost</div></div>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<CXLArchitecture />);
+</script>
+</body>
+</html>

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Figure 3.3 — Attention Locality Patterns</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, sans-serif; background: linear-gradient(135deg, #0f172a, #1e293b); min-height: 100vh; color: #e2e8f0; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState } = React;
+
+function AttentionLocality() {
+  const [selectedHead, setSelectedHead] = useState('recency');
+  
+  const headTypes = {
+    recency: { name: 'Recency Head', color: '#10b981', pct: 40, pattern: 'Last 50-200 tokens', description: 'Focuses on recent context for coherent generation' },
+    anchor: { name: 'Anchor Head', color: '#3b82f6', pct: 15, pattern: 'Positions 0-100', description: 'Attends to system prompt and initial instructions' },
+    retrieval: { name: 'Retrieval Head', color: '#8b5cf6', pct: 25, pattern: 'Content-based', description: 'Finds relevant information anywhere in context' },
+    syntactic: { name: 'Syntactic Head', color: '#f59e0b', pct: 20, pattern: 'Grammar patterns', description: 'Tracks grammatical structure and dependencies' }
+  };
+
+  const styles = {
+    container: { maxWidth: '900px', margin: '0 auto', padding: '2rem' },
+    header: { textAlign: 'center', marginBottom: '2rem' },
+    badge: { display: 'inline-block', padding: '0.25rem 0.75rem', background: 'rgba(139,92,246,0.2)', color: '#a78bfa', fontSize: '0.75rem', fontFamily: 'monospace', borderRadius: '20px', marginBottom: '0.5rem' },
+    title: { fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.5rem' },
+    grid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', marginBottom: '2rem' },
+    headBtn: (active, color) => ({ padding: '1rem', background: active ? color : '#1e293b', border: `2px solid ${active ? color : '#334155'}`, borderRadius: '12px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s' }),
+    headName: { fontSize: '0.875rem', fontWeight: 600, color: 'white', marginBottom: '0.25rem' },
+    headPct: { fontSize: '1.5rem', fontWeight: 700, color: 'white' },
+    detailCard: { background: '#1e293b', borderRadius: '16px', padding: '2rem', marginBottom: '2rem' },
+    detailHeader: (color) => ({ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', color }),
+    heatmap: { display: 'grid', gridTemplateColumns: 'repeat(20, 1fr)', gap: '2px', marginBottom: '1rem' },
+    heatCell: (intensity, color) => ({ aspectRatio: '1', borderRadius: '2px', background: intensity > 0 ? color : '#334155', opacity: intensity > 0 ? 0.3 + intensity * 0.7 : 0.2 }),
+    legend: { display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#64748b' }
+  };
+
+  const head = headTypes[selectedHead];
+  
+  const getHeatmapData = () => {
+    const data = Array(20).fill(0);
+    if (selectedHead === 'recency') {
+      for (let i = 15; i < 20; i++) data[i] = (i - 14) / 5;
+    } else if (selectedHead === 'anchor') {
+      for (let i = 0; i < 5; i++) data[i] = 1 - i * 0.15;
+    } else if (selectedHead === 'retrieval') {
+      data[3] = 0.9; data[7] = 0.7; data[12] = 0.8; data[16] = 0.5;
+    } else {
+      for (let i = 0; i < 20; i++) data[i] = i % 3 === 0 ? 0.6 : 0.2;
+    }
+    return data;
+  };
+
+  return (
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <div style={styles.badge}>FIGURE 3.3</div>
+        <h1 style={styles.title}>Attention Head Specialization</h1>
+        <p style={{color: '#94a3b8'}}>Click each head type to see its attention pattern</p>
+      </div>
+
+      <div style={styles.grid}>
+        {Object.entries(headTypes).map(([key, val]) => (
+          <div key={key} style={styles.headBtn(selectedHead === key, val.color)} onClick={() => setSelectedHead(key)}>
+            <div style={styles.headName}>{val.name}</div>
+            <div style={styles.headPct}>~{val.pct}%</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={styles.detailCard}>
+        <div style={styles.detailHeader(head.color)}>
+          <div style={{width: 48, height: 48, borderRadius: 12, background: head.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem'}}>
+            {selectedHead === 'recency' ? '⏱️' : selectedHead === 'anchor' ? '📌' : selectedHead === 'retrieval' ? '🔍' : '📝'}
+          </div>
+          <div>
+            <div style={{fontSize: '1.25rem', fontWeight: 700}}>{head.name}</div>
+            <div style={{color: '#94a3b8', fontSize: '0.875rem'}}>{head.description}</div>
+          </div>
+        </div>
+
+        <div style={{marginBottom: '1rem', color: '#94a3b8', fontSize: '0.875rem'}}>Attention Pattern: <strong style={{color: head.color}}>{head.pattern}</strong></div>
+        
+        <div style={styles.heatmap}>
+          {getHeatmapData().map((intensity, i) => (
+            <div key={i} style={styles.heatCell(intensity, head.color)}></div>
+          ))}
+        </div>
+        <div style={styles.legend}>
+          <span>Position 0 (start)</span>
+          <span>→ Sequence →</span>
+          <span>Current position</span>
+        </div>
+      </div>
+
+      <div style={{background: '#1e293b', borderRadius: '12px', padding: '1rem'}}>
+        <div style={{fontWeight: 600, marginBottom: '0.5rem', color: '#60a5fa'}}>💡 Why This Matters</div>
+        <div style={{color: '#94a3b8', fontSize: '0.875rem'}}>
+          Different heads need different cache strategies. Treating all tokens uniformly wastes resources—
+          per-head tracking lets us keep what each head actually needs.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<AttentionLocality />);
+</script>
+</body>
+</html>

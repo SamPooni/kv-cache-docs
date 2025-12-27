@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EMA Attention Scoring</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0a0a12 0%, #1a1a2e 100%);
+            min-height: 100vh;
+            color: #e0e0e0;
+            padding: 40px 20px;
+        }
+        
+        .container { max-width: 1100px; margin: 0 auto; }
+        
+        h1 {
+            font-size: 1.8rem;
+            text-align: center;
+            margin-bottom: 8px;
+            background: linear-gradient(90deg, #22c55e, #3b82f6, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+        }
+        
+        .section {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #22c55e;
+            margin-bottom: 20px;
+        }
+        
+        /* Formula display */
+        .formula-box {
+            background: rgba(0,0,0,0.4);
+            border-radius: 12px;
+            padding: 20px 25px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 30px;
+        }
+        
+        .formula {
+            font-family: 'SF Mono', monospace;
+            font-size: 1.1rem;
+            color: #22c55e;
+        }
+        
+        .formula-explanation {
+            color: #888;
+            font-size: 0.85rem;
+            flex: 1;
+        }
+        
+        /* Comparison chart */
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin: 25px 0;
+        }
+        
+        .token-card {
+            background: rgba(0,0,0,0.3);
+            border-radius: 16px;
+            padding: 20px;
+            border: 2px solid transparent;
+        }
+        
+        .token-card.important {
+            border-color: rgba(34, 197, 94, 0.4);
+        }
+        
+        .token-card.unimportant {
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+        
+        .token-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .token-name {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        
+        .token-card.important .token-name { color: #22c55e; }
+        .token-card.unimportant .token-name { color: #ef4444; }
+        
+        .token-pos {
+            font-size: 0.8rem;
+            color: #666;
+        }
+        
+        .score-timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .score-step {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.8rem;
+        }
+        
+        .step-label {
+            width: 60px;
+            color: #666;
+        }
+        
+        .step-calc {
+            flex: 1;
+            font-family: 'SF Mono', monospace;
+            font-size: 0.75rem;
+            color: #888;
+        }
+        
+        .step-result {
+            width: 80px;
+            text-align: right;
+            font-weight: 600;
+            font-family: 'SF Mono', monospace;
+        }
+        
+        .token-card.important .step-result { color: #22c55e; }
+        .token-card.unimportant .step-result { color: #ef4444; }
+        
+        /* Score bar visualization */
+        .score-bar-container {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .score-bar-label {
+            font-size: 0.75rem;
+            color: #888;
+            margin-bottom: 8px;
+        }
+        
+        .score-bar-bg {
+            height: 24px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        
+        .score-bar {
+            height: 100%;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            padding-left: 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: white;
+        }
+        
+        /* Decision section */
+        .decision-section {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 25px;
+        }
+        
+        .decision-card {
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        
+        .decision-card.keep {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+        
+        .decision-card.demote {
+            background: rgba(251, 146, 60, 0.1);
+            border: 1px solid rgba(251, 146, 60, 0.3);
+        }
+        
+        .decision-card.evict {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        
+        .decision-threshold {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .decision-card.keep .decision-threshold { color: #22c55e; }
+        .decision-card.demote .decision-threshold { color: #fb923c; }
+        .decision-card.evict .decision-threshold { color: #ef4444; }
+        
+        .decision-action {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .decision-card.keep .decision-action { color: #22c55e; }
+        .decision-card.demote .decision-action { color: #fb923c; }
+        .decision-card.evict .decision-action { color: #ef4444; }
+        
+        .decision-location {
+            font-size: 0.8rem;
+            color: #888;
+        }
+        
+        /* Half-life explanation */
+        .halflife-box {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .halflife-title {
+            color: #3b82f6;
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+        }
+        
+        .halflife-content {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+        
+        .halflife-calc {
+            font-family: 'SF Mono', monospace;
+            font-size: 0.85rem;
+            color: #93c5fd;
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 8px;
+        }
+        
+        .halflife-meaning {
+            color: #94a3b8;
+            font-size: 0.85rem;
+            flex: 1;
+        }
+        
+        .highlight {
+            color: #fbbf24;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>EMA-Based Attention Scoring</h1>
+        <p class="subtitle">How we track which tokens are actually important (not just recent)</p>
+        
+        <div class="section">
+            <div class="section-title">The EMA Update Rule</div>
+            
+            <div class="formula-box">
+                <div class="formula">score_new = 0.2 Ã— attention + 0.8 Ã— score_old</div>
+                <div class="formula-explanation">
+                    Each decode step, we update the score using <strong>exponential moving average</strong>.<br>
+                    Tokens that consistently receive attention accumulate high scores.<br>
+                    Tokens that are ignored see their scores decay toward zero.
+                </div>
+            </div>
+            
+            <div class="comparison">
+                <div class="token-card important">
+                    <div class="token-header">
+                        <div class="token-name">Token: "helpful" (instruction)</div>
+                        <div class="token-pos">Position 45</div>
+                    </div>
+                    <div class="score-timeline">
+                        <div class="score-step">
+                            <div class="step-label">Step 1</div>
+                            <div class="step-calc">0.2 Ã— 0.04 + 0.8 Ã— 0</div>
+                            <div class="step-result">0.008</div>
+                        </div>
+                        <div class="score-step">
+                            <div class="step-label">Step 2</div>
+                            <div class="step-calc">0.2 Ã— 0.05 + 0.8 Ã— 0.008</div>
+                            <div class="step-result">0.016</div>
+                        </div>
+                        <div class="score-step">
+                            <div class="step-label">Step 10</div>
+                            <div class="step-calc">0.2 Ã— 0.03 + 0.8 Ã— 0.042</div>
+                            <div class="step-result">0.040</div>
+                        </div>
+                        <div class="score-step">
+                            <div class="step-label">Step 50</div>
+                            <div class="step-calc">0.2 Ã— 0.04 + 0.8 Ã— 0.11</div>
+                            <div class="step-result">0.096</div>
+                        </div>
+                        <div class="score-step">
+                            <div class="step-label">Step 100</div>
+                            <div class="step-calc">0.2 Ã— 0.05 + 0.8 Ã— 0.14</div>
+                            <div class="step-result">0.122</div>
+                        </div>
+                    </div>
+                    <div class="score-bar-container">
+                        <div class="score-bar-label">Final Score after 100 steps</div>
+                        <div class="score-bar-bg">
+                            <div class="score-bar" style="width: 61%; background: linear-gradient(90deg, #22c55e, #16a34a);">
+                                0.122 â†’ KEEP
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="token-card unimportant">
+                    <div class="token-header">
+                        <div class="token-name">Token: "the" (filler word)</div>
+                        <div class="token-pos">Position 5,432</div>
+                    </div>
+                    <div class="score-timeline">
+                        <div class="score-step">
+                            <div class="step-label">Step 1</div>
+                            <div class="step-calc">0.2 Ã— 0.002 + 0.8 Ã— 0</div>
+                            <div class="step-result">0.0004</div>
+                        </div>
+                        <div class="score-step">
+                            <div class="step-label">Step 2</div>
+                            <div class="step-calc">0.2 Ã— 0.001 + 0.8 Ã— 0.0004</div>
+                            <div class="step-result">0.0005</div>
+                        </div>
+                        <div class="score-step">
+                            <div class="step-label">Step 10</div>
+                            <div class="step-calc">0.2 Ã— 0.001 + 0.8 Ã— 0.0008</div>
+                            <div class="step-result">0.0008</div>
+                        </div>
+                        <div class="score-step">
+                            <div class="step-label">Step 50</div>
+                            <div class="step-calc">0.2 Ã— 0.000 + 0.8 Ã— 0.0006</div>
+                            <div class="step-result">0.0005</div>
+                        </div>
+                        <div class="score-step">
+                            <div class="step-label">Step 100</div>
+                            <div class="step-calc">0.2 Ã— 0.001 + 0.8 Ã— 0.0004</div>
+                            <div class="step-result">0.0005</div>
+                        </div>
+                    </div>
+                    <div class="score-bar-container">
+                        <div class="score-bar-label">Final Score after 100 steps</div>
+                        <div class="score-bar-bg">
+                            <div class="score-bar" style="width: 2.5%; background: linear-gradient(90deg, #ef4444, #dc2626);">
+                            </div>
+                        </div>
+                        <div style="font-size: 0.75rem; color: #ef4444; margin-top: 5px;">0.0005 â†’ EVICT</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="halflife-box">
+                <div class="halflife-title">Why Î± = 0.2? The Half-Life Calculation</div>
+                <div class="halflife-content">
+                    <div class="halflife-calc">
+                        (1 - Î±)^n = 0.5<br>
+                        0.8^n = 0.5<br>
+                        n = log(0.5) / log(0.8)<br>
+                        n = 3.1 steps
+                    </div>
+                    <div class="halflife-meaning">
+                        At <span class="highlight">20 tokens/second</span>, the half-life is <span class="highlight">155 milliseconds</span>.<br><br>
+                        This means: if a token doesn't receive attention for 155ms, its score drops by 50%. 
+                        Tokens that are consistently important maintain high scores; tokens that were briefly accessed but then ignored see their scores decay quickly.
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">Eviction Decision Thresholds</div>
+            
+            <div class="decision-section">
+                <div class="decision-card keep">
+                    <div class="decision-threshold">> 0.10</div>
+                    <div class="decision-action">KEEP</div>
+                    <div class="decision-location">Store in fast HBM</div>
+                </div>
+                <div class="decision-card demote">
+                    <div class="decision-threshold">0.02 - 0.10</div>
+                    <div class="decision-action">DEMOTE</div>
+                    <div class="decision-location">Move to CXL DRAM</div>
+                </div>
+                <div class="decision-card evict">
+                    <div class="decision-threshold">< 0.02</div>
+                    <div class="decision-action">EVICT</div>
+                    <div class="decision-location">Move to Flash or discard</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

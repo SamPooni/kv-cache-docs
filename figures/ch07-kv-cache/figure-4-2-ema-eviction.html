@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Figure 4.2 — EMA Eviction Policy</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: system-ui, sans-serif; background: linear-gradient(135deg, #0f172a, #1e293b); min-height: 100vh; color: #e2e8f0; }</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+function EMAEviction() {
+  const [step, setStep] = useState(0);
+  const [scores, setScores] = useState([0.8, 0.3, 0.6, 0.1, 0.5, 0.2, 0.9, 0.4]);
+  const alpha = 0.2;
+  
+  useEffect(() => {
+    if (step > 0 && step <= 5) {
+      const timer = setTimeout(() => {
+        setScores(s => s.map((v, i) => {
+          const attn = Math.random() * 0.5;
+          return alpha * attn + (1 - alpha) * v;
+        }));
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [step]);
+
+  const styles = {
+    container: { maxWidth: '800px', margin: '0 auto', padding: '2rem' },
+    header: { textAlign: 'center', marginBottom: '2rem' },
+    badge: { display: 'inline-block', padding: '0.25rem 0.75rem', background: 'rgba(245,158,11,0.2)', color: '#fbbf24', fontSize: '0.75rem', fontFamily: 'monospace', borderRadius: '20px', marginBottom: '0.5rem' },
+    formula: { background: '#0f172a', borderRadius: '12px', padding: '1rem', textAlign: 'center', marginBottom: '2rem', fontFamily: 'monospace', color: '#60a5fa' },
+    grid: { display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '0.5rem', marginBottom: '2rem' },
+    token: (score) => ({ background: '#1e293b', borderRadius: '8px', padding: '1rem', textAlign: 'center', border: `2px solid ${score < 0.25 ? '#ef4444' : score > 0.6 ? '#10b981' : '#334155'}` }),
+    bar: (score) => ({ height: 60, background: '#0f172a', borderRadius: '4px', overflow: 'hidden', position: 'relative' }),
+    fill: (score) => ({ position: 'absolute', bottom: 0, width: '100%', height: `${score * 100}%`, background: score < 0.25 ? '#ef4444' : score > 0.6 ? '#10b981' : '#f59e0b', transition: 'all 0.3s' }),
+    btns: { display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '1rem' },
+    btn: { padding: '0.5rem 1rem', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }
+  };
+
+  return (
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <div style={styles.badge}>FIGURE 4.2</div>
+        <h1 style={{fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.5rem'}}>EMA-Based Eviction</h1>
+        <p style={{color: '#94a3b8'}}>Exponential Moving Average smooths attention scores</p>
+      </div>
+      <div style={styles.formula}>
+        score_t = α × attention_t + (1-α) × score_{'{t-1}'} &nbsp;&nbsp; (α = {alpha})
+      </div>
+      <div style={styles.btns}>
+        <button style={styles.btn} onClick={() => setStep(s => s + 1)}>Step Forward</button>
+        <button style={{...styles.btn, background: '#334155'}} onClick={() => { setStep(0); setScores([0.8, 0.3, 0.6, 0.1, 0.5, 0.2, 0.9, 0.4]); }}>Reset</button>
+      </div>
+      <div style={styles.grid}>
+        {scores.map((score, i) => (
+          <div key={i} style={styles.token(score)}>
+            <div style={styles.bar(score)}><div style={styles.fill(score)}></div></div>
+            <div style={{fontSize: '0.7rem', color: '#64748b', marginTop: '0.5rem'}}>T{i}</div>
+            <div style={{fontSize: '0.8rem', fontFamily: 'monospace', color: score < 0.25 ? '#ef4444' : '#94a3b8'}}>{score.toFixed(2)}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{display: 'flex', justifyContent: 'center', gap: '2rem', fontSize: '0.875rem'}}>
+        <span><span style={{color: '#10b981'}}>■</span> Keep (score &gt; 0.6)</span>
+        <span><span style={{color: '#f59e0b'}}>■</span> Warm</span>
+        <span><span style={{color: '#ef4444'}}>■</span> Evict (score &lt; 0.25)</span>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<EMAEviction />);
+</script>
+</body>
+</html>

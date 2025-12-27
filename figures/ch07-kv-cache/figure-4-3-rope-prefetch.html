@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Figure 4.3 — RoPE Prefetch</title>
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: system-ui, sans-serif; background: linear-gradient(135deg, #0f172a, #1e293b); min-height: 100vh; color: #e2e8f0; }</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState } = React;
+function RoPEPrefetch() {
+  const [currentPos, setCurrentPos] = useState(50);
+  const windowSize = 20;
+  const styles = {
+    container: { maxWidth: '800px', margin: '0 auto', padding: '2rem' },
+    header: { textAlign: 'center', marginBottom: '2rem' },
+    slider: { background: '#1e293b', borderRadius: '12px', padding: '1.5rem', marginBottom: '1.5rem' },
+    timeline: { display: 'flex', gap: 2, marginBottom: '1rem', overflowX: 'auto', padding: '0.5rem 0' },
+    token: (pos, current) => {
+      const dist = Math.abs(pos - current);
+      const inWindow = dist <= windowSize;
+      const isPrefetch = dist > 0 && dist <= windowSize;
+      return {
+        width: 12, height: 40, borderRadius: 2, flexShrink: 0,
+        background: pos === current ? '#10b981' : isPrefetch ? '#3b82f6' : inWindow ? '#8b5cf6' : '#334155',
+        opacity: inWindow ? 1 : 0.3
+      };
+    },
+    legend: { display: 'flex', justifyContent: 'center', gap: '2rem', marginBottom: '1.5rem', fontSize: '0.875rem' },
+    dot: (color) => ({ width: 12, height: 12, borderRadius: 2, background: color, display: 'inline-block', marginRight: 8 }),
+    formula: { background: '#0f172a', borderRadius: '12px', padding: '1.5rem', textAlign: 'center' },
+    formulaText: { fontFamily: 'monospace', color: '#60a5fa', marginBottom: '0.5rem' },
+    insight: { background: '#1e293b', borderRadius: '12px', padding: '1rem', marginTop: '1.5rem' }
+  };
+  return (
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <div style={{display: 'inline-block', padding: '0.25rem 0.75rem', background: 'rgba(59,130,246,0.2)', color: '#60a5fa', fontSize: '0.75rem', fontFamily: 'monospace', borderRadius: '20px', marginBottom: '0.5rem'}}>FIGURE 4.3</div>
+        <h1 style={{fontSize: '1.5rem', fontWeight: 700}}>RoPE-Aware Prefetching</h1>
+        <p style={{color: '#94a3b8', fontSize: '0.875rem'}}>Attention naturally concentrates on nearby positions</p>
+      </div>
+      <div style={styles.slider}>
+        <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem'}}>
+          <span>Current Position</span><span style={{color: '#10b981', fontWeight: 600}}>{currentPos}</span>
+        </div>
+        <input type="range" min="20" max="80" value={currentPos} onChange={e => setCurrentPos(+e.target.value)} style={{width: '100%'}} />
+      </div>
+      <div style={styles.timeline}>
+        {Array.from({length: 100}, (_, i) => <div key={i} style={styles.token(i, currentPos)}></div>)}
+      </div>
+      <div style={styles.legend}>
+        <span><span style={styles.dot('#10b981')}></span>Current</span>
+        <span><span style={styles.dot('#3b82f6')}></span>Prefetch Window</span>
+        <span><span style={styles.dot('#334155')}></span>Cold</span>
+      </div>
+      <div style={styles.formula}>
+        <div style={styles.formulaText}>Attention(q_m, k_n) ∝ cos((m-n)θ)</div>
+        <div style={{color: '#94a3b8', fontSize: '0.875rem'}}>Attention decays with position distance |m-n|</div>
+      </div>
+      <div style={styles.insight}>
+        <div style={{fontWeight: 600, color: '#60a5fa', marginBottom: '0.5rem'}}>💡 Prefetch Strategy</div>
+        <div style={{color: '#94a3b8', fontSize: '0.875rem'}}>By understanding RoPE's distance decay, we prefetch positions likely to be accessed next, achieving +4% hit rate improvement.</div>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<RoPEPrefetch />);
+</script>
+</body>
+</html>

@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KV Cache Offloading - Visual Diagrams & Architecture</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary: #6f42c1; --primary-light: #a78bfa; --success: #22c55e; --danger: #ef4444;
+  --warning: #fbbf24; --info: #3b82f6; --cyan: #06b6d4; --orange: #f97316; --pink: #ec4899;
+  --dark: #0f172a; --dark-800: #1e293b; --dark-700: #334155; --dark-600: #475569;
+  --gray: #64748b; --light: #e2e8f0; --white: #f8fafc;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: linear-gradient(135deg, var(--dark) 0%, var(--dark-800) 100%); color: var(--light); line-height: 1.7; min-height: 100vh; }
+
+/* Cover Section */
+.cover { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 4rem 2rem; position: relative; overflow: hidden; background: radial-gradient(ellipse at 30% 20%, rgba(59, 130, 246, 0.08) 0%, transparent 50%), radial-gradient(ellipse at 70% 80%, rgba(139, 92, 246, 0.08) 0%, transparent 50%), linear-gradient(135deg, #030308 0%, #0a0a12 50%, #050510 100%); }
+.tech-stack { display: flex; gap: 0.75rem; margin-bottom: 2.5rem; flex-wrap: wrap; justify-content: center; }
+.tech-pill { background: rgba(255, 255, 255, 0.02); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); padding: 0.5rem 1.25rem; border-radius: 50px; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; font-weight: 500; letter-spacing: 0.05em; }
+.tech-pill.cxl { border-color: rgba(59, 130, 246, 0.5); color: #60a5fa; }
+.tech-pill.ucie { border-color: rgba(139, 92, 246, 0.5); color: #a78bfa; }
+.tech-pill.uec { border-color: rgba(6, 182, 212, 0.5); color: #22d3ee; }
+.cover h1 { font-size: clamp(2.5rem, 5vw, 4.2rem); font-weight: 900; line-height: 1.1; margin-bottom: 1.5rem; }
+.cover h1 .line1 { display: block; background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.cover h1 .line2 { display: block; background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #06b6d4 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.cover .tagline { font-size: 1.25rem; color: var(--gray); max-width: 600px; margin-bottom: 2rem; }
+.concept-row { display: flex; gap: 2rem; flex-wrap: wrap; justify-content: center; margin-bottom: 2rem; }
+.concept { display: flex; align-items: center; gap: 0.5rem; }
+.concept-dot { width: 10px; height: 10px; border-radius: 50%; }
+.concept-dot.green { background: var(--success); box-shadow: 0 0 12px rgba(34, 197, 94, 0.6); }
+.concept-dot.blue { background: var(--info); box-shadow: 0 0 12px rgba(59, 130, 246, 0.6); }
+.concept-dot.purple { background: var(--primary); box-shadow: 0 0 12px rgba(139, 92, 246, 0.6); }
+.author-block { margin-top: 2rem; }
+.author-name { font-size: 1.5rem; font-weight: 700; color: var(--white); }
+.author-role { color: var(--gray); font-size: 0.95rem; }
+
+/* Main Content */
+.container { max-width: 1100px; margin: 0 auto; padding: 3rem 2rem; }
+
+/* Section Styling */
+.section { background: var(--dark-800); border-radius: 20px; padding: 2rem; margin-bottom: 2rem; border: 1px solid var(--dark-700); }
+.section-badge { display: inline-block; background: linear-gradient(135deg, var(--info), var(--primary)); color: white; font-size: 0.75rem; font-weight: 700; padding: 0.35rem 1rem; border-radius: 50px; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 1rem; }
+h2 { font-size: 1.75rem; font-weight: 800; color: var(--white); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem; }
+h3 { font-size: 1.25rem; font-weight: 700; color: var(--white); margin: 1.5rem 0 1rem; }
+h4 { font-size: 1rem; font-weight: 600; color: var(--light); margin: 1.25rem 0 0.75rem; }
+p { margin-bottom: 1rem; color: var(--light); }
+
+/* Tables */
+table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; font-size: 0.9rem; }
+th, td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid var(--dark-700); }
+th { background: rgba(0,0,0,0.3); font-weight: 600; color: var(--gray); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; }
+td { color: var(--light); }
+
+/* Code */
+code { background: rgba(0,0,0,0.4); padding: 0.15rem 0.4rem; border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 0.85em; color: var(--cyan); }
+pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; line-height: 1.6; margin: 1rem 0; }
+
+/* Cards */
+.card { background: rgba(0,0,0,0.3); border-radius: 14px; padding: 1.5rem; margin: 1rem 0; border: 1px solid var(--dark-700); }
+.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+
+/* Metric Cards */
+.metric-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.metric-card { background: rgba(0,0,0,0.3); border: 1px solid var(--dark-600); border-radius: 12px; padding: 1.25rem; text-align: center; }
+.metric-value { font-size: 2rem; font-weight: 800; font-family: 'JetBrains Mono', monospace; background: linear-gradient(135deg, var(--info), var(--primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.metric-label { font-size: 0.75rem; color: var(--gray); margin-top: 0.25rem; }
+
+/* Alert Boxes */
+.alert { padding: 1.25rem; border-radius: 12px; margin: 1.5rem 0; }
+.alert-warning { background: rgba(251, 191, 36, 0.1); border-left: 4px solid var(--warning); }
+.alert-success { background: rgba(34, 197, 94, 0.1); border-left: 4px solid var(--success); }
+.alert-danger { background: rgba(239, 68, 68, 0.1); border-left: 4px solid var(--danger); }
+.alert-info { background: rgba(59, 130, 246, 0.1); border-left: 4px solid var(--info); }
+
+/* Key Insight */
+.key-insight { background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1)); border: 1px solid rgba(59, 130, 246, 0.3); padding: 1.5rem; border-radius: 14px; margin: 1.5rem 0; }
+.key-insight-title { font-weight: 700; color: var(--info); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+
+/* Formula */
+.formula { background: rgba(0,0,0,0.5); border-radius: 10px; padding: 1.25rem; font-family: 'JetBrains Mono', monospace; text-align: center; margin: 1rem 0; font-size: 1rem; }
+
+/* Tier Bar */
+.tier-bar { display: flex; margin: 1.5rem 0; border-radius: 10px; overflow: hidden; font-size: 0.8rem; }
+.tier-segment { padding: 1rem 0.5rem; text-align: center; color: white; }
+.tier-hot { background: var(--danger); flex: 1; }
+.tier-warm { background: var(--orange); flex: 3; }
+.tier-cold { background: var(--info); flex: 4; }
+.tier-total { background: var(--success); flex: 2; }
+
+/* Bandwidth Hierarchy */
+.bw-hierarchy { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.bw-tier { color: white; padding: 1.25rem; border-radius: 12px; text-align: center; }
+.bw-tier.t1 { background: linear-gradient(135deg, #11998e, #38ef7d); }
+.bw-tier.t2 { background: linear-gradient(135deg, #667eea, #764ba2); }
+.bw-tier.t3 { background: linear-gradient(135deg, #f093fb, #f5576c); }
+.bw-tier.t4 { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+.bw-name { font-weight: 700; font-size: 0.85rem; }
+.bw-value { font-size: 1.3rem; font-weight: 800; margin-top: 0.25rem; }
+
+/* Endpoint Package */
+.endpoint-package { border: 3px solid var(--cyan); border-radius: 16px; padding: 1.5rem; background: rgba(6, 182, 212, 0.05); margin: 1.5rem 0; }
+.endpoint-title { text-align: center; color: var(--cyan); font-weight: 700; font-size: 1.1rem; margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 2px solid rgba(6, 182, 212, 0.3); }
+.chiplets-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+.chiplet { background: rgba(0,0,0,0.3); border-radius: 12px; padding: 1rem; border: 1px solid var(--dark-600); }
+.chiplet-title { font-weight: 700; font-size: 0.9rem; text-align: center; margin-bottom: 0.75rem; }
+.chiplet-item { background: rgba(255,255,255,0.05); border-radius: 6px; padding: 0.5rem; text-align: center; margin-bottom: 0.5rem; font-size: 0.8rem; }
+
+/* Comparison Grid */
+.comparison-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.compare-card { background: rgba(0,0,0,0.3); border: 2px solid var(--dark-600); border-radius: 14px; padding: 1.25rem; }
+.compare-card.keep { border-color: var(--success); background: rgba(34, 197, 94, 0.05); }
+.compare-card.evict { border-color: var(--danger); background: rgba(239, 68, 68, 0.05); }
+.verdict { margin-top: 1rem; padding: 0.75rem; border-radius: 8px; text-align: center; font-weight: 700; color: white; }
+.compare-card.keep .verdict { background: var(--success); }
+.compare-card.evict .verdict { background: var(--danger); }
+
+/* GQA Visual */
+.gqa-comparison { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1.5rem 0; }
+.method-card { background: rgba(0,0,0,0.3); border-radius: 14px; padding: 1.25rem; border: 2px solid var(--dark-600); text-align: center; }
+.method-card.highlight { border-color: var(--info); background: rgba(59, 130, 246, 0.1); }
+.method-name { font-size: 1.3rem; font-weight: 700; color: var(--white); }
+.method-full { font-size: 0.8rem; color: var(--gray); margin-bottom: 1rem; }
+
+/* Timeline */
+.timeline { background: rgba(0,0,0,0.4); border-radius: 14px; padding: 1.5rem; margin: 1.5rem 0; }
+.timeline-row { display: flex; align-items: center; margin-bottom: 0.75rem; }
+.timeline-label { width: 120px; font-size: 0.85rem; font-weight: 600; color: var(--gray); flex-shrink: 0; }
+.timeline-track { flex: 1; height: 40px; background: rgba(0,0,0,0.3); border-radius: 8px; display: flex; overflow: hidden; }
+.timeline-block { height: 100%; display: flex; align-items: center; justify-content: center; font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; font-weight: 600; color: white; border-radius: 6px; }
+.timeline-block.compute { background: linear-gradient(135deg, var(--success), #16a34a); }
+.timeline-block.transfer { background: linear-gradient(135deg, var(--primary), #7c3aed); }
+
+/* Latency Comparison */
+.latency-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.5rem 0; }
+.latency-box { border-radius: 14px; padding: 1.5rem; text-align: center; }
+.latency-box.bad { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); }
+.latency-box.good { background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); }
+.latency-box-label { font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+.latency-box.bad .latency-box-label { color: #f87171; }
+.latency-box.good .latency-box-label { color: #4ade80; }
+.latency-box-value { font-family: 'JetBrains Mono', monospace; font-size: 2rem; font-weight: 700; }
+.latency-box.bad .latency-box-value { color: var(--danger); }
+.latency-box.good .latency-box-value { color: var(--success); }
+
+/* Gap Analysis */
+.gap-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin: 1.5rem 0; }
+.gap-item { background: rgba(0,0,0,0.3); border-radius: 12px; padding: 1rem; text-align: center; border: 1px solid rgba(34, 197, 94, 0.3); }
+.gap-item-icon { font-size: 1.75rem; margin-bottom: 0.5rem; }
+.gap-item-title { font-weight: 600; color: var(--white); font-size: 0.85rem; }
+.gap-item-desc { font-size: 0.7rem; color: var(--gray); }
+
+/* Feature Grid */
+.feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.feature { display: flex; align-items: flex-start; gap: 0.75rem; background: rgba(0,0,0,0.2); border-radius: 12px; padding: 1rem; border: 1px solid rgba(34, 197, 94, 0.2); }
+.feature-check { width: 24px; height: 24px; background: var(--success); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: white; flex-shrink: 0; }
+.feature-title { font-weight: 600; color: var(--white); font-size: 0.9rem; }
+.feature-desc { font-size: 0.8rem; color: #86efac; }
+
+/* Phase Compare */
+.phase-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.5rem 0; }
+.phase-card { background: rgba(0,0,0,0.3); border-radius: 14px; padding: 1.5rem; border: 2px solid var(--dark-600); }
+.phase-card.prefill { border-color: var(--orange); }
+.phase-card.decode { border-color: var(--cyan); }
+.phase-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+.phase-card.prefill .phase-title { color: var(--orange); }
+.phase-card.decode .phase-title { color: var(--cyan); }
+
+/* Sensitivity Chart */
+.sensitivity-chart { background: rgba(0,0,0,0.4); border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0; }
+.chart-bar { display: flex; align-items: center; margin-bottom: 0.75rem; }
+.chart-label { width: 100px; font-size: 0.8rem; color: var(--gray); }
+.chart-track { flex: 1; height: 28px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden; position: relative; }
+.chart-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; justify-content: flex-end; padding-right: 0.75rem; font-size: 0.75rem; font-weight: 600; color: white; }
+.chart-fill.excellent { background: linear-gradient(90deg, var(--success), #16a34a); }
+.chart-fill.good { background: linear-gradient(90deg, var(--info), #2563eb); }
+.chart-fill.warning { background: linear-gradient(90deg, var(--warning), #d97706); }
+.chart-fill.danger { background: linear-gradient(90deg, var(--danger), #dc2626); }
+
+/* Software Stack */
+.software-stack { background: linear-gradient(180deg, rgba(59, 130, 246, 0.1), transparent); border-radius: 16px; padding: 2rem; border: 1px solid rgba(59, 130, 246, 0.2); }
+.stack-layer { text-align: center; margin-bottom: 1.5rem; }
+.stack-badge { color: white; padding: 0.5rem 1.25rem; border-radius: 8px; display: inline-block; font-weight: 700; font-size: 0.9rem; }
+.stack-items { display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; margin-top: 1rem; }
+.stack-item { background: rgba(0,0,0,0.4); padding: 0.75rem 1.25rem; border-radius: 10px; text-align: center; min-width: 140px; border: 1px solid var(--dark-600); }
+.stack-item-name { font-weight: 600; color: var(--white); font-size: 0.9rem; }
+.stack-item-desc { font-size: 0.7rem; color: var(--gray); margin-top: 0.25rem; }
+.arrow-down { text-align: center; color: var(--gray); font-size: 1.5rem; margin: 0.5rem 0; }
+
+/* Coherency Table */
+.coherency-visual { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin: 1.5rem 0; }
+.coherency-state { background: rgba(0,0,0,0.3); border-radius: 10px; padding: 1rem; text-align: center; border: 2px solid var(--dark-600); }
+.coherency-state.invalid { border-color: var(--gray); }
+.coherency-state.shared { border-color: var(--info); }
+.coherency-state.exclusive { border-color: var(--warning); }
+.coherency-state.modified { border-color: var(--danger); }
+.state-name { font-weight: 700; font-size: 0.9rem; margin-bottom: 0.5rem; }
+.coherency-state.invalid .state-name { color: var(--gray); }
+.coherency-state.shared .state-name { color: var(--info); }
+.coherency-state.exclusive .state-name { color: var(--warning); }
+.coherency-state.modified .state-name { color: var(--danger); }
+.state-desc { font-size: 0.7rem; color: var(--gray); }
+
+/* Quantization Visual */
+.quant-bars { margin: 1.5rem 0; }
+.quant-row { display: flex; align-items: center; margin-bottom: 0.75rem; }
+.quant-label { width: 80px; font-size: 0.85rem; font-weight: 600; }
+.quant-track { flex: 1; height: 32px; background: rgba(0,0,0,0.3); border-radius: 6px; overflow: hidden; margin: 0 1rem; }
+.quant-fill { height: 100%; display: flex; align-items: center; padding-left: 1rem; font-size: 0.8rem; font-weight: 600; color: white; }
+.quant-fill.fp16 { background: linear-gradient(90deg, var(--danger), #dc2626); width: 100%; }
+.quant-fill.fp8 { background: linear-gradient(90deg, var(--orange), #ea580c); width: 50%; }
+.quant-fill.int8 { background: linear-gradient(90deg, var(--warning), #d97706); width: 50%; }
+.quant-fill.int4 { background: linear-gradient(90deg, var(--success), #16a34a); width: 25%; }
+.quant-size { width: 80px; text-align: right; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; }
+
+/* Power Visual */
+.power-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin: 1.5rem 0; }
+.power-box { background: rgba(0,0,0,0.3); border-radius: 14px; padding: 1.5rem; text-align: center; }
+.power-box.high { border: 2px solid var(--danger); }
+.power-box.low { border: 2px solid var(--success); }
+.power-icon { font-size: 3rem; margin-bottom: 0.5rem; }
+.power-value { font-family: 'JetBrains Mono', monospace; font-size: 2.5rem; font-weight: 800; }
+.power-box.high .power-value { color: var(--danger); }
+.power-box.low .power-value { color: var(--success); }
+.power-label { color: var(--gray); font-size: 0.9rem; margin-top: 0.25rem; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .gqa-comparison, .gap-grid, .latency-compare, .phase-compare, .power-comparison, .coherency-visual { grid-template-columns: 1fr; }
+  .bw-hierarchy { grid-template-columns: repeat(2, 1fr); }
+  .cover h1 { font-size: 2rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- COVER PAGE -->
+<section class="cover">
+  <div class="tech-stack">
+    <span class="tech-pill cxl">CXL 3.0</span>
+    <span class="tech-pill ucie">UCIe</span>
+    <span class="tech-pill uec">UEC</span>
+  </div>
+  
+  <h1>
+    <span class="line1">KV Cache Offloading</span>
+    <span class="line2">for LLM Inference</span>
+  </h1>
+  
+  <p class="tagline">
+    Distributed endpoint architecture with intelligent caching, attention-aware eviction, and CXL.mem acceleration
+  </p>
+  
+  <div class="concept-row">
+    <div class="concept">
+      <div class="concept-dot green"></div>
+      <span>Per-Head Eviction</span>
+    </div>
+    <div class="concept">
+      <div class="concept-dot blue"></div>
+      <span>EMA Attention Scoring</span>
+    </div>
+    <div class="concept">
+      <div class="concept-dot purple"></div>
+      <span>RoPE-Aware Prefetch</span>
+    </div>
+  </div>
+  
+  <div class="author-block">
+    <div class="author-name">Sam Pooni</div>
+    <div class="author-role">UC Santa Cruz Â· zett.ai Â· San Jose, CA</div>
+    <div class="author-role" style="margin-top: 0.5rem;">Version 3.0 Â· December 2025</div>
+  </div>
+</section>
+
+<!-- MAIN CONTENT -->
+<div class="container">
+
+<!-- FIGURE 1: MEMORY WALL -->
+<section class="section" id="fig1">
+  <span class="section-badge">Figure 1</span>
+  <h2>The Memory Wall Problem</h2>
+  
+  <p>Large language model inference faces a fundamental bottleneck: the memory required to serve long-context requests vastly exceeds what fits in GPU high-bandwidth memory (HBM).</p>
+  
+  <div class="metric-cards">
+    <div class="metric-card">
+      <div class="metric-value">192 GB</div>
+      <div class="metric-label">B200 HBM Capacity</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">140 GB</div>
+      <div class="metric-label">Llama-70B Weights</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">41 GB</div>
+      <div class="metric-label">KV-Cache @ 128K</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">468 GB</div>
+      <div class="metric-label">Total for 8 Users</div>
+    </div>
+  </div>
+  
+  <div class="comparison-grid">
+    <div class="card" style="background: linear-gradient(180deg, rgba(234, 88, 12, 0.2), rgba(234, 88, 12, 0.1)); border-color: var(--orange);">
+      <div style="color: white; font-weight: 700; text-align: center; margin-bottom: 1rem;">CAPACITY WALL</div>
+      <div style="text-align: center;">
+        <div style="color: #fed7aa; font-size: 0.9rem;">8 users @ 128K exceeds memory by</div>
+        <div style="color: white; font-size: 2.5rem; font-weight: 800;">2.4×</div>
+      </div>
+    </div>
+    <div class="card" style="background: linear-gradient(180deg, rgba(147, 51, 234, 0.2), rgba(147, 51, 234, 0.1)); border-color: var(--primary);">
+      <div style="color: white; font-weight: 700; text-align: center; margin-bottom: 1rem;">BANDWIDTH WALL</div>
+      <div style="text-align: center;">
+        <div style="color: #e9d5ff; font-size: 0.9rem;">CXL vs PCIe penalty</div>
+        <div style="color: white; font-size: 2.5rem; font-weight: 800;">65×</div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="card" style="background: linear-gradient(135deg, #15803d, #166534); border: none;">
+    <div style="text-align: center; color: white; font-weight: 700; font-size: 1.1rem; margin-bottom: 1rem;">NVIDIA B200 Specifications</div>
+    <div class="metric-cards" style="margin: 0;">
+      <div class="metric-card" style="background: #14532d; border: none;">
+        <div class="metric-value" style="color: white; font-size: 1.5rem;">4,500</div>
+        <div class="metric-label" style="color: #bbf7d0;">TFLOPS (FP16)</div>
+      </div>
+      <div class="metric-card" style="background: #14532d; border: none;">
+        <div class="metric-value" style="color: white; font-size: 1.5rem;">8</div>
+        <div class="metric-label" style="color: #bbf7d0;">TB/s HBM3e</div>
+      </div>
+      <div class="metric-card" style="background: #14532d; border: none;">
+        <div class="metric-value" style="color: white; font-size: 1.5rem;">192</div>
+        <div class="metric-label" style="color: #bbf7d0;">GB Capacity</div>
+      </div>
+      <div class="metric-card" style="background: #14532d; border: none;">
+        <div class="metric-value" style="color: white; font-size: 1.5rem;">64</div>
+        <div class="metric-label" style="color: #bbf7d0;">GB/s PCIe 5.0</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FIGURE 2: KV-CACHE SCALING -->
+<section class="section" id="fig2">
+  <span class="section-badge">Figure 2</span>
+  <h2>KV-Cache Size vs Context Length</h2>
+  
+  <div class="formula">
+    KV-cache = 2 Ã— L Ã— H Ã— D Ã— S Ã— bytes<br>
+    <span style="color: var(--warning);">Llama-70B: 2 Ã— 80 Ã— 8 Ã— 128 Ã— S Ã— 2 = <strong>320 KB/token</strong></span>
+  </div>
+  
+  <table>
+    <thead>
+      <tr><th>Context Length</th><th>KV-Cache Size</th><th>% of B200 HBM</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>4K tokens</td><td>1.3 GB</td><td>0.7%</td><td style="color: var(--success);">âœ“ Fits easily</td></tr>
+      <tr><td>32K tokens</td><td>10 GB</td><td>5.2%</td><td style="color: var(--success);">âœ“ Comfortable</td></tr>
+      <tr><td>128K tokens</td><td>41 GB</td><td>21%</td><td style="color: var(--warning);">âš  Tight</td></tr>
+      <tr><td>512K tokens</td><td>164 GB</td><td>85%</td><td style="color: var(--danger);">âœ— Impossible</td></tr>
+      <tr><td>1M tokens</td><td>328 GB</td><td>171%</td><td style="color: var(--danger);">âœ— Impossible</td></tr>
+    </tbody>
+  </table>
+  
+  <div class="alert alert-danger">
+    <strong>The Scaling Crisis:</strong> Context lengths are expanding rapidly (GPT-4: 128K, Claude: 200K, Gemini: 1M+). KV-cache requirements grow linearly with context, but GPU memory remains fixed.
+  </div>
+</section>
+
+<!-- FIGURE 3: ENDPOINT ARCHITECTURE -->
+<section class="section" id="fig3">
+  <span class="section-badge">Figure 3</span>
+  <h2>CXL Endpoint Architecture</h2>
+  
+  <p>A distributed endpoint is a <strong>CXL 3.0 Type-3 device</strong> combining memory, compute, and control logic into a single package.</p>
+  
+  <div class="endpoint-package">
+    <div class="endpoint-title">DISTRIBUTED ENDPOINT PACKAGE (UCIe Integrated)</div>
+    
+    <div class="card" style="background: linear-gradient(135deg, #1d4ed8, #2563eb); border: none; margin-bottom: 1rem;">
+      <div style="color: white; font-weight: 700; text-align: center; margin-bottom: 0.75rem;">CXL 3.0 PROTOCOL ENGINE</div>
+      <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+        <div style="background: #1e3a8a; border-radius: 8px; padding: 0.5rem 1rem; text-align: center;">
+          <div style="color: white; font-weight: 600; font-size: 0.85rem;">CXL.mem</div>
+          <div style="color: #93c5fd; font-size: 0.7rem;">HDM-D/HDM-DB</div>
+        </div>
+        <div style="background: #1e3a8a; border-radius: 8px; padding: 0.5rem 1rem; text-align: center;">
+          <div style="color: white; font-weight: 600; font-size: 0.85rem;">CXL.io</div>
+          <div style="color: #93c5fd; font-size: 0.7rem;">Mailbox/Config</div>
+        </div>
+        <div style="background: #1e3a8a; border-radius: 8px; padding: 0.5rem 1rem; text-align: center;">
+          <div style="color: white; font-weight: 600; font-size: 0.85rem;">CXL.cache</div>
+          <div style="color: #93c5fd; font-size: 0.7rem;">Coherency</div>
+        </div>
+      </div>
+    </div>
+    
+    <div style="background: #7c3aed; border-radius: 10px; padding: 0.75rem; text-align: center; margin-bottom: 1rem;">
+      <span style="color: white; font-weight: 700;">UCIe 1.1 â€” 1+ TB/s Die-to-Die Interconnect</span>
+    </div>
+    
+    <div class="chiplets-row">
+      <div class="chiplet" style="border-color: var(--success);">
+        <div class="chiplet-title" style="color: var(--success);">MEMORY CONTROLLER</div>
+        <div class="chiplet-item">CH 0-3: DDR5-6400</div>
+        <div class="chiplet-item">CH 4-7: DDR5-6400</div>
+        <div style="text-align: center; font-size: 0.75rem; color: var(--success); font-weight: 600;">8ch Ã— 51.2 GB/s = 409.6 GB/s</div>
+      </div>
+      <div class="chiplet" style="border-color: var(--orange);">
+        <div class="chiplet-title" style="color: var(--orange);">COMPUTE CHIPLET</div>
+        <div class="chiplet-item">Core 0-3: ARM A78 @ 3GHz</div>
+        <div class="chiplet-item">Core 4-7: ARM A78 @ 3GHz</div>
+        <div class="chiplet-item">L3 Cache â€” 8 MB Shared</div>
+      </div>
+      <div class="chiplet" style="border-color: var(--warning);">
+        <div class="chiplet-title" style="color: var(--warning);">CONTROL & POLICY</div>
+        <div class="chiplet-item">EMA Scoring Engine</div>
+        <div class="chiplet-item">Per-Head Access Tracker</div>
+        <div class="chiplet-item">RoPE Prefetch Queue</div>
+      </div>
+    </div>
+    
+    <div class="card" style="background: rgba(0,0,0,0.4); margin-top: 1rem; margin-bottom: 0;">
+      <div style="display: flex; justify-content: space-around; flex-wrap: wrap; gap: 1rem; text-align: center;">
+        <div>
+          <div style="font-size: 1.75rem; font-weight: 800; color: var(--cyan);">512 GB</div>
+          <div style="font-size: 0.75rem; color: var(--gray);">DDR5 DRAM</div>
+        </div>
+        <div>
+          <div style="font-size: 1.75rem; font-weight: 800; color: var(--info);">16 TB</div>
+          <div style="font-size: 0.75rem; color: var(--gray);">NVMe Flash</div>
+        </div>
+        <div>
+          <div style="font-size: 1.75rem; font-weight: 800; color: var(--success);">~250 ns</div>
+          <div style="font-size: 0.75rem; color: var(--gray);">CXL Latency</div>
+        </div>
+        <div>
+          <div style="font-size: 1.75rem; font-weight: 800; color: var(--orange);">80 W</div>
+          <div style="font-size: 0.75rem; color: var(--gray);">Typical Power</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FIGURE 4: TIERED MEMORY -->
+<section class="section" id="fig4">
+  <span class="section-badge">Figure 4</span>
+  <h2>Tiered Memory Architecture</h2>
+  
+  <div class="tier-bar">
+    <div class="tier-segment tier-hot"><strong>Hot (HBM)</strong><br>192 GB<br>8 TB/s</div>
+    <div class="tier-segment tier-warm"><strong>Warm (CXL)</strong><br>1 TB<br>~250 ns</div>
+    <div class="tier-segment tier-cold"><strong>Cold (Flash)</strong><br>16 TB<br>~25 Î¼s</div>
+    <div class="tier-segment tier-total"><strong>Total</strong><br>~17 TB</div>
+  </div>
+  
+  <h3>Bandwidth Hierarchy</h3>
+  
+  <div class="bw-hierarchy">
+    <div class="bw-tier t1"><div class="bw-name">UCIe Internal</div><div class="bw-value">1+ TB/s</div></div>
+    <div class="bw-tier t2"><div class="bw-name">DDR5 Local</div><div class="bw-value">409.6 GB/s</div></div>
+    <div class="bw-tier t3"><div class="bw-name">CXL External</div><div class="bw-value">32-64 GB/s</div></div>
+    <div class="bw-tier t4"><div class="bw-name">NVMe Flash</div><div class="bw-value">~14 GB/s</div></div>
+  </div>
+  
+  <div class="key-insight">
+    <div class="key-insight-title">Key Insight</div>
+    <strong>GPU sees unified address space. Endpoint manages tier placement transparently.</strong><br>
+    CXL.mem provides load/store semanticsâ€”no explicit I/O commands, no DMA setup, no driver intervention.
+  </div>
+</section>
+
+<!-- FIGURE 5: COHERENCY PROTOCOL -->
+<section class="section" id="fig5">
+  <span class="section-badge">Figure 5</span>
+  <h2>CXL 3.0 Coherency Protocol</h2>
+  
+  <p>CXL 3.0 provides hardware-managed coherency through the <strong>Back-Invalidate (BI)</strong> protocol.</p>
+  
+  <div class="coherency-visual">
+    <div class="coherency-state invalid">
+      <div class="state-name">Invalid</div>
+      <div class="state-desc">GPU cache empty<br>Endpoint authoritative</div>
+    </div>
+    <div class="coherency-state shared">
+      <div class="state-name">Shared</div>
+      <div class="state-desc">GPU has read copy<br>Endpoint authoritative</div>
+    </div>
+    <div class="coherency-state exclusive">
+      <div class="state-name">Exclusive</div>
+      <div class="state-desc">GPU can write<br>Endpoint stale</div>
+    </div>
+    <div class="coherency-state modified">
+      <div class="state-name">Modified</div>
+      <div class="state-desc">GPU has dirty data<br>Must writeback</div>
+    </div>
+  </div>
+  
+  <div class="comparison-grid">
+    <div class="card" style="border-color: var(--info);">
+      <h4 style="color: var(--info);">GPU â†’ Endpoint Writes</h4>
+      <p style="font-size: 0.9rem; margin-bottom: 0;">During prefill, GPU writes new KV entries. Endpoint receives <code>D2H Write</code> with data, updates local DRAM and clears stale metadata.</p>
+    </div>
+    <div class="card" style="border-color: var(--primary);">
+      <h4 style="color: var(--primary);">Endpoint â†’ GPU Invalidation</h4>
+      <p style="font-size: 0.9rem; margin-bottom: 0;">When endpoint evicts entries to flash, it issues <code>BI-Snoop</code>. GPU must writeback dirty data before acknowledging.</p>
+    </div>
+  </div>
+  
+  <div class="alert alert-info">
+    <strong>Concurrent SM Access:</strong> Multiple GPU SMs accessing the same KV-head are serialized at L2 cache. Endpoint sees unified coherent viewâ€”no per-SM tracking required.
+  </div>
+</section>
+
+<!-- FIGURE 6: GQA COMPARISON -->
+<section class="section" id="fig6">
+  <span class="section-badge">Figure 6</span>
+  <h2>Attention Mechanisms: MHA vs GQA vs MQA</h2>
+  
+  <div class="gqa-comparison">
+    <div class="method-card">
+      <div class="method-name">MHA</div>
+      <div class="method-full">Multi-Head Attention</div>
+      <div style="background: rgba(0,0,0,0.3); padding: 0.75rem; border-radius: 8px;">
+        <div style="font-size: 0.85rem; color: var(--gray);">Q heads = K heads = V heads</div>
+        <div style="margin-top: 0.5rem; font-family: 'JetBrains Mono'; color: var(--danger);">64 KV heads</div>
+        <div style="font-size: 0.7rem; color: var(--gray);">Full memory cost</div>
+      </div>
+    </div>
+    <div class="method-card highlight">
+      <div class="method-name">GQA</div>
+      <div class="method-full">Grouped Query Attention</div>
+      <div style="background: rgba(0,0,0,0.3); padding: 0.75rem; border-radius: 8px;">
+        <div style="font-size: 0.85rem; color: var(--gray);">Multiple Q share K/V</div>
+        <div style="margin-top: 0.5rem; font-family: 'JetBrains Mono'; color: var(--success);">8 KV heads</div>
+        <div style="font-size: 0.7rem; color: var(--gray);">8Ã— memory savings</div>
+      </div>
+    </div>
+    <div class="method-card">
+      <div class="method-name">MQA</div>
+      <div class="method-full">Multi-Query Attention</div>
+      <div style="background: rgba(0,0,0,0.3); padding: 0.75rem; border-radius: 8px;">
+        <div style="font-size: 0.85rem; color: var(--gray);">All Q share single K/V</div>
+        <div style="margin-top: 0.5rem; font-family: 'JetBrains Mono'; color: var(--warning);">1 KV head</div>
+        <div style="font-size: 0.7rem; color: var(--gray);">Quality tradeoff</div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="formula">
+    8 KV-heads Ã— 80 layers = <strong style="color: var(--warning);">640 independent eviction policies</strong>
+  </div>
+  
+  <div class="metric-cards">
+    <div class="metric-card">
+      <div class="metric-value">640</div>
+      <div class="metric-label">LRU Queues</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">131K</div>
+      <div class="metric-label">Entries/Queue</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">8 B</div>
+      <div class="metric-label">Bytes/Entry</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">640 MB</div>
+      <div class="metric-label">Total Metadata</div>
+    </div>
+  </div>
+</section>
+
+<!-- FIGURE 7: EMA EVICTION -->
+<section class="section" id="fig7">
+  <span class="section-badge">Figure 7</span>
+  <h2>EMA-Based Eviction Algorithm</h2>
+  
+  <p><strong>Why LRU fails:</strong> LRU assumes recent access predicts future access. Attention violates thisâ€”a token at position 1,000 may not be accessed until position 100,000, but remains critically important.</p>
+  
+  <div class="card" style="background: #2d3748; border: none;">
+    <div style="font-family: 'JetBrains Mono'; font-size: 1.1rem; color: white; text-align: center; padding: 0.5rem;">
+      <span style="color: #68d391; font-style: italic;">score_ema</span> = 
+      <span style="color: #f6ad55;">Î±</span> Ã— 
+      <span style="color: #68d391; font-style: italic;">new_score</span> + (1 âˆ’ 
+      <span style="color: #f6ad55;">Î±</span>) Ã— 
+      <span style="color: #68d391; font-style: italic;">score_ema</span>
+    </div>
+  </div>
+  
+  <div class="comparison-grid" style="margin-top: 1rem;">
+    <div style="background: rgba(0,0,0,0.2); border-radius: 10px; padding: 1rem;">
+      <div style="font-weight: 700; color: var(--orange); margin-bottom: 0.25rem;">Î± â†’ 1.0 (Reactive)</div>
+      <div style="font-size: 0.9rem; color: var(--gray);">Trust recent scores. Good for bursty access patterns.</div>
+    </div>
+    <div style="background: rgba(0,0,0,0.2); border-radius: 10px; padding: 1rem;">
+      <div style="font-weight: 700; color: var(--cyan); margin-bottom: 0.25rem;">Î± â†’ 0.1 (Stable)</div>
+      <div style="font-size: 0.9rem; color: var(--gray);">Trust history. Good for persistent anchors.</div>
+    </div>
+  </div>
+  
+  <div class="formula">
+    <span style="color: var(--primary);">priority</span> = (1 âˆ’ score_ema) Ã— recency_decay<br>
+    <span style="color: var(--gray); font-size: 0.85rem;">Higher priority â†’ evict sooner</span>
+  </div>
+  
+  <div class="comparison-grid">
+    <div class="compare-card keep">
+      <div style="font-weight: 700; margin-bottom: 0.75rem; color: var(--white);">Token A: Important Anchor</div>
+      <table style="margin: 0; font-size: 0.85rem;">
+        <tr><td>Position</td><td style="text-align: right;">1,024</td></tr>
+        <tr><td>Last access</td><td style="text-align: right;">50 steps ago</td></tr>
+        <tr><td>score_ema</td><td style="text-align: right;"><strong>0.211</strong></td></tr>
+        <tr><td>recency_decay</td><td style="text-align: right;">0.049</td></tr>
+        <tr><td>priority</td><td style="text-align: right; color: var(--success);"><strong>0.039</strong></td></tr>
+      </table>
+      <div class="verdict">âœ“ KEEP IN CACHE</div>
+    </div>
+    <div class="compare-card evict">
+      <div style="font-weight: 700; margin-bottom: 0.75rem; color: var(--white);">Token B: Low Attention</div>
+      <table style="margin: 0; font-size: 0.85rem;">
+        <tr><td>Position</td><td style="text-align: right;">45,678</td></tr>
+        <tr><td>Last access</td><td style="text-align: right;">2,000 steps ago</td></tr>
+        <tr><td>score_ema</td><td style="text-align: right;"><strong>0.08</strong></td></tr>
+        <tr><td>recency_decay</td><td style="text-align: right;">0.865</td></tr>
+        <tr><td>priority</td><td style="text-align: right; color: var(--danger);"><strong>0.796</strong></td></tr>
+      </table>
+      <div class="verdict">ðŸ—‘ EVICT TO FLASH</div>
+    </div>
+  </div>
+</section>
+
+<!-- FIGURE 8: ROPE PREFETCH -->
+<section class="section" id="fig8">
+  <span class="section-badge">Figure 8</span>
+  <h2>RoPE-Aware Prefetch Strategy</h2>
+  
+  <div class="card-grid">
+    <div class="card">
+      <div style="font-weight: 700; color: var(--primary); margin-bottom: 0.5rem;">ðŸ”„ Rotary Encoding</div>
+      <div style="font-size: 0.9rem; color: var(--gray);">RoPE encodes position by rotating Q/K vectors. Nearby positions have similar rotations â†’ higher dot product â†’ higher attention.</div>
+    </div>
+    <div class="card">
+      <div style="font-weight: 700; color: var(--cyan); margin-bottom: 0.5rem;">ðŸ“ Locality Bias</div>
+      <div style="font-size: 0.9rem; color: var(--gray);">On average, ~70% of attention mass falls within Â±W positions of the query token.</div>
+    </div>
+    <div class="card">
+      <div style="font-weight: 700; color: var(--success); margin-bottom: 0.5rem;">ðŸŽ¯ Predictable Access</div>
+      <div style="font-size: 0.9rem; color: var(--gray);">If GPU requests position P, it will likely need PÂ±W soon. Prefetch proactively.</div>
+    </div>
+  </div>
+  
+  <div class="formula" style="background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.3);">
+    <span style="color: var(--primary); font-weight: 700;">Prefetch Rule:</span> GPU accesses position P â†’ Prefetch [P âˆ’ W, P + W]
+  </div>
+  
+  <div class="metric-cards">
+    <div class="metric-card">
+      <div class="metric-value" style="color: var(--success);">85%</div>
+      <div class="metric-label">Cache Hit Rate</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" style="color: var(--primary);">72%</div>
+      <div class="metric-label">Attention Captured</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" style="color: var(--success);">3.2Ã—</div>
+      <div class="metric-label">Latency Reduction</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" style="color: var(--warning);">1.4Ã—</div>
+      <div class="metric-label">BW Overhead</div>
+    </div>
+  </div>
+</section>
+
+<!-- FIGURE 9: PREFILL VS DECODE -->
+<section class="section" id="fig9">
+  <span class="section-badge">Figure 9</span>
+  <h2>Prefill vs Decode Phase Characteristics</h2>
+  
+  <div class="phase-compare">
+    <div class="phase-card prefill">
+      <div class="phase-title">âš¡ Prefill Phase</div>
+      <table style="margin: 0; font-size: 0.85rem;">
+        <tr><td><strong>Bottleneck</strong></td><td>Compute-bound</td></tr>
+        <tr><td><strong>Access Pattern</strong></td><td>Sequential writes</td></tr>
+        <tr><td><strong>KV Operations</strong></td><td>Write-only (populate cache)</td></tr>
+        <tr><td><strong>Arithmetic Intensity</strong></td><td>High (~100 FLOP/byte)</td></tr>
+        <tr><td><strong>Batching</strong></td><td>Full sequence parallel</td></tr>
+      </table>
+      <div class="alert alert-warning" style="margin-top: 1rem; margin-bottom: 0; padding: 0.75rem;">
+        <strong>Strategy:</strong> Stream writes directly to CXL. No eviction neededâ€”all entries are new.
+      </div>
+    </div>
+    <div class="phase-card decode">
+      <div class="phase-title">ðŸ”„ Decode Phase</div>
+      <table style="margin: 0; font-size: 0.85rem;">
+        <tr><td><strong>Bottleneck</strong></td><td>Memory-bound</td></tr>
+        <tr><td><strong>Access Pattern</strong></td><td>Random reads + 1 write</td></tr>
+        <tr><td><strong>KV Operations</strong></td><td>Read all + append one</td></tr>
+        <tr><td><strong>Arithmetic Intensity</strong></td><td>Low (~0.5 FLOP/byte)</td></tr>
+        <tr><td><strong>Batching</strong></td><td>Token-by-token</td></tr>
+      </table>
+      <div class="alert alert-success" style="margin-top: 1rem; margin-bottom: 0; padding: 0.75rem;">
+        <strong>Strategy:</strong> Active EMA eviction + RoPE prefetch. This is where caching matters.
+      </div>
+    </div>
+  </div>
+  
+  <div class="key-insight">
+    <div class="key-insight-title">Phase Detection</div>
+    Endpoint monitors write/read ratio. When reads exceed writes by 10Ã—, switch to decode-optimized policy.
+  </div>
+</section>
+
+<!-- FIGURE 10: QUANTIZATION -->
+<section class="section" id="fig10">
+  <span class="section-badge">Figure 10</span>
+  <h2>KV-Cache Quantization Support</h2>
+  
+  <p>Modern inference increasingly uses quantized KV-caches. The endpoint supports transparent compression:</p>
+  
+  <div class="quant-bars">
+    <div class="quant-row">
+      <div class="quant-label" style="color: var(--danger);">FP16</div>
+      <div class="quant-track">
+        <div class="quant-fill fp16">Baseline</div>
+      </div>
+      <div class="quant-size">40 GB</div>
+    </div>
+    <div class="quant-row">
+      <div class="quant-label" style="color: var(--orange);">FP8</div>
+      <div class="quant-track">
+        <div class="quant-fill fp8">&lt;0.1% loss</div>
+      </div>
+      <div class="quant-size">20 GB</div>
+    </div>
+    <div class="quant-row">
+      <div class="quant-label" style="color: var(--warning);">INT8</div>
+      <div class="quant-track">
+        <div class="quant-fill int8">&lt;0.5% loss</div>
+      </div>
+      <div class="quant-size">20 GB</div>
+    </div>
+    <div class="quant-row">
+      <div class="quant-label" style="color: var(--success);">INT4</div>
+      <div class="quant-track">
+        <div class="quant-fill int4">~1% loss</div>
+      </div>
+      <div class="quant-size">10 GB</div>
+    </div>
+  </div>
+  
+  <div class="metric-cards">
+    <div class="metric-card">
+      <div class="metric-value" style="font-size: 1.5rem;">48</div>
+      <div class="metric-label">GB/s FP16â†’INT8</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" style="font-size: 1.5rem;">32</div>
+      <div class="metric-label">GB/s FP16â†’INT4</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" style="font-size: 1.5rem;">64</div>
+      <div class="metric-label">GB/s INT8â†’FP16</div>
+    </div>
+  </div>
+  
+  <div class="alert alert-info">
+    <strong>Transparent compression:</strong> GPU writes FP16 â†’ Endpoint stores INT8 â†’ GPU reads FP16. Compression invisible to inference stack.
+  </div>
+</section>
+
+<!-- FIGURE 11: LATENCY COMPARISON -->
+<section class="section" id="fig11">
+  <span class="section-badge">Figure 11</span>
+  <h2>Latency: CXL.mem vs PCIe Baseline</h2>
+  
+  <div class="latency-compare">
+    <div class="latency-box bad">
+      <div class="latency-box-label">PCIe DMA Transfer</div>
+      <div class="latency-box-value">~13 Î¼s</div>
+      <div style="font-size: 0.8rem; color: var(--gray); margin-top: 0.5rem;">CPU in critical path<br>Driver + DMA setup overhead</div>
+    </div>
+    <div class="latency-box good">
+      <div class="latency-box-label">CXL.mem Direct</div>
+      <div class="latency-box-value">~250 ns</div>
+      <div style="font-size: 0.8rem; color: var(--gray); margin-top: 0.5rem;">Load/store semantics<br>Zero software overhead</div>
+    </div>
+  </div>
+  
+  <div class="card" style="text-align: center; background: rgba(34, 197, 94, 0.1); border-color: var(--success);">
+    <div style="font-size: 2.5rem; font-weight: 800; color: var(--success);">65Ã— Latency Improvement</div>
+    <div style="color: var(--gray);">By eliminating the software stack</div>
+  </div>
+  
+  <table>
+    <thead>
+      <tr><th>Stage</th><th>CXL.mem Latency</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>GPU MMU handling</td><td>~50 ns</td></tr>
+      <tr><td>CXL protocol processing</td><td>~30 ns</td></tr>
+      <tr><td>PCIe transmission</td><td>~70 ns</td></tr>
+      <tr><td>Endpoint memory access</td><td>~50 ns</td></tr>
+      <tr style="font-weight: 700;"><td>Total</td><td style="color: var(--success);">~250 ns</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- FIGURE 12: LAYER PREFETCH -->
+<section class="section" id="fig12">
+  <span class="section-badge">Figure 12</span>
+  <h2>Layer Prefetch Pipeline</h2>
+  
+  <div class="alert alert-danger">
+    <strong>Single Endpoint Limitation:</strong> CXL x16 Gen5 = 64 GB/s. For 1.75 GB layer, transfer = 27.3 ms. Layer compute = 5.5 ms. <strong>GPU stalls 5Ã— waiting.</strong>
+  </div>
+  
+  <table>
+    <thead>
+      <tr><th>Endpoints</th><th>Aggregate BW</th><th>Layer Transfer</th><th>Result</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>1</td><td>64 GB/s</td><td>27.3 ms</td><td style="color: var(--danger);">âŒ GPU stalls (5Ã— slower)</td></tr>
+      <tr><td>3</td><td>192 GB/s</td><td>9.1 ms</td><td style="color: var(--warning);">âš ï¸ Borderline</td></tr>
+      <tr><td>5</td><td>320 GB/s</td><td>5.5 ms</td><td style="color: var(--success);">âœ“ Prefetch beats compute</td></tr>
+    </tbody>
+  </table>
+  
+  <div class="timeline">
+    <div class="timeline-row">
+      <div class="timeline-label">ðŸ–¥ï¸ GPU Compute</div>
+      <div class="timeline-track">
+        <div class="timeline-block compute" style="width: 25%;">Layer N</div>
+        <div class="timeline-block compute" style="width: 25%;">Layer N+1</div>
+        <div class="timeline-block compute" style="width: 25%;">Layer N+2</div>
+        <div class="timeline-block compute" style="width: 25%;">Layer N+3</div>
+      </div>
+    </div>
+    <div class="timeline-row">
+      <div class="timeline-label">ðŸ“¡ CXL Prefetch</div>
+      <div class="timeline-track" style="background: rgba(139, 92, 246, 0.15);">
+        <div class="timeline-block transfer" style="width: 22%; margin-left: 3%;">N+1</div>
+        <div class="timeline-block transfer" style="width: 22%; margin-left: 3%;">N+2</div>
+        <div class="timeline-block transfer" style="width: 22%; margin-left: 3%;">N+3</div>
+        <div class="timeline-block transfer" style="width: 22%; margin-left: 3%;">N+4</div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="key-insight">
+    <div class="key-insight-title">Pipeline Efficiency</div>
+    With 5 endpoints, prefetch completes before compute finishes. <strong>Zero GPU stalls.</strong>
+  </div>
+</section>
+
+<!-- FIGURE 13: SOFTWARE STACK -->
+<section class="section" id="fig13">
+  <span class="section-badge">Figure 13</span>
+  <h2>Software Integration Stack</h2>
+  
+  <div class="software-stack">
+    <div class="stack-layer">
+      <div class="stack-badge" style="background: var(--info);">Application Layer</div>
+      <div class="stack-items">
+        <div class="stack-item">
+          <div class="stack-item-name">vLLM</div>
+          <div class="stack-item-desc">PagedAttention</div>
+        </div>
+        <div class="stack-item">
+          <div class="stack-item-name">TensorRT-LLM</div>
+          <div class="stack-item-desc">Plugin API</div>
+        </div>
+        <div class="stack-item">
+          <div class="stack-item-name">SGLang</div>
+          <div class="stack-item-desc">RadixAttention</div>
+        </div>
+      </div>
+    </div>
+    <div class="arrow-down">â†“</div>
+    <div class="stack-layer">
+      <div class="stack-badge" style="background: var(--primary);">Runtime Layer</div>
+      <div class="stack-items">
+        <div class="stack-item">
+          <div class="stack-item-name">libcxl_kv</div>
+          <div class="stack-item-desc">KV Allocation API</div>
+        </div>
+        <div class="stack-item">
+          <div class="stack-item-name">CUDA UVM</div>
+          <div class="stack-item-desc">Unified Memory</div>
+        </div>
+        <div class="stack-item">
+          <div class="stack-item-name">Hint Interface</div>
+          <div class="stack-item-desc">Policy Params</div>
+        </div>
+      </div>
+    </div>
+    <div class="arrow-down">â†“</div>
+    <div class="stack-layer">
+      <div class="stack-badge" style="background: var(--success);">Driver Layer</div>
+      <div class="stack-items">
+        <div class="stack-item">
+          <div class="stack-item-name">CXL Driver</div>
+          <div class="stack-item-desc">Linux 6.8+</div>
+        </div>
+        <div class="stack-item">
+          <div class="stack-item-name">NVIDIA Driver</div>
+          <div class="stack-item-desc">CXL.mem Support</div>
+        </div>
+      </div>
+    </div>
+    <div class="arrow-down">â†“</div>
+    <div class="stack-layer">
+      <div class="stack-badge" style="background: var(--cyan);">Hardware Layer</div>
+      <div class="stack-items">
+        <div class="stack-item">
+          <div class="stack-item-name">B200 GPU</div>
+          <div class="stack-item-desc">CXL 3.0 Host</div>
+        </div>
+        <div class="stack-item">
+          <div class="stack-item-name">CXL Switch</div>
+          <div class="stack-item-desc">Multi-Endpoint</div>
+        </div>
+        <div class="stack-item">
+          <div class="stack-item-name">Endpoints</div>
+          <div class="stack-item-desc">Type-3 Devices</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="alert alert-success">
+    <strong>No kernel changes required.</strong> CXL memory appears as normal GPU-accessible memory. Framework changes limited to allocator layer.
+  </div>
+</section>
+
+<!-- FIGURE 14: SENSITIVITY ANALYSIS -->
+<section class="section" id="fig14">
+  <span class="section-badge">Figure 14</span>
+  <h2>Performance Sensitivity to Cache Hit Rate</h2>
+  
+  <div class="sensitivity-chart">
+    <div class="chart-bar">
+      <div class="chart-label">95% hit</div>
+      <div class="chart-track">
+        <div class="chart-fill excellent" style="width: 12%;">28 ms</div>
+      </div>
+    </div>
+    <div class="chart-bar">
+      <div class="chart-label">90% hit</div>
+      <div class="chart-track">
+        <div class="chart-fill excellent" style="width: 18%;">45 ms</div>
+      </div>
+    </div>
+    <div class="chart-bar">
+      <div class="chart-label">85% hit</div>
+      <div class="chart-track">
+        <div class="chart-fill good" style="width: 28%;">72 ms</div>
+      </div>
+    </div>
+    <div class="chart-bar">
+      <div class="chart-label">80% hit</div>
+      <div class="chart-track">
+        <div class="chart-fill good" style="width: 38%;">98 ms</div>
+      </div>
+    </div>
+    <div class="chart-bar">
+      <div class="chart-label">70% hit</div>
+      <div class="chart-track">
+        <div class="chart-fill warning" style="width: 55%;">185 ms</div>
+      </div>
+    </div>
+    <div class="chart-bar">
+      <div class="chart-label">60% hit</div>
+      <div class="chart-track">
+        <div class="chart-fill danger" style="width: 85%;">340 ms</div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="alert alert-warning">
+    <strong>Critical Threshold:</strong> Below 75% hit rate, flash access latency dominates. EMA + RoPE prefetch maintains <strong>85%+ hit rate</strong> for typical workloads.
+  </div>
+  
+  <table>
+    <thead>
+      <tr><th>Workload</th><th>P50</th><th>P95</th><th>P99</th><th>P99.9</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Conversational (4K avg)</td><td>8 ms</td><td>15 ms</td><td>28 ms</td><td>85 ms</td></tr>
+      <tr><td>Document QA (32K avg)</td><td>25 ms</td><td>45 ms</td><td>95 ms</td><td>250 ms</td></tr>
+      <tr><td>Long-context (128K)</td><td>45 ms</td><td>120 ms</td><td>350 ms</td><td>1.2 s</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- FIGURE 15: POWER COMPARISON -->
+<section class="section" id="fig15">
+  <span class="section-badge">Figure 15</span>
+  <h2>Power & Thermal Analysis</h2>
+  
+  <div class="power-comparison">
+    <div class="power-box high">
+      <div class="power-icon">ðŸ”¥</div>
+      <div class="power-value">2,800 W</div>
+      <div class="power-label">4Ã— B200 GPUs</div>
+      <div style="font-size: 0.8rem; color: var(--gray); margin-top: 0.5rem;">Liquid cooling required</div>
+    </div>
+    <div class="power-box low">
+      <div class="power-icon">â„ï¸</div>
+      <div class="power-value">1,100 W</div>
+      <div class="power-label">1× B200 + 5Ã— Endpoints</div>
+      <div style="font-size: 0.8rem; color: var(--gray); margin-top: 0.5rem;">Air cooling sufficient</div>
+    </div>
+  </div>
+  
+  <table>
+    <thead>
+      <tr><th>Endpoint Component</th><th>Typical Power</th><th>Peak Power</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>DDR5 (8 channels)</td><td>40 W</td><td>60 W</td></tr>
+      <tr><td>ARM A78 cores (8Ã—)</td><td>15 W</td><td>25 W</td></tr>
+      <tr><td>CXL PHY + controller</td><td>12 W</td><td>18 W</td></tr>
+      <tr><td>UCIe interface</td><td>8 W</td><td>12 W</td></tr>
+      <tr><td>NVMe controller</td><td>5 W</td><td>8 W</td></tr>
+      <tr style="font-weight: 700; background: rgba(34, 197, 94, 0.1);"><td>Total per Endpoint</td><td>80 W</td><td>123 W</td></tr>
+    </tbody>
+  </table>
+  
+  <div class="metric-cards">
+    <div class="metric-card">
+      <div class="metric-value" style="color: var(--success);">2.5Ã—</div>
+      <div class="metric-label">Power Efficiency</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" style="color: var(--info);">Air</div>
+      <div class="metric-label">Cooling Type</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" style="color: var(--primary);">45Â°C</div>
+      <div class="metric-label">Junction Temp</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" style="color: var(--cyan);">1U</div>
+      <div class="metric-label">Form Factor</div>
+    </div>
+  </div>
+</section>
+
+<!-- FIGURE 16: TCO -->
+<section class="section" id="fig16">
+  <span class="section-badge">Figure 16</span>
+  <h2>Total Cost of Ownership (3-Year)</h2>
+  
+  <div class="comparison-grid">
+    <div class="card" style="border-color: var(--danger);">
+      <div style="text-align: center; margin-bottom: 1rem;">
+        <div style="font-weight: 700; color: var(--danger); font-size: 1.1rem;">GPU-Only (8×B200)</div>
+      </div>
+      <table style="margin: 0; font-size: 0.85rem;">
+        <tr><td>Hardware</td><td style="text-align: right;">$240,000</td></tr>
+        <tr><td>Power (3yr)</td><td style="text-align: right;">$147,000</td></tr>
+        <tr><td>Cooling</td><td style="text-align: right;">$50,000</td></tr>
+        <tr><td>Rack Space</td><td style="text-align: right;">$36,000</td></tr>
+        <tr style="font-weight: 700; border-top: 2px solid var(--dark-600);"><td>Total</td><td style="text-align: right; color: var(--danger);">$473,000</td></tr>
+      </table>
+    </div>
+    <div class="card" style="border-color: var(--success);">
+      <div style="text-align: center; margin-bottom: 1rem;">
+        <div style="font-weight: 700; color: var(--success); font-size: 1.1rem;">1Ã— GPU + 5Ã— Endpoints</div>
+      </div>
+      <table style="margin: 0; font-size: 0.85rem;">
+        <tr><td>Hardware</td><td style="text-align: right;">$42,500</td></tr>
+        <tr><td>Power (3yr)</td><td style="text-align: right;">$58,000</td></tr>
+        <tr><td>Cooling</td><td style="text-align: right;">$10,000</td></tr>
+        <tr><td>Rack Space</td><td style="text-align: right;">$18,000</td></tr>
+        <tr style="font-weight: 700; border-top: 2px solid var(--dark-600);"><td>Total</td><td style="text-align: right; color: var(--success);">$128,500</td></tr>
+      </table>
+    </div>
+  </div>
+  
+  <div class="metric-cards">
+    <div class="metric-card">
+      <div class="metric-value" style="color: var(--success);">3.7Ã—</div>
+      <div class="metric-label">TCO Reduction</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" style="color: var(--info);">73%</div>
+      <div class="metric-label">CapEx Savings</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" style="color: var(--primary);">8 mo</div>
+      <div class="metric-label">Payback Period</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" style="color: var(--cyan);">$0.0004</div>
+      <div class="metric-label">Cost/Token</div>
+    </div>
+  </div>
+  
+  <div class="key-insight">
+    <div class="key-insight-title">Break-Even Analysis</div>
+    Endpoint architecture becomes cost-effective when: <strong>context_length > 16K tokens</strong> AND <strong>request_rate > 10 req/min</strong>
+  </div>
+</section>
+
+<!-- FIGURE 17: INNOVATION GAP -->
+<section class="section" id="fig17">
+  <span class="section-badge">Figure 17</span>
+  <h2>The Innovation Gap</h2>
+  
+  <p>Existing solutions address pieces of the problem. <strong>Nobody combines all four innovations:</strong></p>
+  
+  <div class="gap-grid">
+    <div class="gap-item">
+      <div class="gap-item-icon">ðŸ”¢</div>
+      <div class="gap-item-title">Per-Head Tracking</div>
+      <div class="gap-item-desc">640 independent queues</div>
+    </div>
+    <div class="gap-item">
+      <div class="gap-item-icon">ðŸ“ˆ</div>
+      <div class="gap-item-title">EMA Scoring</div>
+      <div class="gap-item-desc">Attention-aware eviction</div>
+    </div>
+    <div class="gap-item">
+      <div class="gap-item-icon">ðŸ§­</div>
+      <div class="gap-item-title">RoPE Prefetch</div>
+      <div class="gap-item-desc">Position locality</div>
+    </div>
+    <div class="gap-item">
+      <div class="gap-item-icon">ðŸ§ </div>
+      <div class="gap-item-title">Endpoint AI</div>
+      <div class="gap-item-desc">Controller-resident logic</div>
+    </div>
+  </div>
+  
+  <table>
+    <thead>
+      <tr><th>Existing Solution</th><th>Type</th><th>What's Missing</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Samsung CMM-D/CMM-B</td><td>CXL 2.0 Type-3</td><td>No compute, no intelligence</td></tr>
+      <tr><td>XConn Apollo + GISMO</td><td>CXL 3.0 Switch</td><td>Pooling only, no eviction policy</td></tr>
+      <tr><td>vLLM PagedAttention</td><td>Software</td><td>Still GPU-memory limited</td></tr>
+      <tr><td>FlexGen</td><td>CPU/Disk offload</td><td>High latency (~10s)</td></tr>
+      <tr><td>InfiniGen</td><td>Speculative prefetch</td><td>CPU-based, limited bandwidth</td></tr>
+      <tr><td>CXL-SpecKV</td><td>CXL + speculation</td><td>No per-head tracking</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- FIGURE 18: SUMMARY -->
+<section class="section" id="fig18">
+  <span class="section-badge">Figure 18</span>
+  <h2>Summary: Key Results</h2>
+  
+  <div class="metric-cards">
+    <div class="metric-card">
+      <div class="metric-value" style="color: var(--success);">65Ã—</div>
+      <div class="metric-label">Latency vs PCIe</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" style="color: var(--info);">85%</div>
+      <div class="metric-label">Cache Hit Rate</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" style="color: var(--primary);">3.7Ã—</div>
+      <div class="metric-label">TCO Reduction</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" style="color: var(--cyan);">17 TB</div>
+      <div class="metric-label">Effective Capacity</div>
+    </div>
+  </div>
+  
+  <table>
+    <thead>
+      <tr><th>Component</th><th>Specification</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Interface</td><td>CXL 3.0 Type-3 (memory expander)</td></tr>
+      <tr><td>Internal bandwidth</td><td>UCIe: 1+ TB/s</td></tr>
+      <tr><td>External bandwidth</td><td>CXL: 32-64 GB/s per link</td></tr>
+      <tr><td>Memory capacity</td><td>DDR5: 256-512 GB per endpoint</td></tr>
+      <tr><td>Compute</td><td>ARM/RISC-V cores for policy execution</td></tr>
+      <tr><td>Tracking granularity</td><td>Per KV-head per layer (640 queues)</td></tr>
+      <tr><td>Eviction policy</td><td>EMA attention score + recency decay</td></tr>
+      <tr><td>Prefetch strategy</td><td>RoPE-aware window [Pâˆ’W, P+W]</td></tr>
+      <tr><td>Metadata overhead</td><td>~640 MB for 128K context (~1.6%)</td></tr>
+    </tbody>
+  </table>
+  
+  <div class="key-insight" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(16, 185, 129, 0.1)); border-color: rgba(34, 197, 94, 0.5);">
+    <div class="key-insight-title" style="color: var(--success);">The Core Insight</div>
+    <strong style="color: var(--white);">GPU handles parallel arithmetic. Endpoint handles memory management.</strong><br>
+    The division matches each architecture to its strengthsâ€”enabling long-context LLM inference at scale.
+  </div>
+</section>
+
+</div>
+</body>
+</html>

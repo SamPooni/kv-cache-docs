@@ -1,0 +1,20 @@
+================================================================================
+CH01 - INTRODUCTION - FIGURE INDEX
+================================================================================
+
+Fig 1.1: The Memory Wall Problem (H100 Specs)
+      Source: distributed-endpoint-diagrams.html -> NVIDIA H100 SXM5
+
+Fig 1.2: KV-Cache Size vs Context Length
+      Source: kv-cache-math-explainer.tsx -> KV-Cache Size Formula
+
+Fig 1.3: Bandwidth-Compute Gap
+      Source: distributed-endpoint-diagrams.html -> LATENCY IMPACT
+
+Fig 1.4: Single User Memory Layout
+      Source: visual-appendix.html -> Diagram 5.1
+
+Fig 1.5: Multi-User Memory Explosion
+      Source: visual-appendix.html -> Diagram 5.2
+
+TOTAL: 5 figures

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cache Management Placement</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: #ffffff;
+  color: #1a1a1a;
+  padding: 2rem;
+  line-height: 1.5;
+}
+.container { max-width: 1000px; margin: 0 auto; }
+h1 {
+  font-size: 2.2rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+.subtitle {
+  text-align: center;
+  color: #555;
+  font-size: 1.15rem;
+  margin-bottom: 2rem;
+}
+.architecture {
+  background: #fafafa;
+  border: 2px solid #e8e8e8;
+  border-radius: 16px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+}
+.arch-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+.system-diagram {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+}
+.tier {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  width: 100%;
+}
+.component {
+  background: #fff;
+  border: 3px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 1.25rem;
+  min-width: 180px;
+  text-align: center;
+  position: relative;
+}
+.component.gpu {
+  border-color: #28a745;
+  background: #f0fff4;
+}
+.component.cpu {
+  border-color: #007bff;
+  background: #f0f7ff;
+}
+.component.cxl {
+  border-color: #6f42c1;
+  background: #f8f5ff;
+}
+.component.nvme {
+  border-color: #e67700;
+  background: #fff8f0;
+}
+.comp-icon {
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+}
+.comp-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+.comp-detail {
+  font-size: 0.9rem;
+  color: #666;
+  margin-top: 0.25rem;
+}
+.placement-badge {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: white;
+}
+.placement-badge.a { background: #dc3545; }
+.placement-badge.b { background: #007bff; }
+.placement-badge.c { background: #6f42c1; }
+.placement-badge.d { background: #e67700; }
+.connector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #999;
+}
+.conn-line {
+  width: 3px;
+  height: 30px;
+  background: #ddd;
+}
+.conn-label {
+  font-size: 0.85rem;
+  color: #888;
+  padding: 0.25rem 0.5rem;
+  background: #f5f5f5;
+  border-radius: 4px;
+}
+.options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.25rem;
+  margin-top: 1.5rem;
+}
+.option-card {
+  background: #fff;
+  border: 3px solid #e0e0e0;
+  border-radius: 14px;
+  padding: 1.25rem;
+  position: relative;
+}
+.option-card.recommended {
+  border-color: #6f42c1;
+  background: #fdfbff;
+}
+.option-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.option-badge {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 700;
+  color: white;
+}
+.option-badge.a { background: #dc3545; }
+.option-badge.b { background: #007bff; }
+.option-badge.c { background: #6f42c1; }
+.option-badge.d { background: #e67700; }
+.option-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+.option-card.recommended .option-title { color: #6f42c1; }
+.rec-badge {
+  position: absolute;
+  top: -10px;
+  right: 12px;
+  background: #6f42c1;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.6rem;
+  border-radius: 10px;
+}
+.option-where {
+  font-size: 0.95rem;
+  color: #555;
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  background: #f8f9fa;
+  border-radius: 6px;
+}
+.option-where strong {
+  color: #333;
+}
+.pros-cons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.pro, .con {
+  font-size: 0.95rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+.pro::before {
+  content: "âœ“";
+  color: #28a745;
+  font-weight: 700;
+}
+.con::before {
+  content: "âœ—";
+  color: #dc3545;
+  font-weight: 700;
+}
+.metadata-section {
+  background: #fafafa;
+  border: 2px solid #e8e8e8;
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+}
+.meta-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+.meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+.meta-item {
+  background: #fff;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 1rem;
+}
+.meta-label {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 0.25rem;
+}
+.meta-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-family: 'Fira Code', monospace;
+}
+.meta-note {
+  font-size: 0.85rem;
+  color: #888;
+  margin-top: 0.25rem;
+}
+.hybrid-section {
+  background: #f8f5ff;
+  border: 2px solid #d4c4f0;
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+}
+.hybrid-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #6f42c1;
+  margin-bottom: 1rem;
+}
+.hybrid-flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.flow-box {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: center;
+}
+.flow-box.gpu { background: #d4edda; color: #155724; }
+.flow-box.cxl { background: #e7d4f7; color: #4a1a7a; }
+.flow-box.nvme { background: #ffe5cc; color: #8a4500; }
+.flow-arrow {
+  font-size: 1.3rem;
+  color: #999;
+}
+.hybrid-desc {
+  font-size: 1rem;
+  color: #555;
+  margin-top: 1rem;
+  text-align: center;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Cache Management Placement</h1>
+  <p class="subtitle">Where do the 640 LRU queues + EMA tracking live?</p>
+
+  <div class="architecture">
+    <div class="arch-title">System Architecture</div>
+    <div class="system-diagram">
+      <div class="tier">
+        <div class="component gpu">
+          <div class="placement-badge a">A</div>
+          <div class="comp-icon">ðŸŽ®</div>
+          <div class="comp-name">GPU HBM</div>
+          <div class="comp-detail">192GB · 8 TB/s</div>
+        </div>
+      </div>
+      
+      <div class="connector">
+        <div class="conn-line"></div>
+        <div class="conn-label">NVLink / PCIe 5.0</div>
+        <div class="conn-line"></div>
+      </div>
+      
+      <div class="tier">
+        <div class="component cpu">
+          <div class="placement-badge b">B</div>
+          <div class="comp-icon">ðŸ–¥ï¸</div>
+          <div class="comp-name">Host CPU</div>
+          <div class="comp-detail">DDR5 Â· ~400 GB/s</div>
+        </div>
+        <div class="component cxl">
+          <div class="placement-badge c">C</div>
+          <div class="comp-icon">ðŸ”Œ</div>
+          <div class="comp-name">CXL Controller</div>
+          <div class="comp-detail">Type 2/3 Â· ~64 GB/s</div>
+        </div>
+      </div>
+      
+      <div class="connector">
+        <div class="conn-line"></div>
+        <div class="conn-label">CXL.mem / NVMe-oF</div>
+        <div class="conn-line"></div>
+      </div>
+      
+      <div class="tier">
+        <div class="component nvme">
+          <div class="placement-badge d">D</div>
+          <div class="comp-icon">ðŸ’¾</div>
+          <div class="comp-name">Computational Storage</div>
+          <div class="comp-detail">NVMe SSD Â· ~14 GB/s</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="options-grid">
+    <div class="option-card">
+      <div class="option-header">
+        <div class="option-badge a">A</div>
+        <div class="option-title">GPU-Side</div>
+      </div>
+      <div class="option-where"><strong>Where:</strong> CUDA kernel / HBM reservation</div>
+      <div class="pros-cons">
+        <div class="pro">Lowest latency decisions</div>
+        <div class="pro">Attention scores already on GPU</div>
+        <div class="con">Burns HBM for metadata (640 MB)</div>
+        <div class="con">Kernel complexity for async I/O</div>
+      </div>
+    </div>
+
+    <div class="option-card">
+      <div class="option-header">
+        <div class="option-badge b">B</div>
+        <div class="option-title">Host CPU</div>
+      </div>
+      <div class="option-where"><strong>Where:</strong> Userspace daemon / driver</div>
+      <div class="pros-cons">
+        <div class="pro">Easy to implement & debug</div>
+        <div class="pro">Flexible policy changes</div>
+        <div class="con">PCIe round-trip per decision</div>
+        <div class="con">CPU becomes bottleneck at scale</div>
+      </div>
+    </div>
+
+    <div class="option-card recommended">
+      <div class="rec-badge">Best for CXL</div>
+      <div class="option-header">
+        <div class="option-badge c">C</div>
+        <div class="option-title">CXL Controller</div>
+      </div>
+      <div class="option-where"><strong>Where:</strong> CXL Type-2 device FPGA/ASIC</div>
+      <div class="pros-cons">
+        <div class="pro">Near-memory processing</div>
+        <div class="pro">Intercepts all CXL.mem traffic</div>
+        <div class="pro">Can prefetch to device-local DRAM</div>
+        <div class="con">Custom hardware required</div>
+      </div>
+    </div>
+
+    <div class="option-card">
+      <div class="option-header">
+        <div class="option-badge d">D</div>
+        <div class="option-title">Computational Storage</div>
+      </div>
+      <div class="option-where"><strong>Where:</strong> NVMe SSD controller ARM cores</div>
+      <div class="pros-cons">
+        <div class="pro">Offloads host entirely</div>
+        <div class="pro">Near-storage prefetch decisions</div>
+        <div class="con">Higher latency path</div>
+        <div class="con">Limited compute on SSD controller</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="metadata-section">
+    <div class="meta-title">Metadata Footprint (Llama-70B, 128K context)</div>
+    <div class="meta-grid">
+      <div class="meta-item">
+        <div class="meta-label">LRU Queues</div>
+        <div class="meta-value">640</div>
+        <div class="meta-note">8 KV-heads Ã— 80 layers</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Entries per Queue</div>
+        <div class="meta-value">131,072</div>
+        <div class="meta-note">Max sequence length</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Bytes per Entry</div>
+        <div class="meta-value">8 B</div>
+        <div class="meta-note">pos + ema + last_access</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Total Metadata</div>
+        <div class="meta-value">640 MB</div>
+        <div class="meta-note">~1.6% of KV cache</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hybrid-section">
+    <div class="hybrid-title">Recommended: Hybrid Approach</div>
+    <div class="hybrid-flow">
+      <div class="flow-box gpu">GPU<br><small>EMA updates</small></div>
+      <div class="flow-arrow">â†’</div>
+      <div class="flow-box cxl">CXL Controller<br><small>Eviction + Prefetch</small></div>
+      <div class="flow-arrow">â†’</div>
+      <div class="flow-box nvme">NVMe<br><small>Cold storage</small></div>
+    </div>
+    <div class="hybrid-desc">
+      GPU computes attention â†’ streams scores to CXL controller â†’ controller updates EMA, makes eviction/prefetch decisions â†’ issues async NVMe reads
+    </div>
+  </div>
+</div>
+</body>
+</html>

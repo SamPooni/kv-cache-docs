@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grouped Query Attention</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: #ffffff;
+  min-height: 100vh;
+  color: #1a1a1a;
+  padding: 2rem;
+}
+.container { max-width: 1100px; margin: 0 auto; }
+h1 {
+  text-align: center;
+  font-size: 2.4rem;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+.subtitle {
+  text-align: center;
+  color: #555;
+  font-size: 1.2rem;
+  margin-bottom: 2.5rem;
+}
+.comparison {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+.method-card {
+  background: #fafafa;
+  border-radius: 16px;
+  padding: 1.5rem;
+  border: 2px solid #e8e8e8;
+  text-align: center;
+}
+.method-card.highlight {
+  border-color: #007bff;
+  background: #f0f7ff;
+}
+.method-name {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+.method-full {
+  font-size: 0.95rem;
+  color: #666;
+  margin-bottom: 1.25rem;
+}
+.heads-visual {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+.head-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.head-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  width: 30px;
+  color: #555;
+}
+.head {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: white;
+}
+.head-q { background: #007bff; }
+.head-k { background: #28a745; }
+.head-v { background: #9c27b0; }
+.kv-memory {
+  font-size: 1.1rem;
+  font-weight: 600;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  background: #f5f5f5;
+}
+.kv-memory span { color: #d63384; }
+.section-title {
+  font-size: 1.6rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+.flow-diagram {
+  background: #fafafa;
+  border-radius: 16px;
+  padding: 2rem;
+  border: 2px solid #e8e8e8;
+  margin-bottom: 2rem;
+}
+.flow-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.flow-box {
+  padding: 1rem 1.5rem;
+  border-radius: 12px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-align: center;
+}
+.flow-input { background: #e8e8e8; color: #333; }
+.flow-proj { background: #007bff; color: white; min-width: 100px; }
+.flow-group { background: #fff3cd; color: #856404; border: 2px dashed #ffc107; }
+.flow-output { background: #d4edda; color: #155724; }
+.arrow-down {
+  text-align: center;
+  font-size: 1.5rem;
+  color: #999;
+  margin: 0.5rem 0;
+}
+.benefits {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+.benefit-card {
+  background: #fafafa;
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 2px solid #e8e8e8;
+  text-align: center;
+}
+.benefit-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.75rem;
+}
+.benefit-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+.benefit-desc {
+  font-size: 1rem;
+  color: #555;
+  line-height: 1.5;
+}
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  margin: 1.5rem 0;
+  flex-wrap: wrap;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.05rem;
+  font-weight: 500;
+}
+.legend-dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+}
+.formula {
+  text-align: center;
+  font-size: 1.2rem;
+  padding: 1.25rem;
+  background: #f8f9fa;
+  border-radius: 12px;
+  margin-top: 1.5rem;
+  font-family: 'Georgia', serif;
+  border: 2px solid #e8e8e8;
+}
+.formula code {
+  background: #e9ecef;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-family: 'Fira Code', monospace;
+  font-size: 1.1rem;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Grouped Query Attention</h1>
+  <p class="subtitle">Balancing KV-cache memory efficiency with model quality</p>
+  
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:#007bff"></div>Query (Q)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#28a745"></div>Key (K)</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#9c27b0"></div>Value (V)</div>
+  </div>
+
+  <div class="comparison">
+    <div class="method-card">
+      <div class="method-name">MHA</div>
+      <div class="method-full">Multi-Head Attention</div>
+      <div class="heads-visual">
+        <div class="head-row">
+          <span class="head-label">Q</span>
+          <div class="head head-q">0</div>
+          <div class="head head-q">1</div>
+          <div class="head head-q">2</div>
+          <div class="head head-q">3</div>
+        </div>
+        <div class="head-row">
+          <span class="head-label">K</span>
+          <div class="head head-k">0</div>
+          <div class="head head-k">1</div>
+          <div class="head head-k">2</div>
+          <div class="head head-k">3</div>
+        </div>
+        <div class="head-row">
+          <span class="head-label">V</span>
+          <div class="head head-v">0</div>
+          <div class="head head-v">1</div>
+          <div class="head head-v">2</div>
+          <div class="head head-v">3</div>
+        </div>
+      </div>
+      <div class="kv-memory">KV Cache: <span>8 heads</span></div>
+    </div>
+
+    <div class="method-card highlight">
+      <div class="method-name">GQA</div>
+      <div class="method-full">Grouped Query Attention</div>
+      <div class="heads-visual">
+        <div class="head-row">
+          <span class="head-label">Q</span>
+          <div class="head head-q">0</div>
+          <div class="head head-q">1</div>
+          <div class="head head-q">2</div>
+          <div class="head head-q">3</div>
+        </div>
+        <div class="head-row">
+          <span class="head-label">K</span>
+          <div class="head head-k" style="width:78px">0-1</div>
+          <div class="head head-k" style="width:78px">2-3</div>
+        </div>
+        <div class="head-row">
+          <span class="head-label">V</span>
+          <div class="head head-v" style="width:78px">0-1</div>
+          <div class="head head-v" style="width:78px">2-3</div>
+        </div>
+      </div>
+      <div class="kv-memory">KV Cache: <span>4 heads</span></div>
+    </div>
+
+    <div class="method-card">
+      <div class="method-name">MQA</div>
+      <div class="method-full">Multi-Query Attention</div>
+      <div class="heads-visual">
+        <div class="head-row">
+          <span class="head-label">Q</span>
+          <div class="head head-q">0</div>
+          <div class="head head-q">1</div>
+          <div class="head head-q">2</div>
+          <div class="head head-q">3</div>
+        </div>
+        <div class="head-row">
+          <span class="head-label">K</span>
+          <div class="head head-k" style="width:162px">shared</div>
+        </div>
+        <div class="head-row">
+          <span class="head-label">V</span>
+          <div class="head head-v" style="width:162px">shared</div>
+        </div>
+      </div>
+      <div class="kv-memory">KV Cache: <span>2 heads</span></div>
+    </div>
+  </div>
+
+  <div class="section-title">How GQA Works</div>
+  
+  <div class="flow-diagram">
+    <div class="flow-row">
+      <div class="flow-box flow-input">Input Hidden States</div>
+    </div>
+    <div class="arrow-down">â†“</div>
+    <div class="flow-row">
+      <div class="flow-box flow-proj">W<sub>Q</sub></div>
+      <div class="flow-box flow-proj">W<sub>K</sub></div>
+      <div class="flow-box flow-proj">W<sub>V</sub></div>
+    </div>
+    <div class="arrow-down">â†“</div>
+    <div class="flow-row">
+      <div class="flow-box" style="background:#cce5ff;color:#004085">Qâ‚€ Qâ‚ Qâ‚‚ Qâ‚ƒ<br><small>n_heads = 4</small></div>
+      <div class="flow-box" style="background:#d4edda;color:#155724">Kâ‚€ Kâ‚<br><small>n_kv = 2</small></div>
+      <div class="flow-box" style="background:#f3d9fa;color:#6f2c91">Vâ‚€ Vâ‚<br><small>n_kv = 2</small></div>
+    </div>
+    <div class="arrow-down">â†“</div>
+    <div class="flow-row">
+      <div class="flow-box flow-group">
+        Group 0: Qâ‚€,Qâ‚ â†’ Kâ‚€,Vâ‚€<br>
+        Group 1: Qâ‚‚,Qâ‚ƒ â†’ Kâ‚,Vâ‚
+      </div>
+    </div>
+    <div class="arrow-down">â†“</div>
+    <div class="flow-row">
+      <div class="flow-box flow-output">Attention Output (concat all heads)</div>
+    </div>
+  </div>
+
+  <div class="section-title">Why GQA Matters</div>
+  
+  <div class="benefits">
+    <div class="benefit-card">
+      <div class="benefit-icon">ðŸ’¾</div>
+      <div class="benefit-title">Smaller KV Cache</div>
+      <div class="benefit-desc">Reduces memory footprint proportional to the grouping ratio. Critical for long-context inference.</div>
+    </div>
+    <div class="benefit-card">
+      <div class="benefit-icon">âš¡</div>
+      <div class="benefit-title">Faster Decoding</div>
+      <div class="benefit-desc">Less KV data to load from HBM per token. Directly improves memory-bound decode throughput.</div>
+    </div>
+    <div class="benefit-card">
+      <div class="benefit-icon">ðŸŽ¯</div>
+      <div class="benefit-title">Quality Preserved</div>
+      <div class="benefit-desc">Outperforms MQA significantly. Llama 2 70B uses GQA with 8 KV heads for 64 query heads.</div>
+    </div>
+  </div>
+
+  <div class="formula">
+    KV Cache Size = <code>2 Ã— n_layers Ã— n_kv_heads Ã— seq_len Ã— head_dim Ã— dtype_size</code>
+  </div>
+</div>
+</body>
+</html>

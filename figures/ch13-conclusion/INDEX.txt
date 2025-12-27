@@ -1,0 +1,14 @@
+================================================================================
+CH13 - CONCLUSION - FIGURE INDEX
+================================================================================
+
+Fig 13.1: Cover Page / Title
+      Source: cover-page.html
+
+Fig 13.2: Final System Comparison
+      Source: (reference back to Ch11)
+
+Fig 13.3: Key Takeaways
+      Source: (reference back to Ch11)
+
+TOTAL: 3 figures (1 unique, 2 references)
