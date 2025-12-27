@@ -427,7 +427,7 @@ h1 {
       <div class="timeline">
         <div class="timeline-step" data-time="t = 0 Âµs">
           <div class="timeline-dot miss"></div>
-          <div class="step-title">ðŸ”´ Cache Miss: Query P=8 ("dog")</div>
+          <div class="step-title">🔴 Cache Miss: Query P=8 ("dog")</div>
           <div class="step-detail">
             GPU requests KV for position 8. Not in cache â†’ fetch from storage.
             <br>Trigger prefetch for window [5, 11].
@@ -458,7 +458,7 @@ h1 {
 
         <div class="timeline-step" data-time="t = 51 Âµs">
           <div class="timeline-dot hit"></div>
-          <div class="step-title">ðŸŸ¢ Cache Hit: Attention needs P=7 ("lazy")</div>
+          <div class="step-title">🟢 Cache Hit: Attention needs P=7 ("lazy")</div>
           <div class="step-detail">
             High attention weight to position 7 â†’ already prefetched!
           </div>
@@ -466,7 +466,7 @@ h1 {
 
         <div class="timeline-step" data-time="t = 52 Âµs">
           <div class="timeline-dot hit"></div>
-          <div class="step-title">ðŸŸ¢ Cache Hits: P=6, P=9, P=10</div>
+          <div class="step-title">🟢 Cache Hits: P=6, P=9, P=10</div>
           <div class="step-detail">
             Remaining high-attention positions all hit in prefetch window.
           </div>
@@ -474,7 +474,7 @@ h1 {
 
         <div class="timeline-step" data-time="t = 100 Âµs">
           <div class="timeline-dot"></div>
-          <div class="step-title">âž¡ï¸ Next Query: P=12 ("the")</div>
+          <div class="step-title">âž¡ Next Query: P=12 ("the")</div>
           <div class="step-detail">
             Autoregressive decode moves to next token. New window [9, 15].
             <br>Positions 9,10,11 already cached â†’ only fetch 12,13,14,15.

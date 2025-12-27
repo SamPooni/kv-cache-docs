@@ -306,7 +306,7 @@ h1 {
 }
 
 .degradation-title::before {
-  content: "âš ï¸";
+  content: "âš ";
 }
 
 .degradation-grid {
@@ -614,11 +614,11 @@ h1 {
     <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 1rem;">PCIe swap path latency components:</p>
     
     <div class="pcie-path">
-      <div class="path-step"><span class="path-step-icon">ðŸš¨</span> Page fault</div>
-      <div class="path-step"><span class="path-step-icon">ðŸ”§</span> Driver intervention</div>
-      <div class="path-step"><span class="path-step-icon">ðŸ“‹</span> DMA setup</div>
-      <div class="path-step"><span class="path-step-icon">ðŸ“¡</span> PCIe transfer</div>
-      <div class="path-step"><span class="path-step-icon">ðŸ””</span> Completion interrupt</div>
+      <div class="path-step"><span class="path-step-icon">🚨</span> Page fault</div>
+      <div class="path-step"><span class="path-step-icon">🔧</span> Driver intervention</div>
+      <div class="path-step"><span class="path-step-icon">📋</span> DMA setup</div>
+      <div class="path-step"><span class="path-step-icon">📡</span> PCIe transfer</div>
+      <div class="path-step"><span class="path-step-icon">🔓</span> Completion interrupt</div>
     </div>
 
     <div class="latency-compare">
@@ -661,7 +661,7 @@ h1 {
   <!-- Example Calculation -->
   <div class="calc-section">
     <div class="calc-header">
-      <div class="calc-icon">ðŸ§®</div>
+      <div class="calc-icon">🧮</div>
       <div>
         <div class="calc-title">Example Calculation</div>
         <div class="calc-subtitle">Llama-70B, 128K context</div>
@@ -698,7 +698,7 @@ h1 {
     </div>
 
     <div class="calc-insight">
-      <div class="insight-icon">ðŸ’¡</div>
+      <div class="insight-icon">💡</div>
       <div class="insight-text">
         <strong>Recompute dominates.</strong> Even at just 1% miss rate, recompute contributes 99.8% of total latency. 
         This is why intelligent caching that prevents misses is critical.

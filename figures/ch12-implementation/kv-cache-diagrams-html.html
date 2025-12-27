@@ -630,7 +630,7 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
         <tr><td>recency_decay</td><td style="text-align: right;">0.865</td></tr>
         <tr><td>priority</td><td style="text-align: right; color: var(--danger);"><strong>0.796</strong></td></tr>
       </table>
-      <div class="verdict">ðŸ—‘ EVICT TO FLASH</div>
+      <div class="verdict">🗑 EVICT TO FLASH</div>
     </div>
   </div>
 </section>
@@ -642,15 +642,15 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
   
   <div class="card-grid">
     <div class="card">
-      <div style="font-weight: 700; color: var(--primary); margin-bottom: 0.5rem;">ðŸ”„ Rotary Encoding</div>
+      <div style="font-weight: 700; color: var(--primary); margin-bottom: 0.5rem;">🔄 Rotary Encoding</div>
       <div style="font-size: 0.9rem; color: var(--gray);">RoPE encodes position by rotating Q/K vectors. Nearby positions have similar rotations â†’ higher dot product â†’ higher attention.</div>
     </div>
     <div class="card">
-      <div style="font-weight: 700; color: var(--cyan); margin-bottom: 0.5rem;">ðŸ“ Locality Bias</div>
+      <div style="font-weight: 700; color: var(--cyan); margin-bottom: 0.5rem;">📍 Locality Bias</div>
       <div style="font-size: 0.9rem; color: var(--gray);">On average, ~70% of attention mass falls within Â±W positions of the query token.</div>
     </div>
     <div class="card">
-      <div style="font-weight: 700; color: var(--success); margin-bottom: 0.5rem;">ðŸŽ¯ Predictable Access</div>
+      <div style="font-weight: 700; color: var(--success); margin-bottom: 0.5rem;">🎯 Predictable Access</div>
       <div style="font-size: 0.9rem; color: var(--gray);">If GPU requests position P, it will likely need PÂ±W soon. Prefetch proactively.</div>
     </div>
   </div>
@@ -699,7 +699,7 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
       </div>
     </div>
     <div class="phase-card decode">
-      <div class="phase-title">ðŸ”„ Decode Phase</div>
+      <div class="phase-title">🔄 Decode Phase</div>
       <table style="margin: 0; font-size: 0.85rem;">
         <tr><td><strong>Bottleneck</strong></td><td>Memory-bound</td></tr>
         <tr><td><strong>Access Pattern</strong></td><td>Random reads + 1 write</td></tr>
@@ -829,14 +829,14 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
     </thead>
     <tbody>
       <tr><td>1</td><td>64 GB/s</td><td>27.3 ms</td><td style="color: var(--danger);">âŒ GPU stalls (5Ã— slower)</td></tr>
-      <tr><td>3</td><td>192 GB/s</td><td>9.1 ms</td><td style="color: var(--warning);">âš ï¸ Borderline</td></tr>
+      <tr><td>3</td><td>192 GB/s</td><td>9.1 ms</td><td style="color: var(--warning);">âš  Borderline</td></tr>
       <tr><td>5</td><td>320 GB/s</td><td>5.5 ms</td><td style="color: var(--success);">âœ“ Prefetch beats compute</td></tr>
     </tbody>
   </table>
   
   <div class="timeline">
     <div class="timeline-row">
-      <div class="timeline-label">ðŸ–¥ï¸ GPU Compute</div>
+      <div class="timeline-label">🖥 GPU Compute</div>
       <div class="timeline-track">
         <div class="timeline-block compute" style="width: 25%;">Layer N</div>
         <div class="timeline-block compute" style="width: 25%;">Layer N+1</div>
@@ -845,7 +845,7 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
       </div>
     </div>
     <div class="timeline-row">
-      <div class="timeline-label">ðŸ“¡ CXL Prefetch</div>
+      <div class="timeline-label">📡 CXL Prefetch</div>
       <div class="timeline-track" style="background: rgba(139, 92, 246, 0.15);">
         <div class="timeline-block transfer" style="width: 22%; margin-left: 3%;">N+1</div>
         <div class="timeline-block transfer" style="width: 22%; margin-left: 3%;">N+2</div>
@@ -1008,13 +1008,13 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
   
   <div class="power-comparison">
     <div class="power-box high">
-      <div class="power-icon">ðŸ”¥</div>
+      <div class="power-icon">🔥</div>
       <div class="power-value">2,800 W</div>
       <div class="power-label">4Ã— B200 GPUs</div>
       <div style="font-size: 0.8rem; color: var(--gray); margin-top: 0.5rem;">Liquid cooling required</div>
     </div>
     <div class="power-box low">
-      <div class="power-icon">â„ï¸</div>
+      <div class="power-icon">â„</div>
       <div class="power-value">1,100 W</div>
       <div class="power-label">1× B200 + 5Ã— Endpoints</div>
       <div style="font-size: 0.8rem; color: var(--gray); margin-top: 0.5rem;">Air cooling sufficient</div>
@@ -1121,22 +1121,22 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
   
   <div class="gap-grid">
     <div class="gap-item">
-      <div class="gap-item-icon">ðŸ”¢</div>
+      <div class="gap-item-icon">📢</div>
       <div class="gap-item-title">Per-Head Tracking</div>
       <div class="gap-item-desc">640 independent queues</div>
     </div>
     <div class="gap-item">
-      <div class="gap-item-icon">ðŸ“ˆ</div>
+      <div class="gap-item-icon">📈</div>
       <div class="gap-item-title">EMA Scoring</div>
       <div class="gap-item-desc">Attention-aware eviction</div>
     </div>
     <div class="gap-item">
-      <div class="gap-item-icon">ðŸ§­</div>
+      <div class="gap-item-icon">🧭</div>
       <div class="gap-item-title">RoPE Prefetch</div>
       <div class="gap-item-desc">Position locality</div>
     </div>
     <div class="gap-item">
-      <div class="gap-item-icon">ðŸ§ </div>
+      <div class="gap-item-icon">🧠</div>
       <div class="gap-item-title">Endpoint AI</div>
       <div class="gap-item-desc">Controller-resident logic</div>
     </div>
