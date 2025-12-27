@@ -1,23 +1,13 @@
-================================================================================
-CH10 - MARKET LANDSCAPE - FIGURE INDEX
-================================================================================
+Chapter 10: Market Landscape Figures
+=====================================
 
-Fig 10.1: Commercial Hardware Comparison
-      Source: market-landscape.html -> CMM-D/B, Apollo, Niagara
+competitive-landscape.html  - MAIN: Competitive landscape, what exists vs. what we address, innovation gap
+market-landscape.html       - Market overview diagrams
+kv-cache-landscape.html     - KV-cache solutions landscape
 
-Fig 10.2: Software Frameworks Comparison
-      Source: market-landscape.html -> vLLM, Mooncake, FlexGen
-
-Fig 10.3: Academic Papers Overview
-      Source: market-landscape.html -> PNM-KV, CXL-SpecKV, TraCT
-
-Fig 10.4: The Innovation Gap
-      Source: kv-cache-landscape.html
-
-Fig 10.5: The Gap We Fill
-      Source: kv-cache-landscape.html
-
-Fig 10.6: The Opportunity
-      Source: kv-cache-landscape.html
-
-TOTAL: 6 figures
+KEY SELLING POINTS (competitive-landscape.html):
+- Commercial Hardware: Samsung CMM-D/B, Apollo CXL Switch, Niagara 2.0
+- Software Frameworks: vLLM/LMCache, Mooncake, FlexGen
+- Academic Papers: PNM-KV, CXL-SpecKV, TraCT
+- The Gap: Per-KV-head tracking, EMA eviction, RoPE prefetch, CXL controller intelligence
+- Our Solution: First complete CXL-native KV-cache with all four innovations
