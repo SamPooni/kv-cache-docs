@@ -383,14 +383,14 @@ h1 {
     <div class="card">
       <div class="observe-content">
         <div class="bar-chart">
-          <div class="bar-slot"><span class="bar-val">0.45</span><div class="bar" style="height:90px"></div><span class="bar-label">tâ‚</span></div>
-          <div class="bar-slot"><span class="bar-val">0.12</span><div class="bar" style="height:24px"></div><span class="bar-label">tâ‚‚</span></div>
-          <div class="bar-slot"><span class="bar-val">0.30</span><div class="bar" style="height:60px"></div><span class="bar-label">tâ‚ƒ</span></div>
-          <div class="bar-slot"><span class="bar-val">0.08</span><div class="bar" style="height:16px"></div><span class="bar-label">tâ‚„</span></div>
-          <div class="bar-slot"><span class="bar-val">0.35</span><div class="bar" style="height:70px"></div><span class="bar-label">tâ‚…</span></div>
+          <div class="bar-slot"><span class="bar-val">0.45</span><div class="bar" style="height:90px"></div><span class="bar-label">t₁</span></div>
+          <div class="bar-slot"><span class="bar-val">0.12</span><div class="bar" style="height:24px"></div><span class="bar-label">t₂</span></div>
+          <div class="bar-slot"><span class="bar-val">0.30</span><div class="bar" style="height:60px"></div><span class="bar-label">t₃</span></div>
+          <div class="bar-slot"><span class="bar-val">0.08</span><div class="bar" style="height:16px"></div><span class="bar-label">t₄</span></div>
+          <div class="bar-slot"><span class="bar-val">0.35</span><div class="bar" style="height:70px"></div><span class="bar-label">t₅</span></div>
         </div>
         <div class="observe-text">
-          <p>Each decode step, every cached token receives an attention weight from the current query. These scores are noisyâ€”a token might spike one step and drop the next.</p>
+          <p>Each decode step, every cached token receives an attention weight from the current query. These scores are noisy—a token might spike one step and drop the next.</p>
           <div class="token-info">📍 Tracking: Position 1024</div>
         </div>
       </div>
@@ -407,16 +407,16 @@ h1 {
       <div class="formula-row">
         <div class="formula-box">
           <div class="formula">
-            <span class="var">score_ema</span> <span class="op">=</span> <span class="alpha">Î±</span> <span class="op">Ã—</span> <span class="var">new_score</span> <span class="op">+</span> <span class="op">(</span>1 <span class="op">âˆ’</span> <span class="alpha">Î±</span><span class="op">)</span> <span class="op">Ã—</span> <span class="var">score_ema</span>
+            <span class="var">score_ema</span> <span class="op">=</span> <span class="alpha">α</span> <span class="op">×</span> <span class="var">new_score</span> <span class="op">+</span> <span class="op">(</span>1 <span class="op">−</span> <span class="alpha">α</span><span class="op">)</span> <span class="op">×</span> <span class="var">score_ema</span>
           </div>
         </div>
         <div class="alpha-cards">
           <div class="alpha-card">
-            <div class="alpha-val">Î± â†’ 1.0</div>
+            <div class="alpha-val">α → 1.0</div>
             <div class="alpha-desc">Reactive: trust recent scores (bursty patterns)</div>
           </div>
           <div class="alpha-card">
-            <div class="alpha-val">Î± â†’ 0.1</div>
+            <div class="alpha-val">α → 0.1</div>
             <div class="alpha-desc">Stable: trust history (important anchors)</div>
           </div>
         </div>
@@ -433,15 +433,15 @@ h1 {
     <div class="card">
       <table class="calc-table">
         <tr><th>Step</th><th>new_score</th><th>Calculation</th><th>score_ema</th></tr>
-        <tr><td>tâ‚</td><td>0.45</td><td class="calc-detail">0.2 × 0.45 + 0.8 × 0.00</td><td class="ema-val">0.090</td></tr>
-        <tr><td>tâ‚‚</td><td>0.12</td><td class="calc-detail">0.2 × 0.12 + 0.8 × 0.135</td><td class="ema-val">0.096</td></tr>
-        <tr><td>tâ‚ƒ</td><td>0.30</td><td class="calc-detail">0.2 × 0.30 + 0.8 × 0.131</td><td class="ema-val">0.137</td></tr>
-        <tr><td>tâ‚„</td><td>0.08</td><td class="calc-detail">0.2 × 0.08 + 0.8 × 0.182</td><td class="ema-val">0.126</td></tr>
-        <tr><td>tâ‚…</td><td>0.35</td><td class="calc-detail">0.2 × 0.35 + 0.8 × 0.151</td><td class="ema-val">0.171</td></tr>
+        <tr><td>t₁</td><td>0.45</td><td class="calc-detail">0.2 × 0.45 + 0.8 × 0.00</td><td class="ema-val">0.090</td></tr>
+        <tr><td>t₂</td><td>0.12</td><td class="calc-detail">0.2 × 0.12 + 0.8 × 0.135</td><td class="ema-val">0.096</td></tr>
+        <tr><td>t₃</td><td>0.30</td><td class="calc-detail">0.2 × 0.30 + 0.8 × 0.131</td><td class="ema-val">0.137</td></tr>
+        <tr><td>t₄</td><td>0.08</td><td class="calc-detail">0.2 × 0.08 + 0.8 × 0.182</td><td class="ema-val">0.126</td></tr>
+        <tr><td>t₅</td><td>0.35</td><td class="calc-detail">0.2 × 0.35 + 0.8 × 0.151</td><td class="ema-val">0.171</td></tr>
       </table>
       <div class="ema-summary">
         <div class="ema-badge"><div class="ema-badge-label">Raw Average</div><div class="ema-badge-value">0.26</div></div>
-        <div class="arrow-conn">â†’</div>
+        <div class="arrow-conn">→</div>
         <div class="ema-badge result"><div class="ema-badge-label">EMA (α=0.2)</div><div class="ema-badge-value">0.171</div></div>
       </div>
     </div>
@@ -456,12 +456,12 @@ h1 {
     <div class="card">
       <div class="priority-formulas">
         <div class="pf-box">
-          <div class="pf-formula">priority = (1 âˆ’ score_ema) Ã— recency_decay</div>
-          <div class="pf-comment">Higher priority â†’ evict sooner</div>
+          <div class="pf-formula">priority = (1 − score_ema) × recency_decay</div>
+          <div class="pf-comment">Higher priority → evict sooner</div>
         </div>
         <div class="pf-box">
-          <div class="pf-formula">recency_decay = 1 âˆ’ e<sup>âˆ’Î² Ã— steps</sup></div>
-          <div class="pf-comment">Î² = 0.001, ~63% decay at 1000 steps</div>
+          <div class="pf-formula">recency_decay = 1 − e<sup>−β × steps</sup></div>
+          <div class="pf-comment">β = 0.001, ~63% decay at 1000 steps</div>
         </div>
       </div>
       <div class="compare-grid">
@@ -469,14 +469,14 @@ h1 {
           <div class="compare-header"><span class="token-badge">A</span> pos=1024, accessed 50 steps ago</div>
           <div class="metric"><span class="metric-label">score_ema</span><span class="metric-value">0.171</span></div>
           <div class="metric"><span class="metric-label">recency_decay</span><span class="metric-value">0.049</span></div>
-          <div class="metric"><span class="metric-label">priority</span><span class="metric-value">(1âˆ’0.211) Ã— 0.049 = 0.039</span></div>
-          <div class="verdict">âœ“ KEEP</div>
+          <div class="metric"><span class="metric-label">priority</span><span class="metric-value">(1−0.211) × 0.049 = 0.039</span></div>
+          <div class="verdict">✓ KEEP</div>
         </div>
         <div class="compare-card evict">
           <div class="compare-header"><span class="token-badge">B</span> pos=45678, accessed 2000 steps ago</div>
           <div class="metric"><span class="metric-label">score_ema</span><span class="metric-value">0.08</span></div>
           <div class="metric"><span class="metric-label">recency_decay</span><span class="metric-value">0.865</span></div>
-          <div class="metric"><span class="metric-label">priority</span><span class="metric-value">(1âˆ’0.08) Ã— 0.865 = 0.796</span></div>
+          <div class="metric"><span class="metric-label">priority</span><span class="metric-value">(1−0.08) × 0.865 = 0.796</span></div>
           <div class="verdict">🗑 EVICT</div>
         </div>
       </div>
@@ -495,19 +495,19 @@ h1 {
         <div class="matrix-grid">
           <div class="matrix-cell watch">
             <div class="matrix-label">High Score + Old</div>
-            <div class="matrix-action">âš  Watch</div>
+            <div class="matrix-action">⚠ Watch</div>
             <div class="matrix-example">
               <div class="ex-name">System Prompt Token</div>
-              <div class="ex-stats">ema=0.72 Â· 3000 steps Â· p=0.23</div>
+              <div class="ex-stats">ema=0.72 · 3000 steps · p=0.23</div>
               <div class="ex-why">Was critical, might be again</div>
             </div>
           </div>
           <div class="matrix-cell keep">
             <div class="matrix-label">High Score + Recent</div>
-            <div class="matrix-action">âœ“ Keep</div>
+            <div class="matrix-action">✓ Keep</div>
             <div class="matrix-example">
               <div class="ex-name">Recent Context Token</div>
-              <div class="ex-stats">ema=0.85 Â· 20 steps Â· p=0.003</div>
+              <div class="ex-stats">ema=0.85 · 20 steps · p=0.003</div>
               <div class="ex-why">Actively used, high value</div>
             </div>
           </div>
@@ -516,23 +516,23 @@ h1 {
             <div class="matrix-action">🗑 Evict</div>
             <div class="matrix-example">
               <div class="ex-name">Filler Word "the"</div>
-              <div class="ex-stats">ema=0.03 Â· 5000 steps Â· p=0.91</div>
+              <div class="ex-stats">ema=0.03 · 5000 steps · p=0.91</div>
               <div class="ex-why">Never important, stale</div>
             </div>
           </div>
           <div class="matrix-cell watch">
             <div class="matrix-label">Low Score + Recent</div>
-            <div class="matrix-action">âš  Watch</div>
+            <div class="matrix-action">⚠ Watch</div>
             <div class="matrix-example">
               <div class="ex-name">New User Input</div>
-              <div class="ex-stats">ema=0.05 Â· 10 steps Â· p=0.009</div>
+              <div class="ex-stats">ema=0.05 · 10 steps · p=0.009</div>
               <div class="ex-why">Just arrived, give it time</div>
             </div>
           </div>
         </div>
         <div class="matrix-axes">
-          <span>â† Old | Recent â†’</span>
-          <span>â†’ High Score | Low Score â†“</span>
+          <span>← Old | Recent →</span>
+          <span>→ High Score | Low Score ↓</span>
         </div>
       </div>
     </div>

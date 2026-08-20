@@ -417,7 +417,7 @@ h1 {
 }
 
 .arrow-line::after {
-  content: "â–¼";
+  content: "▼";
   position: absolute;
   bottom: -8px;
   left: 50%;
@@ -720,7 +720,7 @@ h1 {
 }
 
 .msg-arrow::after {
-  content: "â–¶";
+  content: "▶";
   position: absolute;
   right: -2px;
   top: 50%;
@@ -730,7 +730,7 @@ h1 {
 }
 
 .msg-arrow.reverse::after {
-  content: "â—€";
+  content: "◀";
   left: -2px;
   right: auto;
 }
@@ -827,21 +827,21 @@ h1 {
           <div class="mem-region hbm">
             <div>
               <div class="region-name">HBM (Local)</div>
-              <div class="region-addr">0x0000 â€” 0x4FFF</div>
+              <div class="region-addr">0x0000 — 0x4FFF</div>
             </div>
             <span style="font-size: 0.7rem; color: #4ade80;">192 GB</span>
           </div>
           <div class="mem-region mapped">
             <div>
               <div class="region-name">CXL.mem Region 0</div>
-              <div class="region-addr">0x5000 â€” 0x8FFF</div>
+              <div class="region-addr">0x5000 — 0x8FFF</div>
             </div>
             <span style="font-size: 0.7rem; color: #60a5fa;">64 GB</span>
           </div>
           <div class="mem-region mapped">
             <div>
               <div class="region-name">CXL.mem Region 1</div>
-              <div class="region-addr">0x9000 â€” 0xCFFF</div>
+              <div class="region-addr">0x9000 — 0xCFFF</div>
             </div>
             <span style="font-size: 0.7rem; color: #60a5fa;">64 GB</span>
           </div>
@@ -895,7 +895,7 @@ h1 {
         &nbsp;&nbsp;<span class="code-comment">// Direct load from CXL.mem address</span><br>
         &nbsp;&nbsp;<span class="code-type">float4</span> kv = *(<span class="code-type">float4*</span>)(<span class="code-addr">kv_cache + offset</span>);<br>
         &nbsp;&nbsp;<br>
-        &nbsp;&nbsp;<span class="code-comment">// GPU MMU translates VA â†’ CXL.mem address</span><br>
+        &nbsp;&nbsp;<span class="code-comment">// GPU MMU translates VA → CXL.mem address</span><br>
         &nbsp;&nbsp;<span class="code-comment">// CXL bridge handles coherent access</span><br>
         &nbsp;&nbsp;<span class="code-comment">// No explicit DMA, no driver intervention</span><br>
         }
@@ -1014,8 +1014,8 @@ h1 {
   <!-- 8.3 Driver Translation -->
   <div class="section">
     <div class="section-title">
-      <div class="section-icon blue">âš™</div>
-      8.3 Driver â†’ Firmware Translation
+      <div class="section-icon blue">⚙</div>
+      8.3 Driver → Firmware Translation
     </div>
 
     <p style="color: #94a3b8; margin-bottom: 1rem;">
@@ -1044,7 +1044,7 @@ h1 {
           <div class="stage-details">
             <div class="stage-title">Driver Hint Processing</div>
             <div class="stage-desc">Driver validates hints, selects target endpoint based on capacity and locality</div>
-            <div class="stage-code">select_endpoint(hints) â†’ EP0</div>
+            <div class="stage-code">select_endpoint(hints) → EP0</div>
           </div>
         </div>
       </div>
@@ -1105,14 +1105,14 @@ h1 {
             <div class="node-sublabel">Host CPU</div>
           </div>
         </div>
-        <div class="mailbox-arrow">â†’</div>
+        <div class="mailbox-arrow">→</div>
         <div class="mailbox-node">
           <div class="node-box pcie">
             <div class="node-label">PCIe / CXL.io</div>
             <div class="node-sublabel">Transport</div>
           </div>
         </div>
-        <div class="mailbox-arrow">â†’</div>
+        <div class="mailbox-arrow">→</div>
         <div class="mailbox-node">
           <div class="node-box firmware">
             <div class="node-label">Endpoint FW</div>
@@ -1140,7 +1140,7 @@ h1 {
   <!-- 8.4 Fault Handling -->
   <div class="section">
     <div class="section-title">
-      <div class="section-icon orange">âš¡</div>
+      <div class="section-icon orange">⚡</div>
       8.4 Fault Handling & Latency Breakdown
     </div>
 
@@ -1158,7 +1158,7 @@ h1 {
           </div>
           <div class="fault-details">
             <div class="fault-title">GPU MMU Handling</div>
-            <div class="fault-desc">TLB miss, page table walk, virtual â†’ physical translation. GPU MMU identifies CXL.mem region from PTE flags.</div>
+            <div class="fault-desc">TLB miss, page table walk, virtual → physical translation. GPU MMU identifies CXL.mem region from PTE flags.</div>
           </div>
         </div>
       </div>
@@ -1247,13 +1247,13 @@ h1 {
         </tr>
         <tr>
           <td>PCIe DMA (Traditional)</td>
-          <td class="table-dim">~13 Î¼s</td>
+          <td class="table-dim">~13 μs</td>
           <td>64 GB/s</td>
           <td style="color: #f87171;">Yes (driver)</td>
         </tr>
         <tr>
           <td>NVMe Read</td>
-          <td class="table-dim">~10-20 Î¼s</td>
+          <td class="table-dim">~10-20 μs</td>
           <td>14 GB/s</td>
           <td style="color: #f87171;">Yes (filesystem)</td>
         </tr>

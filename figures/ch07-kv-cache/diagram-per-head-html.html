@@ -296,7 +296,7 @@
 <body>
     <div class="container">
         <h1>Per-Head Attention Tracking</h1>
-        <p class="subtitle">Different attention heads serve different purposes â€” one cache policy doesn't fit all</p>
+        <p class="subtitle">Different attention heads serve different purposes — one cache policy doesn't fit all</p>
         
         <div class="section">
             <div class="section-title">The Four Types of Attention Heads</div>
@@ -421,7 +421,7 @@
             
             <div class="problem-solution">
                 <div class="box problem">
-                    <div class="box-title">âŒ Problem with Global Caching</div>
+                    <div class="box-title">❌ Problem with Global Caching</div>
                     <div class="box-content">
                         A single "keep recent tokens" policy works for <strong>recency heads</strong> but fails for:
                         <ul style="margin-top: 8px; margin-left: 18px;">
@@ -431,7 +431,7 @@
                     </div>
                 </div>
                 <div class="box solution">
-                    <div class="box-title">âœ“ Solution: Per-Head Tracking</div>
+                    <div class="box-title">✓ Solution: Per-Head Tracking</div>
                     <div class="box-content">
                         Track which tokens each head needs separately. A token stays cached if <strong>ANY</strong> head still needs it.
                         This ensures anchor tokens stay cached even though recency heads don't need them.
@@ -460,7 +460,7 @@
             </div>
             
             <p style="color: #888; font-size: 0.85rem; margin: 15px 0;">
-                Query: "What is the capital of France?" â€” Now generating answer...
+                Query: "What is the capital of France?" — Now generating answer...
             </p>
             
             <div class="head-decisions">
@@ -498,7 +498,7 @@
                 <div class="result-title">Combined Cache Decision</div>
                 <div class="result-text">
                     Keep in HBM: <strong>Pos 0-100</strong> (anchor) + <strong>Pos ~50K</strong> (France mention) + <strong>Last 1000 tokens</strong> (recent)<br>
-                    Everything else â†’ CXL DRAM (accessed less frequently)
+                    Everything else → CXL DRAM (accessed less frequently)
                 </div>
             </div>
         </div>

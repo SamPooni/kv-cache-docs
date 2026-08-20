@@ -376,7 +376,7 @@ h1 {
 }
 
 .prefetch-title::before {
-  content: "âš¡";
+  content: "⚡";
 }
 
 .prefetch-rule {
@@ -589,17 +589,17 @@ h1 {
 
     <div class="arch-diagram">
       <div class="input-token">Input Token</div>
-      <div class="arrow-down">â†“</div>
+      <div class="arrow-down">↓</div>
       <div class="router-box">
         <div class="router-label">Learned Router</div>
         <div class="router-sublabel">Selects K experts per token</div>
       </div>
-      <div class="arrow-down">â†“</div>
+      <div class="arrow-down">↓</div>
       
       <div class="experts-container">
-        <div class="expert active"><span class="expert-num">E1</span>âœ“</div>
+        <div class="expert active"><span class="expert-num">E1</span>✓</div>
         <div class="expert inactive"><span class="expert-num">E2</span></div>
-        <div class="expert active"><span class="expert-num">E3</span>âœ“</div>
+        <div class="expert active"><span class="expert-num">E3</span>✓</div>
         <div class="expert inactive"><span class="expert-num">E4</span></div>
         <div class="expert inactive"><span class="expert-num">E5</span></div>
         <div class="expert inactive"><span class="expert-num">E6</span></div>
@@ -618,7 +618,7 @@ h1 {
   <!-- Challenge -->
   <div class="challenge-section">
     <div class="challenge-header">
-      <span class="challenge-icon">âš </span>
+      <span class="challenge-icon">⚠</span>
       <span class="challenge-title">The Challenge: Data-Dependent Access</span>
     </div>
 
@@ -626,9 +626,9 @@ h1 {
       <div class="challenge-text">
         Expert activation depends on <strong>input content</strong>. The router learns which experts handle which types of inputs, but this means access patterns are:
         <br><br>
-        â€¢ <strong>Data-dependent</strong> â€” can't predict without seeing input<br>
-        â€¢ <strong>Irregular</strong> â€” no fixed pattern to exploit<br>
-        â€¢ <strong>Sparse</strong> â€” only K of N experts active
+        • <strong>Data-dependent</strong> — can't predict without seeing input<br>
+        • <strong>Irregular</strong> — no fixed pattern to exploit<br>
+        • <strong>Sparse</strong> — only K of N experts active
       </div>
       
       <div class="access-pattern">
@@ -708,12 +708,12 @@ h1 {
         
         <div class="prefetch-rule">
           <div class="rule-condition">if P(activation) > threshold:</div>
-          <div class="rule-action">â†’ Prefetch expert to endpoint DRAM</div>
+          <div class="rule-action">→ Prefetch expert to endpoint DRAM</div>
         </div>
         
         <div class="prefetch-rule">
           <div class="rule-condition">if P(activation) < threshold:</div>
-          <div class="rule-action">â†’ Keep in flash, fetch on demand</div>
+          <div class="rule-action">→ Keep in flash, fetch on demand</div>
         </div>
 
         <div class="prefetch-note">
@@ -734,7 +734,7 @@ h1 {
     <div class="cache-scenarios">
       <div class="scenario optimal">
         <div class="scenario-header">
-          <span class="scenario-icon">âœ“</span>
+          <span class="scenario-icon">✓</span>
           <span class="scenario-title">Optimal: Full Replication</span>
         </div>
         <div class="scenario-desc">
@@ -746,14 +746,14 @@ h1 {
 
       <div class="scenario fallback">
         <div class="scenario-header">
-          <span class="scenario-icon">âš¡</span>
+          <span class="scenario-icon">⚡</span>
           <span class="scenario-title">Fallback: Histogram Prefetch</span>
         </div>
         <div class="scenario-desc">
           If DRAM < all experts, use histogram to prefetch likely experts. 
           Cold experts fetched from flash on demand.
         </div>
-        <div class="scenario-result">P(hit) Ã— 0 + P(miss) Ã— flash_latency</div>
+        <div class="scenario-result">P(hit) × 0 + P(miss) × flash_latency</div>
       </div>
     </div>
 
@@ -764,7 +764,7 @@ h1 {
           Request<br>
           <span style="font-size: 0.65rem; opacity: 0.8;">needs E1, E3</span>
         </div>
-        <span class="routing-arrow">â†’</span>
+        <span class="routing-arrow">→</span>
         <div class="routing-node endpoint">
           Endpoint A
           <div class="endpoint-experts">

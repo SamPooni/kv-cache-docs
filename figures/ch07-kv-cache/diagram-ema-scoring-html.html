@@ -287,7 +287,7 @@
             <div class="section-title">The EMA Update Rule</div>
             
             <div class="formula-box">
-                <div class="formula">score_new = 0.2 Ã— attention + 0.8 Ã— score_old</div>
+                <div class="formula">score_new = 0.2 × attention + 0.8 × score_old</div>
                 <div class="formula-explanation">
                     Each decode step, we update the score using <strong>exponential moving average</strong>.<br>
                     Tokens that consistently receive attention accumulate high scores.<br>
@@ -304,27 +304,27 @@
                     <div class="score-timeline">
                         <div class="score-step">
                             <div class="step-label">Step 1</div>
-                            <div class="step-calc">0.2 Ã— 0.04 + 0.8 Ã— 0</div>
+                            <div class="step-calc">0.2 × 0.04 + 0.8 × 0</div>
                             <div class="step-result">0.008</div>
                         </div>
                         <div class="score-step">
                             <div class="step-label">Step 2</div>
-                            <div class="step-calc">0.2 Ã— 0.05 + 0.8 Ã— 0.008</div>
+                            <div class="step-calc">0.2 × 0.05 + 0.8 × 0.008</div>
                             <div class="step-result">0.016</div>
                         </div>
                         <div class="score-step">
                             <div class="step-label">Step 10</div>
-                            <div class="step-calc">0.2 Ã— 0.03 + 0.8 Ã— 0.042</div>
+                            <div class="step-calc">0.2 × 0.03 + 0.8 × 0.042</div>
                             <div class="step-result">0.040</div>
                         </div>
                         <div class="score-step">
                             <div class="step-label">Step 50</div>
-                            <div class="step-calc">0.2 Ã— 0.04 + 0.8 Ã— 0.11</div>
+                            <div class="step-calc">0.2 × 0.04 + 0.8 × 0.11</div>
                             <div class="step-result">0.096</div>
                         </div>
                         <div class="score-step">
                             <div class="step-label">Step 100</div>
-                            <div class="step-calc">0.2 Ã— 0.05 + 0.8 Ã— 0.14</div>
+                            <div class="step-calc">0.2 × 0.05 + 0.8 × 0.14</div>
                             <div class="step-result">0.122</div>
                         </div>
                     </div>
@@ -332,7 +332,7 @@
                         <div class="score-bar-label">Final Score after 100 steps</div>
                         <div class="score-bar-bg">
                             <div class="score-bar" style="width: 61%; background: linear-gradient(90deg, #22c55e, #16a34a);">
-                                0.122 â†’ KEEP
+                                0.122 → KEEP
                             </div>
                         </div>
                     </div>
@@ -346,27 +346,27 @@
                     <div class="score-timeline">
                         <div class="score-step">
                             <div class="step-label">Step 1</div>
-                            <div class="step-calc">0.2 Ã— 0.002 + 0.8 Ã— 0</div>
+                            <div class="step-calc">0.2 × 0.002 + 0.8 × 0</div>
                             <div class="step-result">0.0004</div>
                         </div>
                         <div class="score-step">
                             <div class="step-label">Step 2</div>
-                            <div class="step-calc">0.2 Ã— 0.001 + 0.8 Ã— 0.0004</div>
+                            <div class="step-calc">0.2 × 0.001 + 0.8 × 0.0004</div>
                             <div class="step-result">0.0005</div>
                         </div>
                         <div class="score-step">
                             <div class="step-label">Step 10</div>
-                            <div class="step-calc">0.2 Ã— 0.001 + 0.8 Ã— 0.0008</div>
+                            <div class="step-calc">0.2 × 0.001 + 0.8 × 0.0008</div>
                             <div class="step-result">0.0008</div>
                         </div>
                         <div class="score-step">
                             <div class="step-label">Step 50</div>
-                            <div class="step-calc">0.2 Ã— 0.000 + 0.8 Ã— 0.0006</div>
+                            <div class="step-calc">0.2 × 0.000 + 0.8 × 0.0006</div>
                             <div class="step-result">0.0005</div>
                         </div>
                         <div class="score-step">
                             <div class="step-label">Step 100</div>
-                            <div class="step-calc">0.2 Ã— 0.001 + 0.8 Ã— 0.0004</div>
+                            <div class="step-calc">0.2 × 0.001 + 0.8 × 0.0004</div>
                             <div class="step-result">0.0005</div>
                         </div>
                     </div>
@@ -376,16 +376,16 @@
                             <div class="score-bar" style="width: 2.5%; background: linear-gradient(90deg, #ef4444, #dc2626);">
                             </div>
                         </div>
-                        <div style="font-size: 0.75rem; color: #ef4444; margin-top: 5px;">0.0005 â†’ EVICT</div>
+                        <div style="font-size: 0.75rem; color: #ef4444; margin-top: 5px;">0.0005 → EVICT</div>
                     </div>
                 </div>
             </div>
             
             <div class="halflife-box">
-                <div class="halflife-title">Why Î± = 0.2? The Half-Life Calculation</div>
+                <div class="halflife-title">Why α = 0.2? The Half-Life Calculation</div>
                 <div class="halflife-content">
                     <div class="halflife-calc">
-                        (1 - Î±)^n = 0.5<br>
+                        (1 - α)^n = 0.5<br>
                         0.8^n = 0.5<br>
                         n = log(0.5) / log(0.8)<br>
                         n = 3.1 steps

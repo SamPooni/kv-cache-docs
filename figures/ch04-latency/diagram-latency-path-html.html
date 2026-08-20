@@ -336,7 +336,7 @@
                     <div class="step-number pcie">1</div>
                     <div class="step-content">
                         <div class="step-name">GPU Page Fault</div>
-                        <div class="step-detail">TLB miss â†’ fault signal</div>
+                        <div class="step-detail">TLB miss → fault signal</div>
                     </div>
                     <div class="step-latency pcie">750 ns</div>
                 </div>
@@ -345,7 +345,7 @@
                     <div class="step-number pcie">2</div>
                     <div class="step-content">
                         <div class="step-name">CPU Interrupt</div>
-                        <div class="step-detail">MSI-X â†’ context switch</div>
+                        <div class="step-detail">MSI-X → context switch</div>
                     </div>
                     <div class="step-latency pcie">2,000 ns</div>
                 </div>
@@ -469,7 +469,7 @@
                     <div class="comp-bar-container">
                         <div class="comp-bar pcie" style="width: 48%;">
                             3,000 ns
-                            <span class="improvement-badge">12Ã— slower</span>
+                            <span class="improvement-badge">12× slower</span>
                         </div>
                     </div>
                 </div>
@@ -479,7 +479,7 @@
                     <div class="comp-bar-container">
                         <div class="comp-bar pcie" style="width: 96%;">
                             6,000 ns
-                            <span class="improvement-badge">24Ã— slower</span>
+                            <span class="improvement-badge">24× slower</span>
                         </div>
                     </div>
                 </div>
@@ -489,7 +489,7 @@
                     <div class="comp-bar-container">
                         <div class="comp-bar nvme" style="width: 100%;">
                             25,000 ns
-                            <span class="improvement-badge">100Ã— slower</span>
+                            <span class="improvement-badge">100× slower</span>
                         </div>
                     </div>
                 </div>
@@ -497,12 +497,12 @@
         </div>
         
         <div class="key-insight">
-            <div class="insight-icon">âš¡</div>
+            <div class="insight-icon">⚡</div>
             <div class="insight-content">
                 <h3>Key Insight: CPU Elimination</h3>
                 <p>CXL.mem removes CPU from the critical path entirely. No interrupts, no context switches, no DMA setup. The GPU issues a load instruction and receives data directly from endpoint DRAM via hardware-managed coherence.</p>
             </div>
-            <div class="insight-value">24Ã—</div>
+            <div class="insight-value">24×</div>
         </div>
     </div>
 </body>

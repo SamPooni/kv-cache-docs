@@ -501,17 +501,17 @@ h1 {
           <span class="node-label">Storage</span>
           <span class="node-sublabel">NVMe</span>
         </div>
-        <span class="flow-arrow">â†’</span>
+        <span class="flow-arrow">→</span>
         <div class="flow-node cpu-dram bottleneck">
           <span class="node-label">CPU DRAM</span>
           <span class="node-sublabel">DDR5</span>
         </div>
-        <span class="flow-arrow">â†’</span>
+        <span class="flow-arrow">→</span>
         <div class="flow-node cpu-proc bottleneck">
           <span class="node-label">CPU Preprocessing</span>
           <span class="node-sublabel">x86 cores</span>
         </div>
-        <span class="flow-arrow">â†’</span>
+        <span class="flow-arrow">→</span>
         <div class="flow-node gpu-dram">
           <span class="node-label">GPU DRAM</span>
           <span class="node-sublabel">via PCIe</span>
@@ -523,7 +523,7 @@ h1 {
     <div class="path-card endpoint">
       <div class="path-header">
         <div class="path-title">
-          <span class="path-icon">âš¡</span>
+          <span class="path-icon">⚡</span>
           <span class="path-name">Endpoint Path</span>
         </div>
         <span class="path-badge">Direct to GPU</span>
@@ -534,22 +534,22 @@ h1 {
           <span class="node-label">Endpoint Flash</span>
           <span class="node-sublabel">NVMe</span>
         </div>
-        <span class="flow-arrow highlight">â†’</span>
+        <span class="flow-arrow highlight">→</span>
         <div class="flow-node ep-dram">
           <span class="node-label">Endpoint DRAM</span>
           <span class="node-sublabel">DDR5</span>
         </div>
-        <span class="flow-arrow highlight">â†’</span>
+        <span class="flow-arrow highlight">→</span>
         <div class="flow-node ep-arm">
           <span class="node-label">ARM Preprocessing</span>
           <span class="node-sublabel">Embedded cores</span>
         </div>
-        <span class="flow-arrow highlight">â†’</span>
+        <span class="flow-arrow highlight">→</span>
         <div class="flow-node cxl-mem">
           <span class="node-label">CXL.mem</span>
           <span class="node-sublabel">Direct</span>
         </div>
-        <span class="flow-arrow highlight">â†’</span>
+        <span class="flow-arrow highlight">→</span>
         <div class="flow-node gpu">
           <span class="node-label">GPU</span>
           <span class="node-sublabel">HBM</span>
@@ -558,7 +558,7 @@ h1 {
 
       <div class="bypass-indicator">
         <span class="bypass-icon">🚫</span>
-        <span class="bypass-text"><strong>Zero CPU involvement</strong> â€” data flows directly to GPU-accessible memory</span>
+        <span class="bypass-text"><strong>Zero CPU involvement</strong> — data flows directly to GPU-accessible memory</span>
       </div>
     </div>
   </div>
@@ -566,7 +566,7 @@ h1 {
   <!-- Preprocessing Tasks -->
   <div class="tasks-section">
     <div class="section-title">
-      <div class="section-title-icon">âš™</div>
+      <div class="section-title-icon">⚙</div>
       Preprocessing Tasks for Embedded ARM
     </div>
 
@@ -584,7 +584,7 @@ h1 {
       <div class="task-card">
         <div class="task-icon">🔄</div>
         <div class="task-name">Format Conversion</div>
-        <div class="task-detail">FP32 â†’ FP16/BF16</div>
+        <div class="task-detail">FP32 → FP16/BF16</div>
       </div>
       <div class="task-card">
         <div class="task-icon">📦</div>
@@ -609,14 +609,14 @@ h1 {
         <div class="factor-icon">📢</div>
         <div class="factor-content">
           <div class="factor-label">Core Count</div>
-          <div class="factor-value">4â€“16 Cortex-A cores</div>
+          <div class="factor-value">4–16 Cortex-A cores</div>
         </div>
       </div>
       <div class="arm-factor">
-        <div class="factor-icon">â±</div>
+        <div class="factor-icon">⏱</div>
         <div class="factor-content">
           <div class="factor-label">Clock Speed</div>
-          <div class="factor-value">1.5â€“2.5 GHz</div>
+          <div class="factor-value">1.5–2.5 GHz</div>
         </div>
       </div>
       <div class="arm-factor">
@@ -630,7 +630,7 @@ h1 {
         <div class="factor-icon">🖼</div>
         <div class="factor-content">
           <div class="factor-label">Image Throughput</div>
-          <div class="factor-value">~1000 img/sec (224Ã—224)</div>
+          <div class="factor-value">~1000 img/sec (224×224)</div>
         </div>
       </div>
     </div>
@@ -646,15 +646,15 @@ h1 {
     <div class="insight-content">
       <div class="insight-diagram">
         <div class="insight-node arm">ARM</div>
-        <span class="insight-arrow">â†’</span>
+        <span class="insight-arrow">→</span>
         <div class="insight-node cxl">CXL.mem</div>
-        <span class="insight-arrow">â†’</span>
+        <span class="insight-arrow">→</span>
         <div class="insight-node gpu">GPU</div>
       </div>
       
       <div class="insight-text">
         Data flows directly to GPU-accessible CXL.mem region <strong>without CPU involvement</strong>. 
-        No <span class="cpu-crossed">CPU âŒ</span> copies, no PCIe DMA setup, no interrupt overhead. 
+        No <span class="cpu-crossed">CPU ❌</span> copies, no PCIe DMA setup, no interrupt overhead. 
         The endpoint handles everything from raw storage to GPU-ready tensors.
       </div>
     </div>

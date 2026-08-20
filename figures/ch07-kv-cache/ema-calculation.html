@@ -230,7 +230,7 @@ h1 {
     
     <div class="param-row">
       <div class="param">
-        <div class="param-label">Î± (smoothing factor)</div>
+        <div class="param-label">α (smoothing factor)</div>
         <div class="param-value alpha">0.2</div>
       </div>
       <div class="param">
@@ -251,33 +251,33 @@ h1 {
         <th>score_ema</th>
       </tr>
       <tr>
-        <td>tâ‚</td>
+        <td>t₁</td>
         <td>0.45</td>
-        <td class="calc-detail">0.3 Ã— 0.45 + 0.7 Ã— 0.00</td>
+        <td class="calc-detail">0.3 × 0.45 + 0.7 × 0.00</td>
         <td class="ema-result">0.135</td>
       </tr>
       <tr>
-        <td>tâ‚‚</td>
+        <td>t₂</td>
         <td>0.12</td>
-        <td class="calc-detail">0.3 Ã— 0.12 + 0.7 Ã— 0.135</td>
+        <td class="calc-detail">0.3 × 0.12 + 0.7 × 0.135</td>
         <td class="ema-result">0.131</td>
       </tr>
       <tr>
-        <td>tâ‚ƒ</td>
+        <td>t₃</td>
         <td>0.30</td>
-        <td class="calc-detail">0.3 Ã— 0.30 + 0.7 Ã— 0.131</td>
+        <td class="calc-detail">0.3 × 0.30 + 0.7 × 0.131</td>
         <td class="ema-result">0.182</td>
       </tr>
       <tr>
-        <td>tâ‚„</td>
+        <td>t₄</td>
         <td>0.08</td>
-        <td class="calc-detail">0.3 Ã— 0.08 + 0.7 Ã— 0.182</td>
+        <td class="calc-detail">0.3 × 0.08 + 0.7 × 0.182</td>
         <td class="ema-result">0.151</td>
       </tr>
       <tr>
-        <td>tâ‚…</td>
+        <td>t₅</td>
         <td>0.35</td>
-        <td class="calc-detail">0.3 Ã— 0.35 + 0.7 Ã— 0.151</td>
+        <td class="calc-detail">0.3 × 0.35 + 0.7 × 0.151</td>
         <td class="ema-result">0.211</td>
       </tr>
     </table>
@@ -288,15 +288,15 @@ h1 {
     
     <div class="formula-box">
       <div class="formula">
-        priority = (1 - score_ema) Ã— recency_decay<br>
+        priority = (1 - score_ema) × recency_decay<br>
         <span class="comment"># Higher priority = evict sooner</span>
       </div>
     </div>
     
     <div class="formula-box">
       <div class="formula">
-        recency_decay = 1 - exp(-Î² Ã— steps_since_access)<br>
-        <span class="comment"># Î² = 0.001, decays over ~1000 steps</span>
+        recency_decay = 1 - exp(-β × steps_since_access)<br>
+        <span class="comment"># β = 0.001, decays over ~1000 steps</span>
       </div>
     </div>
 
@@ -306,8 +306,8 @@ h1 {
       </div>
       <div class="calc-line">score_ema = 0.211</div>
       <div class="calc-line">steps_since_access = 50</div>
-      <div class="calc-line highlight">recency_decay = 1 - exp(-0.001 Ã— 50) = 0.049</div>
-      <div class="calc-line result">priority = (1 - 0.211) Ã— 0.049 = 0.039</div>
+      <div class="calc-line highlight">recency_decay = 1 - exp(-0.001 × 50) = 0.049</div>
+      <div class="calc-line result">priority = (1 - 0.211) × 0.049 = 0.039</div>
     </div>
 
     <div class="example-calc">
@@ -316,8 +316,8 @@ h1 {
       </div>
       <div class="calc-line">score_ema = 0.08</div>
       <div class="calc-line">steps_since_access = 2000</div>
-      <div class="calc-line highlight">recency_decay = 1 - exp(-0.001 Ã— 2000) = 0.865</div>
-      <div class="calc-line evict">priority = (1 - 0.08) Ã— 0.865 = 0.796</div>
+      <div class="calc-line highlight">recency_decay = 1 - exp(-0.001 × 2000) = 0.865</div>
+      <div class="calc-line evict">priority = (1 - 0.08) × 0.865 = 0.796</div>
     </div>
   </div>
 
@@ -343,7 +343,7 @@ h1 {
           <span class="metric-label">eviction_priority</span>
           <span class="metric-value">0.039</span>
         </div>
-        <div class="final-verdict">âœ“ KEEP (low priority)</div>
+        <div class="final-verdict">✓ KEEP (low priority)</div>
       </div>
       
       <div class="compare-card evict">

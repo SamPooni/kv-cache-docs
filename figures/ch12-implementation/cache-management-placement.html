@@ -204,12 +204,12 @@ h1 {
   gap: 0.5rem;
 }
 .pro::before {
-  content: "âœ“";
+  content: "✓";
   color: #28a745;
   font-weight: 700;
 }
 .con::before {
-  content: "âœ—";
+  content: "✗";
   color: #dc3545;
   font-weight: 700;
 }
@@ -321,13 +321,13 @@ h1 {
           <div class="placement-badge b">B</div>
           <div class="comp-icon">🖥</div>
           <div class="comp-name">Host CPU</div>
-          <div class="comp-detail">DDR5 Â· ~400 GB/s</div>
+          <div class="comp-detail">DDR5 · ~400 GB/s</div>
         </div>
         <div class="component cxl">
           <div class="placement-badge c">C</div>
           <div class="comp-icon">🔌</div>
           <div class="comp-name">CXL Controller</div>
-          <div class="comp-detail">Type 2/3 Â· ~64 GB/s</div>
+          <div class="comp-detail">Type 2/3 · ~64 GB/s</div>
         </div>
       </div>
       
@@ -342,7 +342,7 @@ h1 {
           <div class="placement-badge d">D</div>
           <div class="comp-icon">💾</div>
           <div class="comp-name">Computational Storage</div>
-          <div class="comp-detail">NVMe SSD Â· ~14 GB/s</div>
+          <div class="comp-detail">NVMe SSD · ~14 GB/s</div>
         </div>
       </div>
     </div>
@@ -413,7 +413,7 @@ h1 {
       <div class="meta-item">
         <div class="meta-label">LRU Queues</div>
         <div class="meta-value">640</div>
-        <div class="meta-note">8 KV-heads Ã— 80 layers</div>
+        <div class="meta-note">8 KV-heads × 80 layers</div>
       </div>
       <div class="meta-item">
         <div class="meta-label">Entries per Queue</div>
@@ -437,13 +437,13 @@ h1 {
     <div class="hybrid-title">Recommended: Hybrid Approach</div>
     <div class="hybrid-flow">
       <div class="flow-box gpu">GPU<br><small>EMA updates</small></div>
-      <div class="flow-arrow">â†’</div>
+      <div class="flow-arrow">→</div>
       <div class="flow-box cxl">CXL Controller<br><small>Eviction + Prefetch</small></div>
-      <div class="flow-arrow">â†’</div>
+      <div class="flow-arrow">→</div>
       <div class="flow-box nvme">NVMe<br><small>Cold storage</small></div>
     </div>
     <div class="hybrid-desc">
-      GPU computes attention â†’ streams scores to CXL controller â†’ controller updates EMA, makes eviction/prefetch decisions â†’ issues async NVMe reads
+      GPU computes attention → streams scores to CXL controller → controller updates EMA, makes eviction/prefetch decisions → issues async NVMe reads
     </div>
   </div>
 </div>

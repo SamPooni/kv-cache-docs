@@ -185,7 +185,7 @@ h1 {
 }
 
 .comparison-title::before {
-  content: "âš¡";
+  content: "⚡";
 }
 
 .pcie-path {
@@ -207,7 +207,7 @@ h1 {
 }
 
 .path-step::after {
-  content: "â†’";
+  content: "→";
   color: #64748b;
   margin-left: 0.25rem;
 }
@@ -306,7 +306,7 @@ h1 {
 }
 
 .degradation-title::before {
-  content: "âš ";
+  content: "⚠";
 }
 
 .degradation-grid {
@@ -354,7 +354,7 @@ h1 {
 }
 
 .solution-title::before {
-  content: "âœ“";
+  content: "✓";
   background: #22c55e;
   color: white;
   width: 20px;
@@ -576,15 +576,15 @@ h1 {
       <span class="var var-result">L_eff</span>
       <span class="op">=</span>
       <span class="var var-dram">hit_rate_dram</span>
-      <span class="op">Ã—</span>
+      <span class="op">×</span>
       <span class="var var-dram">L_dram</span>
       <span class="op">+</span>
       <span class="var var-flash">hit_rate_flash</span>
-      <span class="op">Ã—</span>
+      <span class="op">×</span>
       <span class="var var-flash">L_flash</span>
       <span class="op">+</span>
       <span class="var var-recompute">miss_rate</span>
-      <span class="op">Ã—</span>
+      <span class="op">×</span>
       <span class="var var-recompute">L_recompute</span>
     </div>
   </div>
@@ -594,17 +594,17 @@ h1 {
     <div class="var-card dram">
       <div class="var-card-name">L_dram</div>
       <div class="var-card-desc">DRAM access latency via CXL.mem path</div>
-      <div class="var-card-latency">~150â€“300 ns</div>
+      <div class="var-card-latency">~150–300 ns</div>
     </div>
     <div class="var-card flash">
       <div class="var-card-name">L_flash</div>
       <div class="var-card-desc">Flash access latency (NVMe behind endpoint controller)</div>
-      <div class="var-card-latency">~10â€“20 Î¼s</div>
+      <div class="var-card-latency">~10–20 μs</div>
     </div>
     <div class="var-card recompute">
       <div class="var-card-name">L_recompute</div>
       <div class="var-card-desc">Cost of regenerating evicted KV entries</div>
-      <div class="var-card-latency">~50â€“200 ms</div>
+      <div class="var-card-latency">~50–200 ms</div>
     </div>
   </div>
 
@@ -624,7 +624,7 @@ h1 {
     <div class="latency-compare">
       <div class="latency-box pcie">
         <div class="latency-box-label">PCIe Path</div>
-        <div class="latency-box-value">~13 Î¼s</div>
+        <div class="latency-box-value">~13 μs</div>
         <div class="latency-box-detail">fault + driver + DMA + transfer + IRQ</div>
       </div>
       <div class="latency-box cxl">
@@ -635,7 +635,7 @@ h1 {
     </div>
     
     <div class="improvement-badge">
-      <span>65Ã— Lower Latency</span>
+      <span>65× Lower Latency</span>
     </div>
   </div>
 
@@ -645,15 +645,15 @@ h1 {
     <div class="degradation-grid">
       <div class="degrade-item">
         <div class="degrade-item-label">Queue Depth</div>
-        <div class="degrade-item-value">+50â€“200%</div>
+        <div class="degrade-item-value">+50–200%</div>
       </div>
       <div class="degrade-item">
         <div class="degrade-item-label">Interrupt Coalescing</div>
-        <div class="degrade-item-value">+10â€“50 Î¼s</div>
+        <div class="degrade-item-value">+10–50 μs</div>
       </div>
       <div class="degrade-item">
         <div class="degrade-item-label">OS Scheduling</div>
-        <div class="degrade-item-value">+100 Î¼s jitter</div>
+        <div class="degrade-item-value">+100 μs jitter</div>
       </div>
     </div>
   </div>
@@ -686,7 +686,7 @@ h1 {
     <div class="calc-steps">
       <div class="calc-step-title">Substituting Values</div>
       <div class="calc-equation">
-        <div class="calc-line">L_eff = (<span class="hl-dram">0.85 × 250ns</span>) + (<span class="hl-flash">0.14 Ã— 15Î¼s</span>) + (<span class="hl-recompute">0.01 Ã— 100ms</span>)</div>
+        <div class="calc-line">L_eff = (<span class="hl-dram">0.85 × 250ns</span>) + (<span class="hl-flash">0.14 × 15μs</span>) + (<span class="hl-recompute">0.01 × 100ms</span>)</div>
         <div class="calc-line">L_eff = <span class="hl-dram">170ns</span> + <span class="hl-flash">2,100ns</span> + <span class="hl-recompute">1,000,000ns</span></div>
         <div class="calc-line final">L_eff = 1,002,270 ns</div>
       </div>
@@ -694,7 +694,7 @@ h1 {
 
     <div class="calc-result">
       <div class="calc-result-label">Effective Latency</div>
-      <div class="calc-result-value">â‰ˆ 1.0 ms</div>
+      <div class="calc-result-value">≈ 1.0 ms</div>
     </div>
 
     <div class="calc-insight">
@@ -710,7 +710,7 @@ h1 {
   <div class="solution-section">
     <div class="solution-title">Intelligent Caching Prevents Thrashing</div>
     <p class="solution-text">
-      The endpoint's intelligent caching prevents thrashingâ€”<strong>high-value entries never evict</strong>, 
+      The endpoint's intelligent caching prevents thrashing—<strong>high-value entries never evict</strong>, 
       eliminating the miss cascades that cause queue buildup. EMA-based scoring ensures frequently-accessed 
       KV entries remain in fast DRAM tier while cold entries gracefully demote to flash.
     </p>

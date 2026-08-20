@@ -197,7 +197,7 @@ h1 {
 }
 
 .product-limitation::before {
-  content: "âš ";
+  content: "⚠";
   font-size: 0.7rem;
 }
 
@@ -468,7 +468,7 @@ h1 {
           <span class="spec">~600ns latency</span>
         </div>
         <div class="product-desc">CXL memory expander with large capacity DRAM pools.</div>
-        <div class="product-limitation">Dumb DRAM â€” no compute, no intelligent caching</div>
+        <div class="product-limitation">Dumb DRAM — no compute, no intelligent caching</div>
       </div>
 
       <div class="product-card">
@@ -484,7 +484,7 @@ h1 {
           <span class="spec">NVIDIA Dynamo</span>
         </div>
         <div class="product-desc">CXL memory pooling integrated with NVIDIA's inference stack.</div>
-        <div class="product-limitation">Memory pooling only â€” no attention-aware eviction</div>
+        <div class="product-limitation">Memory pooling only — no attention-aware eviction</div>
       </div>
 
       <div class="product-card">
@@ -500,7 +500,7 @@ h1 {
           <span class="spec">Academic Research</span>
         </div>
         <div class="product-desc">CXL Type-3 memory expander used in university research settings.</div>
-        <div class="product-limitation">Expander only â€” no processing capability</div>
+        <div class="product-limitation">Expander only — no processing capability</div>
       </div>
 
       <div class="product-card">
@@ -527,7 +527,7 @@ h1 {
       <div class="category-icon research">📚</div>
       <div>
         <div class="category-title">Recent Research</div>
-        <div class="category-subtitle">Octâ€“Dec 2025 (arXiv)</div>
+        <div class="category-subtitle">Oct–Dec 2025 (arXiv)</div>
       </div>
     </div>
 
@@ -536,14 +536,14 @@ h1 {
         <div class="research-date">arXiv 2025</div>
         <div class="research-title">PNM-KV</div>
         <div class="research-desc">CXL-enabled processing-near-memory that offloads token page selection to a PNM accelerator.</div>
-        <div class="research-result">21.9Ã— throughput (1M tokens)</div>
+        <div class="research-result">21.9× throughput (1M tokens)</div>
       </div>
 
       <div class="research-card">
         <div class="research-date">arXiv 2025</div>
         <div class="research-title">CXL-SpecKV</div>
         <div class="research-desc">FPGA-based speculative KV-cache prefetching with compression.</div>
-        <div class="research-result">4â€“8Ã— memory expansion</div>
+        <div class="research-result">4–8× memory expansion</div>
       </div>
 
       <div class="research-card">
@@ -591,7 +591,7 @@ h1 {
     <div class="gap-closest">
       <span class="gap-closest-icon">💡</span>
       <span class="gap-closest-text">
-        <strong>Closest: PNM-KV</strong> â€” but they do token selection, not per-head eviction with attention weighting. 
+        <strong>Closest: PNM-KV</strong> — but they do token selection, not per-head eviction with attention weighting. 
         The opportunity is more fine-grained and model-architecture-aware.
       </span>
     </div>
@@ -606,28 +606,28 @@ h1 {
 
     <div class="opportunity-features">
       <div class="feature">
-        <div class="feature-check">âœ“</div>
+        <div class="feature-check">✓</div>
         <div class="feature-content">
           <div class="feature-title">Per-KV-Head Eviction</div>
           <div class="feature-desc">Track 640 GQA queues independently, evict at head granularity</div>
         </div>
       </div>
       <div class="feature">
-        <div class="feature-check">âœ“</div>
+        <div class="feature-check">✓</div>
         <div class="feature-content">
           <div class="feature-title">EMA-Based Scoring</div>
           <div class="feature-desc">Smooth attention scores over time, prevent thrashing</div>
         </div>
       </div>
       <div class="feature">
-        <div class="feature-check">âœ“</div>
+        <div class="feature-check">✓</div>
         <div class="feature-content">
           <div class="feature-title">RoPE Locality Prefetch</div>
           <div class="feature-desc">Exploit position encoding structure for predictive fetch</div>
         </div>
       </div>
       <div class="feature">
-        <div class="feature-check">âœ“</div>
+        <div class="feature-check">✓</div>
         <div class="feature-content">
           <div class="feature-title">Model-Architecture Aware</div>
           <div class="feature-desc">Understands transformer structure, not just memory pages</div>

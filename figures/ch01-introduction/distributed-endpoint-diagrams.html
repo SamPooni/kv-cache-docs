@@ -141,14 +141,14 @@ h1 { font-size: 1.875rem; font-weight: 700; text-align: center; margin-bottom: 8
     <div class="card-title">THE PROBLEM: Attention is Memory-Bound</div>
     <div class="problem-inner">
       <p>Transformer attention: dominated by KV-cache reads</p>
-      <strong>Few FLOPs per byte loaded â†’ GPU waits for data</strong>
+      <strong>Few FLOPs per byte loaded → GPU waits for data</strong>
     </div>
   </div>
 
   <!-- Llama-70B KV-Cache -->
   <div class="card kv">
     <div class="card-title">Llama-70B KV-Cache Size</div>
-    <div class="card-subtitle">80 layers Ã— 8 KV-heads Ã— 128 dim Ã— seq_len Ã— batch Ã— 4 bytes</div>
+    <div class="card-subtitle">80 layers × 8 KV-heads × 128 dim × seq_len × batch × 4 bytes</div>
     <div class="kv-grid">
       <div class="kv-box">
         <div class="kv-box-title">128K Context</div>
@@ -188,7 +188,7 @@ h1 { font-size: 1.875rem; font-weight: 700; text-align: center; margin-bottom: 8
           <div class="wall-calc-label">KV-Cache (Batch 32)</div>
           <div class="wall-calc-value">1,280 GB</div>
         </div>
-        <div class="wall-calc-op">Ã·</div>
+        <div class="wall-calc-op">÷</div>
         <div class="wall-calc-item">
           <div class="wall-calc-label">HBM Capacity</div>
           <div class="wall-calc-value">192 GB</div>
@@ -196,7 +196,7 @@ h1 { font-size: 1.875rem; font-weight: 700; text-align: center; margin-bottom: 8
       </div>
       <div class="wall-result">
         <div class="wall-result-label">Working set exceeds on-chip memory by</div>
-        <div class="wall-result-value">16Ã—</div>
+        <div class="wall-result-value">16×</div>
       </div>
     </div>
     <div class="wall bandwidth">
@@ -206,7 +206,7 @@ h1 { font-size: 1.875rem; font-weight: 700; text-align: center; margin-bottom: 8
           <div class="wall-calc-label">HBM3 Bandwidth</div>
           <div class="wall-calc-value">8,000 GB/s</div>
         </div>
-        <div class="wall-calc-op">Ã·</div>
+        <div class="wall-calc-op">÷</div>
         <div class="wall-calc-item">
           <div class="wall-calc-label">PCIe 5.0 Sustained</div>
           <div class="wall-calc-value">51 GB/s</div>
@@ -214,7 +214,7 @@ h1 { font-size: 1.875rem; font-weight: 700; text-align: center; margin-bottom: 8
       </div>
       <div class="wall-result">
         <div class="wall-result-label">Off-chip access penalty</div>
-        <div class="wall-result-value">65Ã—</div>
+        <div class="wall-result-value">65×</div>
       </div>
     </div>
   </div>
@@ -226,12 +226,12 @@ h1 { font-size: 1.875rem; font-weight: 700; text-align: center; margin-bottom: 8
       <div class="latency-box good">
         <div class="latency-label">From HBM</div>
         <div class="latency-value">12 ms</div>
-        <div class="latency-calc">40 GB Ã· 8,000 GB/s</div>
+        <div class="latency-calc">40 GB ÷ 8,000 GB/s</div>
       </div>
       <div class="latency-box bad">
         <div class="latency-label">From PCIe</div>
         <div class="latency-value">780 ms</div>
-        <div class="latency-calc">40 GB Ã· 51 GB/s</div>
+        <div class="latency-calc">40 GB ÷ 51 GB/s</div>
       </div>
     </div>
     <div class="latency-footer">
@@ -244,7 +244,7 @@ h1 { font-size: 1.875rem; font-weight: 700; text-align: center; margin-bottom: 8
   <div class="card bottom">
     <div class="bottom-label">THE BOTTLENECK</div>
     <div class="bottom-title">The GPU doesn't lack compute. It lacks data.</div>
-    <div class="bottom-desc">Capacity gap (16Ã—) forces off-chip storage. Bandwidth gap (65Ã—) makes off-chip access catastrophic.</div>
+    <div class="bottom-desc">Capacity gap (16×) forces off-chip storage. Bandwidth gap (65×) makes off-chip access catastrophic.</div>
   </div>
 
   <!-- References -->

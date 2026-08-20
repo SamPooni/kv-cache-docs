@@ -339,19 +339,19 @@ h1 {
         <div class="config-item">
           <div class="config-label">Prefetch Window</div>
           <div class="config-value">W = 3</div>
-          <div class="config-unit">Â±3 positions</div>
+          <div class="config-unit">±3 positions</div>
         </div>
         <div class="config-item">
           <div class="config-label">Storage Latency</div>
           <div class="config-value">50</div>
-          <div class="config-unit">Âµs per fetch</div>
+          <div class="config-unit">µs per fetch</div>
         </div>
       </div>
       
       <div class="formula-box">
         <div class="formula-text">
-          Query at position <span class="red">P</span> â†’ Prefetch 
-          [<span class="highlight">Pâˆ’3</span>, <span class="highlight">P+3</span>] into GPU cache
+          Query at position <span class="red">P</span> → Prefetch 
+          [<span class="highlight">P−3</span>, <span class="highlight">P+3</span>] into GPU cache
         </div>
       </div>
 
@@ -411,7 +411,7 @@ h1 {
         </div>
         <p style="color:#666; font-size:0.9rem; max-width:600px; text-align:center;">
           RoPE causes attention to concentrate around the query position. 
-          Positions 5â€“11 (within Â±3 of query P=8) capture <strong>~72%</strong> of total attention mass.
+          Positions 5–11 (within ±3 of query P=8) capture <strong>~72%</strong> of total attention mass.
         </p>
       </div>
     </div>
@@ -425,11 +425,11 @@ h1 {
     </div>
     <div class="card">
       <div class="timeline">
-        <div class="timeline-step" data-time="t = 0 Âµs">
+        <div class="timeline-step" data-time="t = 0 µs">
           <div class="timeline-dot miss"></div>
           <div class="step-title">🔴 Cache Miss: Query P=8 ("dog")</div>
           <div class="step-detail">
-            GPU requests KV for position 8. Not in cache â†’ fetch from storage.
+            GPU requests KV for position 8. Not in cache → fetch from storage.
             <br>Trigger prefetch for window [5, 11].
           </div>
           <div class="step-cache">
@@ -438,9 +438,9 @@ h1 {
           </div>
         </div>
 
-        <div class="timeline-step" data-time="t = 50 Âµs">
+        <div class="timeline-step" data-time="t = 50 µs">
           <div class="timeline-dot fetch"></div>
-          <div class="step-title">â³ Fetching P=8 + Prefetch [5,11]</div>
+          <div class="step-title">⏳ Fetching P=8 + Prefetch [5,11]</div>
           <div class="step-detail">
             Storage returns position 8. Async prefetch loads positions 5,6,7,9,10,11.
           </div>
@@ -456,15 +456,15 @@ h1 {
           </div>
         </div>
 
-        <div class="timeline-step" data-time="t = 51 Âµs">
+        <div class="timeline-step" data-time="t = 51 µs">
           <div class="timeline-dot hit"></div>
           <div class="step-title">🟢 Cache Hit: Attention needs P=7 ("lazy")</div>
           <div class="step-detail">
-            High attention weight to position 7 â†’ already prefetched!
+            High attention weight to position 7 → already prefetched!
           </div>
         </div>
 
-        <div class="timeline-step" data-time="t = 52 Âµs">
+        <div class="timeline-step" data-time="t = 52 µs">
           <div class="timeline-dot hit"></div>
           <div class="step-title">🟢 Cache Hits: P=6, P=9, P=10</div>
           <div class="step-detail">
@@ -472,12 +472,12 @@ h1 {
           </div>
         </div>
 
-        <div class="timeline-step" data-time="t = 100 Âµs">
+        <div class="timeline-step" data-time="t = 100 µs">
           <div class="timeline-dot"></div>
-          <div class="step-title">âž¡ Next Query: P=12 ("the")</div>
+          <div class="step-title">➡ Next Query: P=12 ("the")</div>
           <div class="step-detail">
             Autoregressive decode moves to next token. New window [9, 15].
-            <br>Positions 9,10,11 already cached â†’ only fetch 12,13,14,15.
+            <br>Positions 9,10,11 already cached → only fetch 12,13,14,15.
           </div>
           <div class="step-cache">
             <span class="cache-label">Evict:</span>
@@ -517,25 +517,25 @@ h1 {
           <div class="stat-label">Attention Captured</div>
         </div>
         <div class="stat-card good">
-          <div class="stat-value">3.2Ã—</div>
+          <div class="stat-value">3.2×</div>
           <div class="stat-label">Latency Reduction</div>
         </div>
         <div class="stat-card neutral">
-          <div class="stat-value">1.4Ã—</div>
+          <div class="stat-value">1.4×</div>
           <div class="stat-label">Bandwidth Overhead</div>
         </div>
       </div>
 
       <div class="comparison" style="margin-top:1.5rem;">
         <div class="compare-card">
-          <div class="compare-title">âŒ Naive (No Prefetch)</div>
+          <div class="compare-title">❌ Naive (No Prefetch)</div>
           <div class="compare-stat">
             <span>Fetches per query</span>
             <span class="compare-stat-value">16</span>
           </div>
           <div class="compare-stat">
             <span>Avg latency</span>
-            <span class="compare-stat-value">800 Âµs</span>
+            <span class="compare-stat-value">800 µs</span>
           </div>
           <div class="compare-stat">
             <span>Storage round-trips</span>
@@ -543,14 +543,14 @@ h1 {
           </div>
         </div>
         <div class="compare-card winner">
-          <div class="compare-title">âœ… RoPE Prefetch (W=3) <span class="badge success">Winner</span></div>
+          <div class="compare-title">✅ RoPE Prefetch (W=3) <span class="badge success">Winner</span></div>
           <div class="compare-stat">
             <span>Fetches per query</span>
             <span class="compare-stat-value">7</span>
           </div>
           <div class="compare-stat">
             <span>Avg latency</span>
-            <span class="compare-stat-value">250 Âµs</span>
+            <span class="compare-stat-value">250 µs</span>
           </div>
           <div class="compare-stat">
             <span>Storage round-trips</span>

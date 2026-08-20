@@ -416,15 +416,15 @@ h1 {
         <div class="rope-explanation">
           <div class="rope-point">
             <div class="rope-point-title">Rotary Encoding</div>
-            <div class="rope-point-desc">RoPE encodes position by rotating Q/K vectors. Nearby positions have similar rotations â†’ higher dot product.</div>
+            <div class="rope-point-desc">RoPE encodes position by rotating Q/K vectors. Nearby positions have similar rotations → higher dot product.</div>
           </div>
           <div class="rope-point">
             <div class="rope-point-title">Locality Bias</div>
-            <div class="rope-point-desc">On average, ~70% of attention mass falls within Â±W positions of the query, even for long contexts.</div>
+            <div class="rope-point-desc">On average, ~70% of attention mass falls within ±W positions of the query, even for long contexts.</div>
           </div>
           <div class="rope-point">
             <div class="rope-point-title">Predictable Access</div>
-            <div class="rope-point-desc">If GPU requests position P, it will likely need PÂ±W soon. Prefetch proactively.</div>
+            <div class="rope-point-desc">If GPU requests position P, it will likely need P±W soon. Prefetch proactively.</div>
           </div>
         </div>
       </div>
@@ -441,7 +441,7 @@ h1 {
       <div class="prefetch-viz">
         <div class="formula-card">
           <div class="formula-title">Prefetch Rule</div>
-          <div class="formula-content">GPU accesses P â†’ Prefetch [P âˆ’ W, P + W]</div>
+          <div class="formula-content">GPU accesses P → Prefetch [P − W, P + W]</div>
           <div class="formula-note">W = window size, tuned per model based on attention distribution</div>
         </div>
         
@@ -453,13 +453,13 @@ h1 {
             <div class="current-pos">P</div>
             <div class="pos-p-label">Current Access</div>
             <div class="window-edges">
-              <span class="edge-label left">Pâˆ’W</span>
+              <span class="edge-label left">P−W</span>
               <span class="edge-label right">P+W</span>
             </div>
           </div>
           <div class="position-markers">
-            <div class="pos-marker"><div class="pos-tick"></div><div class="pos-label">Pâˆ’2W</div></div>
-            <div class="pos-marker"><div class="pos-tick"></div><div class="pos-label">Pâˆ’W</div></div>
+            <div class="pos-marker"><div class="pos-tick"></div><div class="pos-label">P−2W</div></div>
+            <div class="pos-marker"><div class="pos-tick"></div><div class="pos-label">P−W</div></div>
             <div class="pos-marker"><div class="pos-tick"></div><div class="pos-label">P</div></div>
             <div class="pos-marker"><div class="pos-tick"></div><div class="pos-label">P+W</div></div>
             <div class="pos-marker"><div class="pos-tick"></div><div class="pos-label">P+2W</div></div>
@@ -515,7 +515,7 @@ h1 {
           <div class="dist-bar" style="height:18%"></div>
           <div class="dist-bar" style="height:12%"></div>
         </div>
-        <div class="dist-label">Attention mass distribution Â· <strong>Green = within prefetch window</strong></div>
+        <div class="dist-label">Attention mass distribution · <strong>Green = within prefetch window</strong></div>
       </div>
       
       <div class="w-selection">
@@ -527,7 +527,7 @@ h1 {
         <div class="w-option recommended">
           <div class="w-value">W = 128</div>
           <div class="w-coverage">~75% attention captured</div>
-          <div class="w-tradeoff">âœ“ Balanced for Llama-70B</div>
+          <div class="w-tradeoff">✓ Balanced for Llama-70B</div>
         </div>
         <div class="w-option">
           <div class="w-value">W = 512</div>

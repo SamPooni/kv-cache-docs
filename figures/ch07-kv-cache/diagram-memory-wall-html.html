@@ -276,7 +276,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>Why Attention Has Locality â€” The RoPE Effect</h1>
+        <h1>Why Attention Has Locality — The RoPE Effect</h1>
         <p class="subtitle">Understanding why recent tokens receive more attention than distant ones</p>
         
         <div class="section">
@@ -341,7 +341,7 @@
                         <strong>73%</strong> of attention goes to the <strong>last 10%</strong> of tokens
                     </div>
                     <div class="legend-insight" style="margin-top: 8px; background: rgba(245, 158, 11, 0.1); border-color: #f59e0b;">
-                        This is NOT random â€” it's caused by how positions are encoded (RoPE)
+                        This is NOT random — it's caused by how positions are encoded (RoPE)
                     </div>
                 </div>
             </div>
@@ -386,13 +386,13 @@
                 </svg>
                 
                 <div class="rope-formula">
-                    <div class="main">attention âˆ cos((m - n) Ã— Î¸)</div>
+                    <div class="main">attention ∝ cos((m - n) × θ)</div>
                     <div class="explanation">
                         m = query position<br>
                         n = key position<br>
-                        Î¸ = rotation frequency<br><br>
-                        When distance (m-n) is small â†’ cos â‰ˆ 1 â†’ high attention<br>
-                        When distance is large â†’ cos oscillates â†’ lower average
+                        θ = rotation frequency<br><br>
+                        When distance (m-n) is small → cos ≈ 1 → high attention<br>
+                        When distance is large → cos oscillates → lower average
                     </div>
                 </div>
             </div>

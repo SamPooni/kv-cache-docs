@@ -164,7 +164,7 @@ h1 { font-size: 1.875rem; font-weight: 700; text-align: center; margin-bottom: 8
       <div class="gpu-box">
         <div class="gpu-label">GPU MMU</div>
         <div class="gpu-value">Page Fault</div>
-        <div class="gpu-sub">â†’ CXL.mem Request</div>
+        <div class="gpu-sub">→ CXL.mem Request</div>
       </div>
     </div>
   </div>
@@ -183,11 +183,11 @@ h1 { font-size: 1.875rem; font-weight: 700; text-align: center; margin-bottom: 8
       </div>
       <div class="cxl-arrows">
         <div class="cxl-arrow">
-          <div class="cxl-arrow-label green">â†’ Data Response</div>
+          <div class="cxl-arrow-label green">→ Data Response</div>
           <div class="cxl-arrow-sub">Cache Line (64B)</div>
         </div>
         <div class="cxl-arrow">
-          <div class="cxl-arrow-label blue">â†“ Read Request</div>
+          <div class="cxl-arrow-label blue">↓ Read Request</div>
           <div class="cxl-arrow-sub">Physical Address</div>
         </div>
       </div>
@@ -223,7 +223,7 @@ h1 { font-size: 1.875rem; font-weight: 700; text-align: center; margin-bottom: 8
       <div class="endpoint-tier cold">
         <div class="tier-label cold">Flash (Cold Tier)</div>
         <div class="tier-value">4 TB</div>
-        <div class="tier-latency cold">~50 Î¼s latency</div>
+        <div class="tier-latency cold">~50 μs latency</div>
         <div class="tier-inner cold">
           <div class="tier-inner-label">Evicted KV Entries</div>
           <div class="tier-inner-value">Low attention score</div>
@@ -248,7 +248,7 @@ h1 { font-size: 1.875rem; font-weight: 700; text-align: center; margin-bottom: 8
       <div class="endpoint-tier cold">
         <div class="tier-label cold">Flash (Cold Tier)</div>
         <div class="tier-value">4 TB</div>
-        <div class="tier-latency cold">~50 Î¼s latency</div>
+        <div class="tier-latency cold">~50 μs latency</div>
         <div class="tier-inner cold">
           <div class="tier-inner-label">Evicted KV Entries</div>
           <div class="tier-inner-value">Low attention score</div>
@@ -273,7 +273,7 @@ h1 { font-size: 1.875rem; font-weight: 700; text-align: center; margin-bottom: 8
       <div class="endpoint-tier cold">
         <div class="tier-label cold">Flash (Cold Tier)</div>
         <div class="tier-value">4 TB</div>
-        <div class="tier-latency cold">~50 Î¼s latency</div>
+        <div class="tier-latency cold">~50 μs latency</div>
         <div class="tier-inner cold">
           <div class="tier-inner-label">Evicted KV Entries</div>
           <div class="tier-inner-value">Low attention score</div>
@@ -296,15 +296,15 @@ h1 { font-size: 1.875rem; font-weight: 700; text-align: center; margin-bottom: 8
       </div>
       <div class="flow-step s2">
         <div class="flow-step-title">2. HBM Check</div>
-        <div class="flow-step-desc">Hit â†’ Return (12ms for full scan)<br/>Miss â†’ CXL.mem fault</div>
+        <div class="flow-step-desc">Hit → Return (12ms for full scan)<br/>Miss → CXL.mem fault</div>
       </div>
       <div class="flow-step s3">
         <div class="flow-step-title">3. Endpoint Lookup</div>
-        <div class="flow-step-desc">DRAM hit â†’ 250 ns<br/>Flash hit â†’ 50 Î¼s<br/>Miss â†’ Recompute</div>
+        <div class="flow-step-desc">DRAM hit → 250 ns<br/>Flash hit → 50 μs<br/>Miss → Recompute</div>
       </div>
       <div class="flow-step s4">
         <div class="flow-step-title">4. Prefetch</div>
-        <div class="flow-step-desc">Position P accessed â†’<br/>Prefetch [P-W, P+W]<br/>(RoPE locality)</div>
+        <div class="flow-step-desc">Position P accessed →<br/>Prefetch [P-W, P+W]<br/>(RoPE locality)</div>
       </div>
     </div>
   </div>
@@ -316,25 +316,25 @@ h1 { font-size: 1.875rem; font-weight: 700; text-align: center; margin-bottom: 8
       <div class="policy-box">
         <div class="policy-title">Access Tracking</div>
         <div class="policy-list">
-          â€¢ 640 LRU queues (8 heads Ã— 80 layers)<br/>
-          â€¢ Entry: position, count, score_ema<br/>
-          â€¢ Metadata: 640 MB for 128K context
+          • 640 LRU queues (8 heads × 80 layers)<br/>
+          • Entry: position, count, score_ema<br/>
+          • Metadata: 640 MB for 128K context
         </div>
       </div>
       <div class="policy-box">
         <div class="policy-title">Score Integration</div>
         <div class="policy-list">
-          â€¢ Attention scores via CXL.io mailbox<br/>
-          â€¢ score_ema = Î± Ã— new + (1-Î±) Ã— old<br/>
-          â€¢ High score â†’ Retain in DRAM
+          • Attention scores via CXL.io mailbox<br/>
+          • score_ema = α × new + (1-α) × old<br/>
+          • High score → Retain in DRAM
         </div>
       </div>
       <div class="policy-box">
         <div class="policy-title">Eviction Priority</div>
         <div class="policy-list">
-          â€¢ f(recency_rank, score_ema)<br/>
-          â€¢ Low score + old â†’ Flash<br/>
-          â€¢ High score â†’ Keep in DRAM
+          • f(recency_rank, score_ema)<br/>
+          • Low score + old → Flash<br/>
+          • High score → Keep in DRAM
         </div>
       </div>
     </div>
@@ -371,7 +371,7 @@ h1 { font-size: 1.875rem; font-weight: 700; text-align: center; margin-bottom: 8
   <div class="card insight">
     <div class="insight-label">KEY INSIGHT</div>
     <div class="insight-title">GPU sees unified address space. Endpoint manages tier placement transparently.</div>
-    <div class="insight-desc">CXL.mem provides load/store semantics â€” no explicit I/O commands.<br/>Endpoint firmware handles caching, prefetching, and promotion/demotion.</div>
+    <div class="insight-desc">CXL.mem provides load/store semantics — no explicit I/O commands.<br/>Endpoint firmware handles caching, prefetching, and promotion/demotion.</div>
   </div>
 
 </div>

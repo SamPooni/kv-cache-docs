@@ -236,7 +236,7 @@ h1 {
 <body>
 <div class="container">
   <h1>Per-Head Tracking with GQA</h1>
-  <p class="subtitle">Llama-70B: 64 Query Heads â†’ 8 KV-Heads Ã— 80 Layers = 640 LRU Queues</p>
+  <p class="subtitle">Llama-70B: 64 Query Heads → 8 KV-Heads × 80 Layers = 640 LRU Queues</p>
 
   <div class="section-title">1. GQA Grouping Defines Tracking Unit</div>
   <div class="gqa-mapping">
@@ -251,9 +251,9 @@ h1 {
         <div class="q-head">Q6</div>
         <div class="q-head">Q7</div>
       </div>
-      <div class="arrow-map">â†’</div>
+      <div class="arrow-map">→</div>
       <div class="kv-head-box">KV-Head 0</div>
-      <div class="arrow-map">â†’</div>
+      <div class="arrow-map">→</div>
       <div class="track-indicator">LRU Queue [layer, 0]</div>
     </div>
     <div class="mapping-row">
@@ -267,12 +267,12 @@ h1 {
         <div class="q-head">Q14</div>
         <div class="q-head">Q15</div>
       </div>
-      <div class="arrow-map">â†’</div>
+      <div class="arrow-map">→</div>
       <div class="kv-head-box">KV-Head 1</div>
-      <div class="arrow-map">â†’</div>
+      <div class="arrow-map">→</div>
       <div class="track-indicator">LRU Queue [layer, 1]</div>
     </div>
-    <div style="text-align:center;color:#888;font-size:1.1rem;margin:0.5rem 0">â‹®</div>
+    <div style="text-align:center;color:#888;font-size:1.1rem;margin:0.5rem 0">⋮</div>
     <div class="mapping-row">
       <div class="q-group">
         <div class="q-head">Q56</div>
@@ -284,9 +284,9 @@ h1 {
         <div class="q-head">Q62</div>
         <div class="q-head">Q63</div>
       </div>
-      <div class="arrow-map">â†’</div>
+      <div class="arrow-map">→</div>
       <div class="kv-head-box">KV-Head 7</div>
-      <div class="arrow-map">â†’</div>
+      <div class="arrow-map">→</div>
       <div class="track-indicator">LRU Queue [layer, 7]</div>
     </div>
   </div>
@@ -338,7 +338,7 @@ h1 {
   <div class="queue-detail">
     <div class="queue-header">
       <div class="queue-label">Queue [Layer 42, KV-Head 3]</div>
-      <span style="color:#666;font-size:1rem">â† One of 640 queues</span>
+      <span style="color:#666;font-size:1rem">← One of 640 queues</span>
     </div>
     <div class="lru-visual">
       <div class="lru-entry hot">
@@ -346,31 +346,31 @@ h1 {
         <div class="entry-field">access: <span>847</span></div>
         <div class="entry-field">attn: <span>0.92</span></div>
       </div>
-      <div class="lru-arrow">â†’</div>
+      <div class="lru-arrow">→</div>
       <div class="lru-entry hot">
         <div class="entry-pos">pos: 0</div>
         <div class="entry-field">access: <span>512</span></div>
         <div class="entry-field">attn: <span>0.88</span></div>
       </div>
-      <div class="lru-arrow">â†’</div>
+      <div class="lru-arrow">→</div>
       <div class="lru-entry warm">
         <div class="entry-pos">pos: 1024</div>
         <div class="entry-field">access: <span>234</span></div>
         <div class="entry-field">attn: <span>0.45</span></div>
       </div>
-      <div class="lru-arrow">â†’</div>
+      <div class="lru-arrow">→</div>
       <div class="lru-entry warm">
         <div class="entry-pos">pos: 89012</div>
         <div class="entry-field">access: <span>89</span></div>
         <div class="entry-field">attn: <span>0.31</span></div>
       </div>
-      <div class="lru-arrow">â†’</div>
+      <div class="lru-arrow">→</div>
       <div class="lru-entry cold">
         <div class="entry-pos">pos: 45678</div>
         <div class="entry-field">access: <span>12</span></div>
         <div class="entry-field">attn: <span>0.08</span></div>
       </div>
-      <div class="lru-arrow">â†’</div>
+      <div class="lru-arrow">→</div>
       <div class="evict-zone">EVICT<br>CANDIDATES</div>
     </div>
   </div>
@@ -378,12 +378,12 @@ h1 {
   <div class="summary-box">
     <div class="summary-title">Per-Entry Metadata (8 bytes)</div>
     <div class="summary-grid">
-      <div class="summary-item"><strong>position_id</strong> â€” u32 (4B)</div>
-      <div class="summary-item"><strong>access_count</strong> â€” u16 (2B)</div>
-      <div class="summary-item"><strong>attention_score</strong> â€” fp16 (2B)</div>
+      <div class="summary-item"><strong>position_id</strong> — u32 (4B)</div>
+      <div class="summary-item"><strong>access_count</strong> — u16 (2B)</div>
+      <div class="summary-item"><strong>attention_score</strong> — fp16 (2B)</div>
     </div>
     <div class="total-calc">
-      640 queues Ã— 131,072 positions Ã— 8 bytes = <strong>640 MB</strong> metadata
+      640 queues × 131,072 positions × 8 bytes = <strong>640 MB</strong> metadata
     </div>
   </div>
 </div>

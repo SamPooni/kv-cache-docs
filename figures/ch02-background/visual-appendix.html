@@ -171,14 +171,14 @@ td { color: #c8d0e0; }
 <body>
 
 <h1>Technical Appendix</h1>
-<p class="subtitle">KV-Cache Offloading for LLM Inference â€” Visual Reference</p>
+<p class="subtitle">KV-Cache Offloading for LLM Inference — Visual Reference</p>
 
 <!-- ============================================ -->
 <h2>1. Transformer Architecture</h2>
 <p>Llama-70B consists of 80 identical layers. Each layer performs attention followed by a feed-forward transformation.</p>
 
 <div class="diagram">
-  <div class="diagram-label">Diagram 1.1 â€” Layer Structure</div>
+  <div class="diagram-label">Diagram 1.1 — Layer Structure</div>
   
   <div class="flex gap-30 items-center" style="justify-content: center; flex-wrap: wrap;">
     <div class="flex-col gap-10" style="width: 220px;">
@@ -186,7 +186,7 @@ td { color: #c8d0e0; }
       <div class="arrow-down"></div>
       
       <div style="border: 2px solid #4a5a7a; border-radius: 14px; padding: 18px;">
-        <div style="font-size:0.9rem; color:#7080a0; margin-bottom:12px;">Ã— 80 LAYERS</div>
+        <div style="font-size:0.9rem; color:#7080a0; margin-bottom:12px;">× 80 LAYERS</div>
         <div class="box box-blue" style="text-align:center; margin-bottom:10px;">Self-Attention</div>
         <div class="box box-purple" style="text-align:center;">Feed-Forward</div>
       </div>
@@ -215,7 +215,7 @@ td { color: #c8d0e0; }
 <p>Each token computes Query, Key, and Value vectors. Attention scores determine how much each previous token contributes to the output.</p>
 
 <div class="diagram">
-  <div class="diagram-label">Diagram 2.1 â€” Q, K, V Projections</div>
+  <div class="diagram-label">Diagram 2.1 — Q, K, V Projections</div>
   
   <div class="flex gap-30 items-center" style="justify-content:center; flex-wrap: wrap;">
     <div class="flex-col items-center gap-10">
@@ -258,15 +258,15 @@ td { color: #c8d0e0; }
     
     <div class="info-box" style="max-width:320px;">
       <div style="font-size:1rem; color:#8898b8; margin-bottom:15px;">What each vector represents:</div>
-      <div style="font-size:1.05rem; color:var(--red); margin:12px 0;">Q â€” "What am I looking for?"</div>
-      <div style="font-size:1.05rem; color:var(--green); margin:12px 0;">K â€” "What do I contain?"</div>
-      <div style="font-size:1.05rem; color:var(--blue); margin:12px 0;">V â€” "What do I contribute?"</div>
+      <div style="font-size:1.05rem; color:var(--red); margin:12px 0;">Q — "What am I looking for?"</div>
+      <div style="font-size:1.05rem; color:var(--green); margin:12px 0;">K — "What do I contain?"</div>
+      <div style="font-size:1.05rem; color:var(--blue); margin:12px 0;">V — "What do I contribute?"</div>
     </div>
   </div>
 </div>
 
 <div class="diagram">
-  <div class="diagram-label">Diagram 2.2 â€” Attention Score Computation</div>
+  <div class="diagram-label">Diagram 2.2 — Attention Score Computation</div>
   
   <div class="flex gap-30" style="justify-content:center; flex-wrap:wrap;">
     <div class="flex-col gap-20">
@@ -276,7 +276,7 @@ td { color: #c8d0e0; }
         <div style="width:100px; font-size:0.95rem; color:#8898b8;">Position 0</div>
         <div style="flex:1; display:flex; align-items:center; gap:12px;">
           <span style="color:var(--red); font-size:1rem;">Q<sub>france</sub></span>
-          <span style="color:#5a6a8a;">Â·</span>
+          <span style="color:#5a6a8a;">·</span>
           <span style="color:var(--green); font-size:1rem;">K<sub>the</sub></span>
           <span style="color:#5a6a8a;">=</span>
           <div style="width:100px; height:24px; background:#1a2245; border-radius:4px; overflow:hidden;">
@@ -290,7 +290,7 @@ td { color: #c8d0e0; }
         <div style="width:100px; font-size:0.95rem; color:#8898b8;">Position 1</div>
         <div style="flex:1; display:flex; align-items:center; gap:12px;">
           <span style="color:var(--red); font-size:1rem;">Q<sub>france</sub></span>
-          <span style="color:#5a6a8a;">Â·</span>
+          <span style="color:#5a6a8a;">·</span>
           <span style="color:var(--green); font-size:1rem;">K<sub>capital</sub></span>
           <span style="color:#5a6a8a;">=</span>
           <div style="width:100px; height:24px; background:#1a2245; border-radius:4px; overflow:hidden;">
@@ -304,7 +304,7 @@ td { color: #c8d0e0; }
         <div style="width:100px; font-size:0.95rem; color:#8898b8;">Position 2</div>
         <div style="flex:1; display:flex; align-items:center; gap:12px;">
           <span style="color:var(--red); font-size:1rem;">Q<sub>france</sub></span>
-          <span style="color:#5a6a8a;">Â·</span>
+          <span style="color:#5a6a8a;">·</span>
           <span style="color:var(--green); font-size:1rem;">K<sub>of</sub></span>
           <span style="color:#5a6a8a;">=</span>
           <div style="width:100px; height:24px; background:#1a2245; border-radius:4px; overflow:hidden;">
@@ -318,7 +318,7 @@ td { color: #c8d0e0; }
         <div style="width:100px; font-size:0.95rem; color:#8898b8;">Position 3</div>
         <div style="flex:1; display:flex; align-items:center; gap:12px;">
           <span style="color:var(--red); font-size:1rem;">Q<sub>france</sub></span>
-          <span style="color:#5a6a8a;">Â·</span>
+          <span style="color:#5a6a8a;">·</span>
           <span style="color:var(--green); font-size:1rem;">K<sub>france</sub></span>
           <span style="color:#5a6a8a;">=</span>
           <div style="width:100px; height:24px; background:#1a2245; border-radius:4px; overflow:hidden;">
@@ -371,7 +371,7 @@ td { color: #c8d0e0; }
 <p>The KV-cache stores Key and Value vectors for all processed tokens, eliminating redundant computation during generation.</p>
 
 <div class="diagram">
-  <div class="diagram-label">Diagram 3.1 â€” KV-Cache Organization</div>
+  <div class="diagram-label">Diagram 3.1 — KV-Cache Organization</div>
   
   <div style="display:grid; grid-template-columns: repeat(8, 1fr); gap:6px; margin-bottom:25px;">
     <div style="grid-column: span 8; text-align:center; font-size:0.9rem; color:#8898b8; padding:10px;">Layer 1</div>
@@ -393,17 +393,17 @@ td { color: #c8d0e0; }
     <div style="background:rgba(77,171,247,0.3); padding:12px; border-radius:6px; text-align:center; font-size:0.85rem; color:var(--blue);">V<sub>h7</sub></div>
   </div>
   
-  <div style="text-align:center; color:#6a7a9a; font-size:1rem; margin:20px 0;">â‹® Ã— 80 layers â‹®</div>
+  <div style="text-align:center; color:#6a7a9a; font-size:1rem; margin:20px 0;">⋮ × 80 layers ⋮</div>
   
   <div class="equation" style="margin-top:25px;">
-Size = L Ã— H_kv Ã— seq_len Ã— d_head Ã— 2 Ã— bytes
-     = 80 Ã— 8 Ã— seq_len Ã— 128 Ã— 2 Ã— 2
+Size = L × H_kv × seq_len × d_head × 2 × bytes
+     = 80 × 8 × seq_len × 128 × 2 × 2
      = <span style="color:var(--cyan); font-weight:600;">320 KB per token</span>
   </div>
 </div>
 
 <div class="diagram">
-  <div class="diagram-label">Diagram 3.2 â€” KV-Cache Size Scaling</div>
+  <div class="diagram-label">Diagram 3.2 — KV-Cache Size Scaling</div>
   
   <div class="bar-chart">
     <div class="bar-row">
@@ -445,7 +445,7 @@ Size = L Ã— H_kv Ã— seq_len Ã— d_head Ã— 2 Ã— bytes
 <p>The two phases of inference have fundamentally different computational characteristics.</p>
 
 <div class="diagram">
-  <div class="diagram-label">Diagram 4.1 â€” Phase Comparison</div>
+  <div class="diagram-label">Diagram 4.1 — Phase Comparison</div>
   
   <div class="compare">
     <div class="compare-side" style="background:rgba(77,171,247,0.1); border:2px solid var(--blue);">
@@ -461,9 +461,9 @@ Size = L Ã— H_kv Ã— seq_len Ã— d_head Ã— 2 Ã— bytes
       </div>
       
       <div style="font-size:1rem; color:#a0a8b8;">
-        <div style="margin:10px 0;">âœ“ All tokens processed in parallel</div>
-        <div style="margin:10px 0;">âœ“ High arithmetic intensity</div>
-        <div style="margin:10px 0;">âœ“ <strong style="color:var(--blue);">Compute-bound</strong></div>
+        <div style="margin:10px 0;">✓ All tokens processed in parallel</div>
+        <div style="margin:10px 0;">✓ High arithmetic intensity</div>
+        <div style="margin:10px 0;">✓ <strong style="color:var(--blue);">Compute-bound</strong></div>
       </div>
     </div>
     
@@ -475,21 +475,21 @@ Size = L Ã— H_kv Ã— seq_len Ã— d_head Ã— 2 Ã— bytes
         <div style="padding:10px 16px; background:#3a4a6a; color:#8898b8; border-radius:6px; font-size:0.95rem;">The</div>
         <div style="padding:10px 16px; background:#3a4a6a; color:#8898b8; border-radius:6px; font-size:0.95rem;">capital</div>
         <div style="padding:10px 16px; background:#3a4a6a; color:#8898b8; border-radius:6px; font-size:0.95rem;">...</div>
-        <div style="color:#6a7a9a; font-size:1.2rem;">â†’</div>
+        <div style="color:#6a7a9a; font-size:1.2rem;">→</div>
         <div style="padding:10px 16px; background:var(--red); color:#fff; border-radius:6px; font-size:0.95rem;">Paris</div>
       </div>
       
       <div style="font-size:1rem; color:#a0a8b8;">
-        <div style="margin:10px 0;">âœ— One token at a time</div>
-        <div style="margin:10px 0;">âœ— Must read entire KV-cache</div>
-        <div style="margin:10px 0;">âœ— <strong style="color:var(--red);">Memory-bandwidth-bound</strong></div>
+        <div style="margin:10px 0;">✗ One token at a time</div>
+        <div style="margin:10px 0;">✗ Must read entire KV-cache</div>
+        <div style="margin:10px 0;">✗ <strong style="color:var(--red);">Memory-bandwidth-bound</strong></div>
       </div>
     </div>
   </div>
 </div>
 
 <div class="diagram">
-  <div class="diagram-label">Diagram 4.2 â€” Decode Memory Access Pattern</div>
+  <div class="diagram-label">Diagram 4.2 — Decode Memory Access Pattern</div>
   
   <div class="flex gap-30" style="justify-content:center; flex-wrap:wrap;">
     <div style="text-align:center;">
@@ -515,9 +515,9 @@ Size = L Ã— H_kv Ã— seq_len Ã— d_head Ã— 2 Ã— bytes
       <div style="font-size:1rem; color:#8898b8; margin-bottom:18px;">Bandwidth requirement:</div>
       <div class="equation" style="background:transparent; padding:0;">
 At 20 tokens/sec:
-181 GB Ã— 20 = <span style="color:var(--cyan); font-weight:600;">3.62 TB/s</span>
+181 GB × 20 = <span style="color:var(--cyan); font-weight:600;">3.62 TB/s</span>
 
-B200 provides: 8 TB/s âœ“
+B200 provides: 8 TB/s ✓
       </div>
     </div>
   </div>
@@ -528,27 +528,27 @@ B200 provides: 8 TB/s âœ“
 <p>GPU memory capacity, not compute or bandwidth, becomes the limiting factor with multiple users.</p>
 
 <div class="diagram">
-  <div class="diagram-label">Diagram 5.1 â€” Single User Memory Layout</div>
+  <div class="diagram-label">Diagram 5.1 — Single User Memory Layout</div>
   
   <div style="margin-bottom:18px;">
     <div style="display:flex; justify-content:space-between; font-size:1rem; color:#8898b8; margin-bottom:8px;">
-      <span>B200 HBM â€” 192 GB</span>
+      <span>B200 HBM — 192 GB</span>
       <span>10 GB free</span>
     </div>
     <div class="mem-bar">
-      <div style="width:73%; background:var(--red);">Model Weights â€” 140 GB</div>
-      <div style="width:21%; background:var(--blue);">KV â€” 41 GB</div>
+      <div style="width:73%; background:var(--red);">Model Weights — 140 GB</div>
+      <div style="width:21%; background:var(--blue);">KV — 41 GB</div>
       <div style="width:6%; background:#2a3a5a; color:#6a7a9a;">Free</div>
     </div>
   </div>
   
   <div style="text-align:center; padding:18px; background:rgba(81,207,102,0.15); border:2px solid var(--green); border-radius:10px; margin-top:25px;">
-    <span style="color:var(--green); font-size:1.05rem;">âœ“ Single user at 128K context fits</span>
+    <span style="color:var(--green); font-size:1.05rem;">✓ Single user at 128K context fits</span>
   </div>
 </div>
 
 <div class="diagram">
-  <div class="diagram-label">Diagram 5.2 â€” Multi-User Memory Explosion</div>
+  <div class="diagram-label">Diagram 5.2 — Multi-User Memory Explosion</div>
   
   <div style="display:flex; flex-direction:column; gap:20px;">
     <div>
@@ -558,7 +558,7 @@ B200 provides: 8 TB/s âœ“
       </div>
       <div class="mem-bar" style="height:40px;">
         <div style="width:63%; background:var(--red); font-size:0.9rem;">Weights</div>
-        <div style="width:37%; background:var(--blue); font-size:0.9rem;">KV Ã—2</div>
+        <div style="width:37%; background:var(--blue); font-size:0.9rem;">KV ×2</div>
       </div>
     </div>
     
@@ -569,7 +569,7 @@ B200 provides: 8 TB/s âœ“
       </div>
       <div class="mem-bar" style="height:40px;">
         <div style="width:46%; background:var(--red); font-size:0.9rem;">Weights</div>
-        <div style="width:54%; background:var(--blue); font-size:0.9rem;">KV Ã—4</div>
+        <div style="width:54%; background:var(--blue); font-size:0.9rem;">KV ×4</div>
       </div>
     </div>
     
@@ -580,7 +580,7 @@ B200 provides: 8 TB/s âœ“
       </div>
       <div class="mem-bar" style="height:40px;">
         <div style="width:30%; background:var(--red); font-size:0.9rem;">Weights</div>
-        <div style="width:70%; background:var(--blue); font-size:0.9rem;">KV Ã—8</div>
+        <div style="width:70%; background:var(--blue); font-size:0.9rem;">KV ×8</div>
       </div>
     </div>
   </div>
@@ -590,7 +590,7 @@ B200 provides: 8 TB/s âœ“
       <span style="color:var(--red); font-size:1rem;">B200 capacity: 192 GB</span>
     </div>
     <div style="padding:15px 25px; background:rgba(255,107,107,0.15); border:2px solid var(--red); border-radius:10px;">
-      <span style="color:var(--red); font-size:1rem;">8 users need: 468 GB (2.4Ã— over)</span>
+      <span style="color:var(--red); font-size:1rem;">8 users need: 468 GB (2.4× over)</span>
     </div>
   </div>
 </div>
@@ -600,7 +600,7 @@ B200 provides: 8 TB/s âœ“
 <p>Empirical measurement reveals that attention concentrates heavily on recent tokens.</p>
 
 <div class="diagram">
-  <div class="diagram-label">Diagram 6.1 â€” Attention Distribution (10K Context)</div>
+  <div class="diagram-label">Diagram 6.1 — Attention Distribution (10K Context)</div>
   
   <div style="display:flex; gap:40px; justify-content:center; flex-wrap:wrap;">
     <div style="width:320px;">
@@ -637,13 +637,13 @@ B200 provides: 8 TB/s âœ“
 </div>
 
 <div class="diagram">
-  <div class="diagram-label">Diagram 6.2 â€” Attention Heatmap (Simplified)</div>
+  <div class="diagram-label">Diagram 6.2 — Attention Heatmap (Simplified)</div>
   
   <div style="display:flex; gap:40px; align-items:center; justify-content:center; flex-wrap:wrap;">
     <div>
       <div style="font-size:0.95rem; color:#8898b8; margin-bottom:15px; text-align:center;">Current token attending to context</div>
       <div style="display:flex;">
-        <div style="writing-mode:vertical-rl; transform:rotate(180deg); font-size:0.85rem; color:#8898b8; padding-right:12px;">â† Earlier | Recent â†’</div>
+        <div style="writing-mode:vertical-rl; transform:rotate(180deg); font-size:0.85rem; color:#8898b8; padding-right:12px;">← Earlier | Recent →</div>
         <div style="display:grid; grid-template-columns:repeat(20,16px); gap:3px;">
           <div style="width:16px; height:16px; background:rgba(34,211,238,0.05); border-radius:3px;"></div>
           <div style="width:16px; height:16px; background:rgba(34,211,238,0.05); border-radius:3px;"></div>
@@ -695,7 +695,7 @@ B200 provides: 8 TB/s âœ“
 <p>Rotary Position Embedding creates locality as a geometric property of how positions are encoded.</p>
 
 <div class="diagram">
-  <div class="diagram-label">Diagram 7.1 â€” RoPE Rotation Concept</div>
+  <div class="diagram-label">Diagram 7.1 — RoPE Rotation Concept</div>
   
   <div class="flex gap-40" style="justify-content:center; flex-wrap:wrap;">
     <div style="text-align:center;">
@@ -709,32 +709,32 @@ B200 provides: 8 TB/s âœ“
         <line x1="120" y1="120" x2="210" y2="105" stroke="var(--green)" stroke-width="3"/>
         <circle cx="210" cy="105" r="6" fill="var(--green)"/>
         <circle cx="120" cy="120" r="5" fill="#fff"/>
-        <text x="210" y="138" fill="var(--red)" font-size="13" font-family="monospace">Î¸â‚€ = 1.0</text>
-        <text x="188" y="58" fill="var(--orange)" font-size="13" font-family="monospace">Î¸â‚ƒâ‚‚</text>
-        <text x="212" y="98" fill="var(--green)" font-size="13" font-family="monospace">Î¸â‚†â‚ƒ = 0.0001</text>
+        <text x="210" y="138" fill="var(--red)" font-size="13" font-family="monospace">θ₀ = 1.0</text>
+        <text x="188" y="58" fill="var(--orange)" font-size="13" font-family="monospace">θ₃₂</text>
+        <text x="212" y="98" fill="var(--green)" font-size="13" font-family="monospace">θ₆₃ = 0.0001</text>
       </svg>
-      <div style="font-size:0.95rem; color:#8898b8; margin-top:15px;">Position m rotates each pair by m Ã— Î¸áµ¢</div>
+      <div style="font-size:0.95rem; color:#8898b8; margin-top:15px;">Position m rotates each pair by m × θáµ¢</div>
     </div>
     
     <div class="info-box">
       <div style="font-size:1rem; color:#8898b8; margin-bottom:15px;">Frequency formula:</div>
       <div class="equation" style="background:transparent; padding:12px 0;">
-Î¸áµ¢ = 10000<sup>âˆ’2i/d</sup>
+θáµ¢ = 10000<sup>−2i/d</sup>
 
-Î¸â‚€  = 1.0       <span style="color:#6a7a9a;">(fast)</span>
-Î¸â‚ƒâ‚‚ = 0.01     <span style="color:#6a7a9a;">(medium)</span>
-Î¸â‚†â‚ƒ = 0.0001   <span style="color:#6a7a9a;">(slow)</span>
+θ₀  = 1.0       <span style="color:#6a7a9a;">(fast)</span>
+θ₃₂ = 0.01     <span style="color:#6a7a9a;">(medium)</span>
+θ₆₃ = 0.0001   <span style="color:#6a7a9a;">(slow)</span>
       </div>
       <div style="font-size:1rem; color:#a0a8b8; margin-top:18px;">
-        Fast dims â†’ local patterns<br>
-        Slow dims â†’ global patterns
+        Fast dims → local patterns<br>
+        Slow dims → global patterns
       </div>
     </div>
   </div>
 </div>
 
 <div class="diagram">
-  <div class="diagram-label">Diagram 7.2 â€” Distance-Dependent Decay</div>
+  <div class="diagram-label">Diagram 7.2 — Distance-Dependent Decay</div>
   
   <div style="margin-bottom:25px;">
     <div style="font-size:1rem; color:#a0a8b8; margin-bottom:20px;">Average cosine factor by distance:</div>
@@ -774,10 +774,10 @@ B200 provides: 8 TB/s âœ“
   </div>
   
   <div class="equation">
-score(m, n) âˆ Î£áµ¢ cos((m âˆ’ n) Â· Î¸áµ¢)
+score(m, n) ∝ Σáµ¢ cos((m − n) · θáµ¢)
 
-<span style="color:var(--green);">Small distance â†’ cos â‰ˆ 1 â†’ high attention</span>
-<span style="color:var(--red);">Large distance â†’ cos oscillates â†’ lower attention</span>
+<span style="color:var(--green);">Small distance → cos ≈ 1 → high attention</span>
+<span style="color:var(--red);">Large distance → cos oscillates → lower attention</span>
   </div>
 </div>
 
@@ -786,7 +786,7 @@ score(m, n) âˆ Î£áµ¢ cos((m âˆ’ n) Â· Î¸áµ¢)
 <p>Different attention heads specialize for different functions, creating varied access patterns.</p>
 
 <div class="diagram">
-  <div class="diagram-label">Diagram 8.1 â€” Head Specialization</div>
+  <div class="diagram-label">Diagram 8.1 — Head Specialization</div>
   
   <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:20px;">
     <div style="padding:25px; background:#1a2245; border-radius:12px; border-left:4px solid var(--blue);">
@@ -849,7 +849,7 @@ score(m, n) âˆ Î£áµ¢ cos((m âˆ’ n) Â· Î¸áµ¢)
 <p>CXL provides memory expansion at lower cost and bandwidth than HBM.</p>
 
 <div class="diagram">
-  <div class="diagram-label">Diagram 9.1 â€” System Topology</div>
+  <div class="diagram-label">Diagram 9.1 — System Topology</div>
   
   <div style="display:flex; flex-direction:column; align-items:center; gap:15px;">
     <div style="width:340px; padding:25px; background:linear-gradient(135deg, #1e2a4a 0%, #162040 100%); border:3px solid var(--cyan); border-radius:16px; text-align:center;">
@@ -872,7 +872,7 @@ score(m, n) âˆ Î£áµ¢ cos((m âˆ’ n) Â· Î¸áµ¢)
     
     <div style="display:flex; flex-direction:column; align-items:center;">
       <div style="width:5px; height:35px; background:linear-gradient(to bottom, var(--cyan), var(--purple));"></div>
-      <div style="padding:8px 18px; background:#1a2245; border-radius:6px; font-size:0.9rem; color:#a0a8b8;">CXL 3.0 Ã— 16 â€” 64 GB/s</div>
+      <div style="padding:8px 18px; background:#1a2245; border-radius:6px; font-size:0.9rem; color:#a0a8b8;">CXL 3.0 × 16 — 64 GB/s</div>
       <div style="width:5px; height:35px; background:linear-gradient(to bottom, var(--purple), var(--purple));"></div>
     </div>
     
@@ -913,7 +913,7 @@ score(m, n) âˆ Î£áµ¢ cos((m âˆ’ n) Â· Î¸áµ¢)
 </div>
 
 <div class="diagram">
-  <div class="diagram-label">Diagram 9.2 â€” HBM vs CXL Comparison</div>
+  <div class="diagram-label">Diagram 9.2 — HBM vs CXL Comparison</div>
   
   <table>
     <thead>
@@ -929,31 +929,31 @@ score(m, n) âˆ Î£áµ¢ cos((m âˆ’ n) Â· Î¸áµ¢)
         <td>Bandwidth</td>
         <td class="mono">8 TB/s</td>
         <td class="mono">256 GB/s</td>
-        <td style="color:var(--red);">31Ã— less</td>
+        <td style="color:var(--red);">31× less</td>
       </tr>
       <tr>
         <td>Latency</td>
         <td class="mono">100 ns</td>
         <td class="mono">250 ns</td>
-        <td style="color:var(--orange);">2.5Ã— more</td>
+        <td style="color:var(--orange);">2.5× more</td>
       </tr>
       <tr>
         <td>Capacity</td>
         <td class="mono">192 GB</td>
         <td class="mono">1 TB</td>
-        <td style="color:var(--green);">5Ã— more</td>
+        <td style="color:var(--green);">5× more</td>
       </tr>
       <tr>
         <td>Cost per GB</td>
         <td class="mono">~$50</td>
         <td class="mono">~$5</td>
-        <td style="color:var(--green);">10Ã— less</td>
+        <td style="color:var(--green);">10× less</td>
       </tr>
     </tbody>
   </table>
   
   <div class="diagram-caption">
-    CXL tradeoff: 10Ã— cheaper per GB, but 31Ã— lower bandwidth. Viable only if most accesses hit HBM.
+    CXL tradeoff: 10× cheaper per GB, but 31× lower bandwidth. Viable only if most accesses hit HBM.
   </div>
 </div>
 
@@ -962,13 +962,13 @@ score(m, n) âˆ Î£áµ¢ cos((m âˆ’ n) Â· Î¸áµ¢)
 <p>The caching system places data in tiers based on access patterns.</p>
 
 <div class="diagram">
-  <div class="diagram-label">Diagram 10.1 â€” Three-Tier Architecture</div>
+  <div class="diagram-label">Diagram 10.1 — Three-Tier Architecture</div>
   
   <div style="display:flex; flex-direction:column; gap:18px; max-width:550px; margin:0 auto;">
     <div style="padding:24px; background:linear-gradient(90deg, rgba(34,211,238,0.2) 0%, rgba(34,211,238,0.05) 100%); border:2px solid var(--cyan); border-radius:12px;">
       <div style="display:flex; justify-content:space-between; align-items:center;">
         <div>
-          <div style="font-size:1.1rem; color:var(--cyan); font-weight:600;">Tier 0 â€” HBM Pinned</div>
+          <div style="font-size:1.1rem; color:var(--cyan); font-weight:600;">Tier 0 — HBM Pinned</div>
           <div style="font-size:0.95rem; color:#8898b8; margin-top:6px;">Anchor zone + critical tokens</div>
         </div>
         <div style="text-align:right;">
@@ -981,7 +981,7 @@ score(m, n) âˆ Î£áµ¢ cos((m âˆ’ n) Â· Î¸áµ¢)
     <div style="padding:24px; background:linear-gradient(90deg, rgba(77,171,247,0.2) 0%, rgba(77,171,247,0.05) 100%); border:2px solid var(--blue); border-radius:12px;">
       <div style="display:flex; justify-content:space-between; align-items:center;">
         <div>
-          <div style="font-size:1.1rem; color:var(--blue); font-weight:600;">Tier 1 â€” HBM Evictable</div>
+          <div style="font-size:1.1rem; color:var(--blue); font-weight:600;">Tier 1 — HBM Evictable</div>
           <div style="font-size:0.95rem; color:#8898b8; margin-top:6px;">Recent + high-attention tokens</div>
         </div>
         <div style="text-align:right;">
@@ -994,7 +994,7 @@ score(m, n) âˆ Î£áµ¢ cos((m âˆ’ n) Â· Î¸áµ¢)
     <div style="padding:24px; background:linear-gradient(90deg, rgba(204,93,232,0.2) 0%, rgba(204,93,232,0.05) 100%); border:2px solid var(--purple); border-radius:12px;">
       <div style="display:flex; justify-content:space-between; align-items:center;">
         <div>
-          <div style="font-size:1.1rem; color:var(--purple); font-weight:600;">Tier 2 â€” CXL DRAM</div>
+          <div style="font-size:1.1rem; color:var(--purple); font-weight:600;">Tier 2 — CXL DRAM</div>
           <div style="font-size:0.95rem; color:#8898b8; margin-top:6px;">Cold tokens, low attention</div>
         </div>
         <div style="text-align:right;">
@@ -1007,12 +1007,12 @@ score(m, n) âˆ Î£áµ¢ cos((m âˆ’ n) Â· Î¸áµ¢)
 </div>
 
 <div class="diagram">
-  <div class="diagram-label">Diagram 10.2 â€” Memory Layout (8 Users Ã— 128K)</div>
+  <div class="diagram-label">Diagram 10.2 — Memory Layout (8 Users × 128K)</div>
   
   <div style="margin-bottom:30px;">
-    <div style="font-size:1rem; color:#a0a8b8; margin-bottom:10px;">HBM â€” 192 GB</div>
+    <div style="font-size:1rem; color:#a0a8b8; margin-bottom:10px;">HBM — 192 GB</div>
     <div class="mem-bar">
-      <div style="width:73%; background:var(--red);">Model Weights â€” 140 GB</div>
+      <div style="width:73%; background:var(--red);">Model Weights — 140 GB</div>
       <div style="width:5%; background:var(--purple);"></div>
       <div style="width:3%; background:var(--cyan);"></div>
       <div style="width:18%; background:var(--blue);">Hot KV</div>
@@ -1027,10 +1027,10 @@ score(m, n) âˆ Î£áµ¢ cos((m âˆ’ n) Â· Î¸áµ¢)
   </div>
   
   <div>
-    <div style="font-size:1rem; color:#a0a8b8; margin-bottom:10px;">CXL â€” 1 TB</div>
+    <div style="font-size:1rem; color:#a0a8b8; margin-bottom:10px;">CXL — 1 TB</div>
     <div class="mem-bar">
-      <div style="width:28%; background:var(--purple);">Cold KV â€” 280 GB</div>
-      <div style="width:72%; background:#1e2a4a; color:#6a7a9a;">Available â€” 720 GB</div>
+      <div style="width:28%; background:var(--purple);">Cold KV — 280 GB</div>
+      <div style="width:72%; background:#1e2a4a; color:#6a7a9a;">Available — 720 GB</div>
     </div>
   </div>
 </div>
@@ -1040,15 +1040,15 @@ score(m, n) âˆ Î£áµ¢ cos((m âˆ’ n) Â· Î¸áµ¢)
 <p>Exponential Moving Average tracks which tokens actually receive attention over time.</p>
 
 <div class="diagram">
-  <div class="diagram-label">Diagram 11.1 â€” EMA Update Rule</div>
+  <div class="diagram-label">Diagram 11.1 — EMA Update Rule</div>
   
   <div class="equation" style="text-align:center; font-size:1.2rem;">
-score<sub>t</sub> = Î± Â· attention<sub>t</sub> + (1 âˆ’ Î±) Â· score<sub>tâˆ’1</sub>
+score<sub>t</sub> = α · attention<sub>t</sub> + (1 − α) · score<sub>t−1</sub>
   </div>
   
   <div style="display:flex; justify-content:center; gap:35px; margin-top:30px; flex-wrap:wrap;">
     <div style="padding:20px 32px; background:#1a2245; border-radius:12px; text-align:center;">
-      <div style="font-size:2rem; color:var(--cyan); font-weight:600;">Î± = 0.2</div>
+      <div style="font-size:2rem; color:var(--cyan); font-weight:600;">α = 0.2</div>
       <div style="font-size:0.95rem; color:#8898b8; margin-top:8px;">Decay factor</div>
     </div>
     <div style="padding:20px 32px; background:#1a2245; border-radius:12px; text-align:center;">
@@ -1063,42 +1063,42 @@ score<sub>t</sub> = Î± Â· attention<sub>t</sub> + (1 âˆ’ Î±) Â· scor
 </div>
 
 <div class="diagram">
-  <div class="diagram-label">Diagram 11.2 â€” EMA Evolution Example</div>
+  <div class="diagram-label">Diagram 11.2 — EMA Evolution Example</div>
   
   <div class="compare">
     <div class="compare-side" style="background:rgba(81,207,102,0.08); border:2px solid #2a4a3a;">
       <div class="compare-title" style="color:var(--green);">System Instruction Token</div>
-      <div style="font-size:0.95rem; color:#8898b8; margin-bottom:18px;">Position 50 â€” "helpful"</div>
+      <div style="font-size:0.95rem; color:#8898b8; margin-bottom:18px;">Position 50 — "helpful"</div>
       
       <div style="font-size:0.9rem; color:#8898b8; margin-bottom:12px;">Consistent attention from anchor heads:</div>
       <div style="display:flex; flex-direction:column; gap:8px; font-family:monospace; font-size:0.95rem;">
-        <div>Step 0: attn=0.04 â†’ score=<span style="color:var(--green);">0.008</span></div>
-        <div>Step 1: attn=0.03 â†’ score=<span style="color:var(--green);">0.012</span></div>
-        <div>Step 2: attn=0.05 â†’ score=<span style="color:var(--green);">0.020</span></div>
+        <div>Step 0: attn=0.04 → score=<span style="color:var(--green);">0.008</span></div>
+        <div>Step 1: attn=0.03 → score=<span style="color:var(--green);">0.012</span></div>
+        <div>Step 2: attn=0.05 → score=<span style="color:var(--green);">0.020</span></div>
         <div style="color:#6a7a9a;">...</div>
-        <div>Step 100: â†’ score=<span style="color:var(--green);">0.040</span></div>
+        <div>Step 100: → score=<span style="color:var(--green);">0.040</span></div>
       </div>
       
       <div style="margin-top:18px; padding:14px; background:rgba(81,207,102,0.15); border-radius:8px; text-align:center;">
-        <span style="color:var(--green); font-size:1rem;">â†’ Stays HOT</span>
+        <span style="color:var(--green); font-size:1rem;">→ Stays HOT</span>
       </div>
     </div>
     
     <div class="compare-side" style="background:rgba(255,107,107,0.08); border:2px solid #4a2a2a;">
       <div class="compare-title" style="color:var(--red);">Generic Middle Token</div>
-      <div style="font-size:0.95rem; color:#8898b8; margin-bottom:18px;">Position 45,000 â€” "the"</div>
+      <div style="font-size:0.95rem; color:#8898b8; margin-bottom:18px;">Position 45,000 — "the"</div>
       
       <div style="font-size:0.9rem; color:#8898b8; margin-bottom:12px;">Rarely attended:</div>
       <div style="display:flex; flex-direction:column; gap:8px; font-family:monospace; font-size:0.95rem;">
-        <div>Step 0: attn=0.001 â†’ score=<span style="color:var(--red);">0.0002</span></div>
-        <div>Step 1: attn=0.000 â†’ score=<span style="color:var(--red);">0.0002</span></div>
-        <div>Step 2: attn=0.002 â†’ score=<span style="color:var(--red);">0.0005</span></div>
+        <div>Step 0: attn=0.001 → score=<span style="color:var(--red);">0.0002</span></div>
+        <div>Step 1: attn=0.000 → score=<span style="color:var(--red);">0.0002</span></div>
+        <div>Step 2: attn=0.002 → score=<span style="color:var(--red);">0.0005</span></div>
         <div style="color:#6a7a9a;">...</div>
-        <div>Step 100: â†’ score=<span style="color:var(--red);">0.001</span></div>
+        <div>Step 100: → score=<span style="color:var(--red);">0.001</span></div>
       </div>
       
       <div style="margin-top:18px; padding:14px; background:rgba(255,107,107,0.15); border-radius:8px; text-align:center;">
-        <span style="color:var(--red); font-size:1rem;">â†’ Evict to CXL</span>
+        <span style="color:var(--red); font-size:1rem;">→ Evict to CXL</span>
       </div>
     </div>
   </div>
@@ -1109,7 +1109,7 @@ score<sub>t</sub> = Î± Â· attention<sub>t</sub> + (1 âˆ’ Î±) Â· scor
 <p>Final placement decisions combine multiple signals into a single priority score.</p>
 
 <div class="diagram">
-  <div class="diagram-label">Diagram 12.1 â€” Scoring Components</div>
+  <div class="diagram-label">Diagram 12.1 — Scoring Components</div>
   
   <div style="display:flex; flex-direction:column; gap:18px; max-width:650px; margin:0 auto;">
     <div style="display:flex; align-items:center; gap:18px;">
@@ -1133,12 +1133,12 @@ score<sub>t</sub> = Î± Â· attention<sub>t</sub> + (1 âˆ’ Î±) Â· scor
   </div>
   
   <div class="equation" style="margin-top:30px; text-align:center;">
-P(p) = 0.25 Â· R(p) + 0.55 Â· E(p) + 0.20 Â· N(p)
+P(p) = 0.25 · R(p) + 0.55 · E(p) + 0.20 · N(p)
   </div>
 </div>
 
 <div class="diagram">
-  <div class="diagram-label">Diagram 12.2 â€” Tier Assignment Thresholds</div>
+  <div class="diagram-label">Diagram 12.2 — Tier Assignment Thresholds</div>
   
   <div style="position:relative; height:70px; background:linear-gradient(90deg, var(--purple) 0%, var(--purple) 30%, var(--blue) 30%, var(--blue) 60%, var(--cyan) 60%, var(--cyan) 100%); border-radius:10px; margin:25px 0;">
     <div style="position:absolute; left:0; top:0; bottom:0; width:30%; display:flex; align-items:center; justify-content:center; font-size:1rem; color:#fff;">Tier 2 (CXL)</div>
@@ -1159,7 +1159,7 @@ P(p) = 0.25 Â· R(p) + 0.55 Â· E(p) + 0.20 Â· N(p)
 <p>Scores are maintained separately for each KV-head to handle head specialization.</p>
 
 <div class="diagram">
-  <div class="diagram-label">Diagram 13.1 â€” Per-Head Score Matrix</div>
+  <div class="diagram-label">Diagram 13.1 — Per-Head Score Matrix</div>
   
   <div style="overflow-x:auto;">
     <table style="min-width:600px;">
@@ -1220,7 +1220,7 @@ P<sub>aggregate</sub>(p) = max( P<sub>h</sub>(p) ) for all heads h
 <p>Predictive prefetch loads anticipated tokens from CXL before they're needed.</p>
 
 <div class="diagram">
-  <div class="diagram-label">Diagram 14.1 â€” Prefetch Targets</div>
+  <div class="diagram-label">Diagram 14.1 — Prefetch Targets</div>
   
   <div style="position:relative; height:100px; background:#1a2245; border-radius:12px; margin:25px 0; overflow:hidden;">
     <div style="position:absolute; left:5%; right:5%; top:30px; height:40px; background:#252a48; border-radius:6px;">
@@ -1241,7 +1241,7 @@ P<sub>aggregate</sub>(p) = max( P<sub>h</sub>(p) ) for all heads h
       <span style="color:var(--purple);">1.</span> Anchor zone [0, 100]
     </div>
     <div style="padding:14px 24px; background:rgba(77,171,247,0.15); border:2px solid var(--blue); border-radius:10px; font-size:1rem;">
-      <span style="color:var(--blue);">2.</span> Recent [mâˆ’200, mâˆ’1]
+      <span style="color:var(--blue);">2.</span> Recent [m−200, m−1]
     </div>
     <div style="padding:14px 24px; background:rgba(34,211,238,0.15); border:2px solid var(--cyan); border-radius:10px; font-size:1rem;">
       <span style="color:var(--cyan);">3.</span> High-EMA positions
@@ -1250,7 +1250,7 @@ P<sub>aggregate</sub>(p) = max( P<sub>h</sub>(p) ) for all heads h
 </div>
 
 <div class="diagram">
-  <div class="diagram-label">Diagram 14.2 â€” Prefetch Timing Budget</div>
+  <div class="diagram-label">Diagram 14.2 — Prefetch Timing Budget</div>
   
   <div style="display:flex; align-items:center; gap:25px; justify-content:center; flex-wrap:wrap;">
     <div style="display:flex; flex-direction:column; gap:10px; align-items:center;">
@@ -1258,7 +1258,7 @@ P<sub>aggregate</sub>(p) = max( P<sub>h</sub>(p) ) for all heads h
       <div class="mono" style="font-size:1.05rem;">50 ms</div>
     </div>
     
-    <div style="font-size:2rem; color:#6a7a9a;">âˆ’</div>
+    <div style="font-size:2rem; color:#6a7a9a;">−</div>
     
     <div style="display:flex; flex-direction:column; gap:10px; align-items:center;">
       <div style="width:140px; height:50px; background:var(--purple); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:1rem; color:#fff;">Compute</div>
@@ -1275,7 +1275,7 @@ P<sub>aggregate</sub>(p) = max( P<sub>h</sub>(p) ) for all heads h
   
   <div style="margin-top:30px; padding:20px; background:#1a2245; border-radius:12px; text-align:center;">
     <div style="font-size:1.05rem; color:#a0a8b8;">Prefetch capacity @ 256 GB/s:</div>
-    <div style="font-size:1.6rem; color:var(--cyan); font-weight:600; margin-top:10px;">7.68 GB â‰ˆ 24,000 positions</div>
+    <div style="font-size:1.6rem; color:var(--cyan); font-weight:600; margin-top:10px;">7.68 GB ≈ 24,000 positions</div>
   </div>
 </div>
 
@@ -1284,7 +1284,7 @@ P<sub>aggregate</sub>(p) = max( P<sub>h</sub>(p) ) for all heads h
 <p>Each algorithmic improvement increases the HBM hit rate.</p>
 
 <div class="diagram">
-  <div class="diagram-label">Diagram 15.1 â€” Algorithm Contribution</div>
+  <div class="diagram-label">Diagram 15.1 — Algorithm Contribution</div>
   
   <div class="bar-chart">
     <div class="bar-row">
@@ -1321,22 +1321,22 @@ P<sub>aggregate</sub>(p) = max( P<sub>h</sub>(p) ) for all heads h
 </div>
 
 <div class="diagram">
-  <div class="diagram-label">Diagram 15.2 â€” Effective Latency</div>
+  <div class="diagram-label">Diagram 15.2 — Effective Latency</div>
   
   <div class="equation" style="text-align:center; margin-bottom:30px;">
-L<sub>eff</sub> = (hit_rate Ã— L<sub>HBM</sub>) + ((1 âˆ’ hit_rate) Ã— L<sub>CXL</sub>)
+L<sub>eff</sub> = (hit_rate × L<sub>HBM</sub>) + ((1 − hit_rate) × L<sub>CXL</sub>)
   </div>
   
   <div style="display:flex; justify-content:center; gap:35px; flex-wrap:wrap;">
     <div style="text-align:center; padding:25px; background:#1a2245; border-radius:14px;">
       <div style="font-size:1rem; color:#a0a8b8;">At 95% hit rate:</div>
       <div style="font-size:2.2rem; color:var(--cyan); font-weight:600; margin:12px 0;">107.5 ns</div>
-      <div style="font-size:1rem; color:#8898b8;">0.95 Ã— 100 + 0.05 Ã— 250</div>
+      <div style="font-size:1rem; color:#8898b8;">0.95 × 100 + 0.05 × 250</div>
     </div>
     <div style="text-align:center; padding:25px; background:#1a2245; border-radius:14px;">
       <div style="font-size:1rem; color:#a0a8b8;">Overhead vs pure HBM:</div>
       <div style="font-size:2.2rem; color:var(--green); font-weight:600; margin:12px 0;">+7.5%</div>
-      <div style="font-size:1rem; color:#8898b8;">(107.5 âˆ’ 100) / 100</div>
+      <div style="font-size:1rem; color:#8898b8;">(107.5 − 100) / 100</div>
     </div>
   </div>
 </div>
@@ -1345,7 +1345,7 @@ L<sub>eff</sub> = (hit_rate Ã— L<sub>HBM</sub>) + ((1 âˆ’ hit_rate) Ã—
 <h2>16. Final Results</h2>
 
 <div class="diagram">
-  <div class="diagram-label">Diagram 16.1 â€” System Comparison</div>
+  <div class="diagram-label">Diagram 16.1 — System Comparison</div>
   
   <div class="compare">
     <div class="compare-side" style="background:rgba(255,107,107,0.08); border:2px solid var(--red);">
@@ -1366,7 +1366,7 @@ L<sub>eff</sub> = (hit_rate Ã— L<sub>HBM</sub>) + ((1 âˆ’ hit_rate) Ã—
         </div>
         <div style="display:flex; justify-content:space-between;">
           <span style="font-size:1rem; color:#a0a8b8;">Hardware</span>
-          <span class="mono" style="font-size:1.05rem;">2Ã— B200</span>
+          <span class="mono" style="font-size:1.05rem;">2× B200</span>
         </div>
       </div>
     </div>
@@ -1389,7 +1389,7 @@ L<sub>eff</sub> = (hit_rate Ã— L<sub>HBM</sub>) + ((1 âˆ’ hit_rate) Ã—
         </div>
         <div style="display:flex; justify-content:space-between;">
           <span style="font-size:1rem; color:#a0a8b8;">Hardware</span>
-          <span class="mono" style="font-size:1.05rem;">1Ã— B200 + CXL</span>
+          <span class="mono" style="font-size:1.05rem;">1× B200 + CXL</span>
         </div>
       </div>
     </div>
@@ -1397,15 +1397,15 @@ L<sub>eff</sub> = (hit_rate Ã— L<sub>HBM</sub>) + ((1 âˆ’ hit_rate) Ã—
 </div>
 
 <div class="diagram">
-  <div class="diagram-label">Diagram 16.2 â€” Key Metrics</div>
+  <div class="diagram-label">Diagram 16.2 — Key Metrics</div>
   
   <div class="stat-grid">
     <div class="stat-card">
-      <div class="stat-value">6Ã—</div>
+      <div class="stat-value">6×</div>
       <div class="stat-label">Memory Expansion</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value">8Ã—</div>
+      <div class="stat-value">8×</div>
       <div class="stat-label">User Capacity</div>
     </div>
     <div class="stat-card">
@@ -1429,7 +1429,7 @@ L<sub>eff</sub> = (hit_rate Ã— L<sub>HBM</sub>) + ((1 âˆ’ hit_rate) Ã—
 
 <!-- Footer -->
 <div style="margin-top:100px; padding-top:35px; border-top:2px solid #3a4a6a; text-align:center; color:#6a7a9a; font-size:1rem;">
-  Slug Architecture Research â€” December 2025
+  Slug Architecture Research — December 2025
 </div>
 
 </body>

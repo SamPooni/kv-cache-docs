@@ -290,26 +290,26 @@ h1 {
     <div class="flow-row">
       <div class="flow-box flow-input">Input Hidden States</div>
     </div>
-    <div class="arrow-down">â†“</div>
+    <div class="arrow-down">↓</div>
     <div class="flow-row">
       <div class="flow-box flow-proj">W<sub>Q</sub></div>
       <div class="flow-box flow-proj">W<sub>K</sub></div>
       <div class="flow-box flow-proj">W<sub>V</sub></div>
     </div>
-    <div class="arrow-down">â†“</div>
+    <div class="arrow-down">↓</div>
     <div class="flow-row">
-      <div class="flow-box" style="background:#cce5ff;color:#004085">Qâ‚€ Qâ‚ Qâ‚‚ Qâ‚ƒ<br><small>n_heads = 4</small></div>
-      <div class="flow-box" style="background:#d4edda;color:#155724">Kâ‚€ Kâ‚<br><small>n_kv = 2</small></div>
-      <div class="flow-box" style="background:#f3d9fa;color:#6f2c91">Vâ‚€ Vâ‚<br><small>n_kv = 2</small></div>
+      <div class="flow-box" style="background:#cce5ff;color:#004085">Q₀ Q₁ Q₂ Q₃<br><small>n_heads = 4</small></div>
+      <div class="flow-box" style="background:#d4edda;color:#155724">K₀ K₁<br><small>n_kv = 2</small></div>
+      <div class="flow-box" style="background:#f3d9fa;color:#6f2c91">V₀ V₁<br><small>n_kv = 2</small></div>
     </div>
-    <div class="arrow-down">â†“</div>
+    <div class="arrow-down">↓</div>
     <div class="flow-row">
       <div class="flow-box flow-group">
-        Group 0: Qâ‚€,Qâ‚ â†’ Kâ‚€,Vâ‚€<br>
-        Group 1: Qâ‚‚,Qâ‚ƒ â†’ Kâ‚,Vâ‚
+        Group 0: Q₀,Q₁ → K₀,V₀<br>
+        Group 1: Q₂,Q₃ → K₁,V₁
       </div>
     </div>
-    <div class="arrow-down">â†“</div>
+    <div class="arrow-down">↓</div>
     <div class="flow-row">
       <div class="flow-box flow-output">Attention Output (concat all heads)</div>
     </div>
@@ -324,7 +324,7 @@ h1 {
       <div class="benefit-desc">Reduces memory footprint proportional to the grouping ratio. Critical for long-context inference.</div>
     </div>
     <div class="benefit-card">
-      <div class="benefit-icon">âš¡</div>
+      <div class="benefit-icon">⚡</div>
       <div class="benefit-title">Faster Decoding</div>
       <div class="benefit-desc">Less KV data to load from HBM per token. Directly improves memory-bound decode throughput.</div>
     </div>
@@ -336,7 +336,7 @@ h1 {
   </div>
 
   <div class="formula">
-    KV Cache Size = <code>2 Ã— n_layers Ã— n_kv_heads Ã— seq_len Ã— head_dim Ã— dtype_size</code>
+    KV Cache Size = <code>2 × n_layers × n_kv_heads × seq_len × head_dim × dtype_size</code>
   </div>
 </div>
 </body>

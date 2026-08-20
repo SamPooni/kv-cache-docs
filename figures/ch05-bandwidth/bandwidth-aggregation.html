@@ -838,7 +838,7 @@ h1 {
 
   <!-- Single Endpoint Limitation -->
   <div class="limitation-card">
-    <div class="limitation-icon">âš </div>
+    <div class="limitation-icon">⚠</div>
     <div class="limitation-content">
       <h3>Single Endpoint Limitation</h3>
       <p>CXL bandwidth per endpoint is constrained by PCIe lane count. A single x16 Gen5 endpoint maxes out regardless of internal capability.</p>
@@ -915,7 +915,7 @@ h1 {
     <!-- Aggregate Result -->
     <div class="aggregate-result">
       <div class="aggregate-label">Aggregated Bandwidth</div>
-      <div class="aggregate-formula">5 endpoints Ã— 64 GB/s =</div>
+      <div class="aggregate-formula">5 endpoints × 64 GB/s =</div>
       <div class="aggregate-value">320 GB/s</div>
     </div>
   </div>
@@ -923,7 +923,7 @@ h1 {
   <!-- Layer Prefetch -->
   <div class="prefetch-section">
     <div class="section-title">
-      <div class="section-title-icon">â±</div>
+      <div class="section-title-icon">⏱</div>
       Layer Prefetch: Overlap Execution &amp; Transfer
     </div>
 
@@ -933,7 +933,7 @@ h1 {
         <div class="predictor-icon">🔮</div>
         <div class="predictor-content">
           <div class="predictor-title">Execution Trace Predictor</div>
-          <div class="predictor-desc">Observes GPU execution â†’ predicts next layer â†’ triggers prefetch</div>
+          <div class="predictor-desc">Observes GPU execution → predicts next layer → triggers prefetch</div>
         </div>
       </div>
 
@@ -1018,7 +1018,7 @@ h1 {
       <!-- Overlap Arrows -->
       <div class="overlap-explanation">
         <div class="overlap-item success">
-          <div class="overlap-icon">âœ“</div>
+          <div class="overlap-icon">✓</div>
           <div class="overlap-text">
             <strong>Perfect Overlap:</strong> Prefetch N+1 completes before GPU finishes N
           </div>
@@ -1026,7 +1026,7 @@ h1 {
         <div class="overlap-item">
           <div class="overlap-icon">🔑</div>
           <div class="overlap-text">
-            <strong>Key Insight:</strong> T<sub>prefetch</sub> &lt; T<sub>compute</sub> â†’ zero stall
+            <strong>Key Insight:</strong> T<sub>prefetch</sub> &lt; T<sub>compute</sub> → zero stall
           </div>
         </div>
       </div>
@@ -1034,7 +1034,7 @@ h1 {
 
     <div class="factors-grid">
       <div class="factor-card">
-        <div class="factor-icon">â³</div>
+        <div class="factor-icon">⏳</div>
         <div class="factor-name">Layer Execution Time</div>
         <div class="factor-desc">Compute budget available for overlap</div>
       </div>
@@ -1046,7 +1046,7 @@ h1 {
       <div class="factor-card">
         <div class="factor-icon">📈</div>
         <div class="factor-name">Aggregate Bandwidth</div>
-        <div class="factor-desc">endpoints Ã— per-endpoint BW</div>
+        <div class="factor-desc">endpoints × per-endpoint BW</div>
       </div>
     </div>
 
@@ -1058,7 +1058,7 @@ h1 {
         <div class="byte-calc">
           <div class="byte-calc-label">Llama-70B Layer Size</div>
           <div class="byte-calc-value">~1.75 GB</div>
-          <div class="byte-calc-detail">140 GB Ã· 80 layers</div>
+          <div class="byte-calc-detail">140 GB ÷ 80 layers</div>
         </div>
         <div class="byte-calc">
           <div class="byte-calc-label">Layer Compute Time</div>
@@ -1068,41 +1068,41 @@ h1 {
         <div class="byte-calc">
           <div class="byte-calc-label">Required BW</div>
           <div class="byte-calc-value">175-350 GB/s</div>
-          <div class="byte-calc-detail">1.75 GB Ã· 5-10 ms</div>
+          <div class="byte-calc-detail">1.75 GB ÷ 5-10 ms</div>
         </div>
       </div>
 
       <div class="byte-scenarios">
         <div class="byte-scenario bad">
           <div class="scenario-header">
-            <span class="scenario-icon">âŒ</span>
+            <span class="scenario-icon">❌</span>
             <span class="scenario-title">1 Endpoint (64 GB/s)</span>
           </div>
           <div class="scenario-math">
-            <span class="math-line">1.75 GB Ã· 64 GB/s = <strong>27.3 ms</strong></span>
-            <span class="math-result bad">5Ã— slower than compute â†’ GPU stalls</span>
+            <span class="math-line">1.75 GB ÷ 64 GB/s = <strong>27.3 ms</strong></span>
+            <span class="math-result bad">5× slower than compute → GPU stalls</span>
           </div>
         </div>
         
         <div class="byte-scenario ok">
           <div class="scenario-header">
-            <span class="scenario-icon">âš </span>
+            <span class="scenario-icon">⚠</span>
             <span class="scenario-title">3 Endpoints (192 GB/s)</span>
           </div>
           <div class="scenario-math">
-            <span class="math-line">1.75 GB Ã· 192 GB/s = <strong>9.1 ms</strong></span>
-            <span class="math-result ok">Borderline â†’ works if compute is slow</span>
+            <span class="math-line">1.75 GB ÷ 192 GB/s = <strong>9.1 ms</strong></span>
+            <span class="math-result ok">Borderline → works if compute is slow</span>
           </div>
         </div>
         
         <div class="byte-scenario good">
           <div class="scenario-header">
-            <span class="scenario-icon">âœ“</span>
+            <span class="scenario-icon">✓</span>
             <span class="scenario-title">5 Endpoints (320 GB/s)</span>
           </div>
           <div class="scenario-math">
-            <span class="math-line">1.75 GB Ã· 320 GB/s = <strong>5.5 ms</strong></span>
-            <span class="math-result good">Prefetch completes before compute â†’ no stall</span>
+            <span class="math-line">1.75 GB ÷ 320 GB/s = <strong>5.5 ms</strong></span>
+            <span class="math-result good">Prefetch completes before compute → no stall</span>
           </div>
         </div>
       </div>
@@ -1124,7 +1124,7 @@ h1 {
         <div class="memory-tier-label">Endpoint DRAM</div>
         <div class="memory-tier-content">All Model Weights</div>
         <div class="memory-tier-size">140 GB</div>
-        <div class="memory-tier-note">All layers resident â†’ no prefetch needed</div>
+        <div class="memory-tier-note">All layers resident → no prefetch needed</div>
       </div>
       <div class="memory-tier flash">
         <div class="memory-tier-label">Endpoint Flash</div>
@@ -1135,7 +1135,7 @@ h1 {
     </div>
 
     <div class="llama-insight">
-      <div class="llama-insight-icon">âœ“</div>
+      <div class="llama-insight-icon">✓</div>
       <div class="llama-insight-text">
         <strong>With sufficient endpoint DRAM, all layers stay resident.</strong> 
         No prefetch latency, no layer swapping. Flash handles KV-cache overflow for 128K+ context windows and multi-tenant session storage.

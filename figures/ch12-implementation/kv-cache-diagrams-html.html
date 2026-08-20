@@ -269,8 +269,8 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
   
   <div class="author-block">
     <div class="author-name">Sam Pooni</div>
-    <div class="author-role">UC Santa Cruz Â· zett.ai Â· San Jose, CA</div>
-    <div class="author-role" style="margin-top: 0.5rem;">Version 3.0 Â· December 2025</div>
+    <div class="author-role">UC Santa Cruz · zett.ai · San Jose, CA</div>
+    <div class="author-role" style="margin-top: 0.5rem;">Version 3.0 · December 2025</div>
   </div>
 </section>
 
@@ -349,8 +349,8 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
   <h2>KV-Cache Size vs Context Length</h2>
   
   <div class="formula">
-    KV-cache = 2 Ã— L Ã— H Ã— D Ã— S Ã— bytes<br>
-    <span style="color: var(--warning);">Llama-70B: 2 Ã— 80 Ã— 8 Ã— 128 Ã— S Ã— 2 = <strong>320 KB/token</strong></span>
+    KV-cache = 2 × L × H × D × S × bytes<br>
+    <span style="color: var(--warning);">Llama-70B: 2 × 80 × 8 × 128 × S × 2 = <strong>320 KB/token</strong></span>
   </div>
   
   <table>
@@ -358,11 +358,11 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
       <tr><th>Context Length</th><th>KV-Cache Size</th><th>% of B200 HBM</th><th>Status</th></tr>
     </thead>
     <tbody>
-      <tr><td>4K tokens</td><td>1.3 GB</td><td>0.7%</td><td style="color: var(--success);">âœ“ Fits easily</td></tr>
-      <tr><td>32K tokens</td><td>10 GB</td><td>5.2%</td><td style="color: var(--success);">âœ“ Comfortable</td></tr>
-      <tr><td>128K tokens</td><td>41 GB</td><td>21%</td><td style="color: var(--warning);">âš  Tight</td></tr>
-      <tr><td>512K tokens</td><td>164 GB</td><td>85%</td><td style="color: var(--danger);">âœ— Impossible</td></tr>
-      <tr><td>1M tokens</td><td>328 GB</td><td>171%</td><td style="color: var(--danger);">âœ— Impossible</td></tr>
+      <tr><td>4K tokens</td><td>1.3 GB</td><td>0.7%</td><td style="color: var(--success);">✓ Fits easily</td></tr>
+      <tr><td>32K tokens</td><td>10 GB</td><td>5.2%</td><td style="color: var(--success);">✓ Comfortable</td></tr>
+      <tr><td>128K tokens</td><td>41 GB</td><td>21%</td><td style="color: var(--warning);">⚠ Tight</td></tr>
+      <tr><td>512K tokens</td><td>164 GB</td><td>85%</td><td style="color: var(--danger);">✗ Impossible</td></tr>
+      <tr><td>1M tokens</td><td>328 GB</td><td>171%</td><td style="color: var(--danger);">✗ Impossible</td></tr>
     </tbody>
   </table>
   
@@ -400,7 +400,7 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
     </div>
     
     <div style="background: #7c3aed; border-radius: 10px; padding: 0.75rem; text-align: center; margin-bottom: 1rem;">
-      <span style="color: white; font-weight: 700;">UCIe 1.1 â€” 1+ TB/s Die-to-Die Interconnect</span>
+      <span style="color: white; font-weight: 700;">UCIe 1.1 — 1+ TB/s Die-to-Die Interconnect</span>
     </div>
     
     <div class="chiplets-row">
@@ -408,13 +408,13 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
         <div class="chiplet-title" style="color: var(--success);">MEMORY CONTROLLER</div>
         <div class="chiplet-item">CH 0-3: DDR5-6400</div>
         <div class="chiplet-item">CH 4-7: DDR5-6400</div>
-        <div style="text-align: center; font-size: 0.75rem; color: var(--success); font-weight: 600;">8ch Ã— 51.2 GB/s = 409.6 GB/s</div>
+        <div style="text-align: center; font-size: 0.75rem; color: var(--success); font-weight: 600;">8ch × 51.2 GB/s = 409.6 GB/s</div>
       </div>
       <div class="chiplet" style="border-color: var(--orange);">
         <div class="chiplet-title" style="color: var(--orange);">COMPUTE CHIPLET</div>
         <div class="chiplet-item">Core 0-3: ARM A78 @ 3GHz</div>
         <div class="chiplet-item">Core 4-7: ARM A78 @ 3GHz</div>
-        <div class="chiplet-item">L3 Cache â€” 8 MB Shared</div>
+        <div class="chiplet-item">L3 Cache — 8 MB Shared</div>
       </div>
       <div class="chiplet" style="border-color: var(--warning);">
         <div class="chiplet-title" style="color: var(--warning);">CONTROL & POLICY</div>
@@ -455,7 +455,7 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
   <div class="tier-bar">
     <div class="tier-segment tier-hot"><strong>Hot (HBM)</strong><br>192 GB<br>8 TB/s</div>
     <div class="tier-segment tier-warm"><strong>Warm (CXL)</strong><br>1 TB<br>~250 ns</div>
-    <div class="tier-segment tier-cold"><strong>Cold (Flash)</strong><br>16 TB<br>~25 Î¼s</div>
+    <div class="tier-segment tier-cold"><strong>Cold (Flash)</strong><br>16 TB<br>~25 μs</div>
     <div class="tier-segment tier-total"><strong>Total</strong><br>~17 TB</div>
   </div>
   
@@ -471,7 +471,7 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
   <div class="key-insight">
     <div class="key-insight-title">Key Insight</div>
     <strong>GPU sees unified address space. Endpoint manages tier placement transparently.</strong><br>
-    CXL.mem provides load/store semanticsâ€”no explicit I/O commands, no DMA setup, no driver intervention.
+    CXL.mem provides load/store semantics—no explicit I/O commands, no DMA setup, no driver intervention.
   </div>
 </section>
 
@@ -503,17 +503,17 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
   
   <div class="comparison-grid">
     <div class="card" style="border-color: var(--info);">
-      <h4 style="color: var(--info);">GPU â†’ Endpoint Writes</h4>
+      <h4 style="color: var(--info);">GPU → Endpoint Writes</h4>
       <p style="font-size: 0.9rem; margin-bottom: 0;">During prefill, GPU writes new KV entries. Endpoint receives <code>D2H Write</code> with data, updates local DRAM and clears stale metadata.</p>
     </div>
     <div class="card" style="border-color: var(--primary);">
-      <h4 style="color: var(--primary);">Endpoint â†’ GPU Invalidation</h4>
+      <h4 style="color: var(--primary);">Endpoint → GPU Invalidation</h4>
       <p style="font-size: 0.9rem; margin-bottom: 0;">When endpoint evicts entries to flash, it issues <code>BI-Snoop</code>. GPU must writeback dirty data before acknowledging.</p>
     </div>
   </div>
   
   <div class="alert alert-info">
-    <strong>Concurrent SM Access:</strong> Multiple GPU SMs accessing the same KV-head are serialized at L2 cache. Endpoint sees unified coherent viewâ€”no per-SM tracking required.
+    <strong>Concurrent SM Access:</strong> Multiple GPU SMs accessing the same KV-head are serialized at L2 cache. Endpoint sees unified coherent view—no per-SM tracking required.
   </div>
 </section>
 
@@ -538,7 +538,7 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
       <div style="background: rgba(0,0,0,0.3); padding: 0.75rem; border-radius: 8px;">
         <div style="font-size: 0.85rem; color: var(--gray);">Multiple Q share K/V</div>
         <div style="margin-top: 0.5rem; font-family: 'JetBrains Mono'; color: var(--success);">8 KV heads</div>
-        <div style="font-size: 0.7rem; color: var(--gray);">8Ã— memory savings</div>
+        <div style="font-size: 0.7rem; color: var(--gray);">8× memory savings</div>
       </div>
     </div>
     <div class="method-card">
@@ -553,7 +553,7 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
   </div>
   
   <div class="formula">
-    8 KV-heads Ã— 80 layers = <strong style="color: var(--warning);">640 independent eviction policies</strong>
+    8 KV-heads × 80 layers = <strong style="color: var(--warning);">640 independent eviction policies</strong>
   </div>
   
   <div class="metric-cards">
@@ -581,32 +581,32 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
   <span class="section-badge">Figure 7</span>
   <h2>EMA-Based Eviction Algorithm</h2>
   
-  <p><strong>Why LRU fails:</strong> LRU assumes recent access predicts future access. Attention violates thisâ€”a token at position 1,000 may not be accessed until position 100,000, but remains critically important.</p>
+  <p><strong>Why LRU fails:</strong> LRU assumes recent access predicts future access. Attention violates this—a token at position 1,000 may not be accessed until position 100,000, but remains critically important.</p>
   
   <div class="card" style="background: #2d3748; border: none;">
     <div style="font-family: 'JetBrains Mono'; font-size: 1.1rem; color: white; text-align: center; padding: 0.5rem;">
       <span style="color: #68d391; font-style: italic;">score_ema</span> = 
-      <span style="color: #f6ad55;">Î±</span> Ã— 
-      <span style="color: #68d391; font-style: italic;">new_score</span> + (1 âˆ’ 
-      <span style="color: #f6ad55;">Î±</span>) Ã— 
+      <span style="color: #f6ad55;">α</span> × 
+      <span style="color: #68d391; font-style: italic;">new_score</span> + (1 − 
+      <span style="color: #f6ad55;">α</span>) × 
       <span style="color: #68d391; font-style: italic;">score_ema</span>
     </div>
   </div>
   
   <div class="comparison-grid" style="margin-top: 1rem;">
     <div style="background: rgba(0,0,0,0.2); border-radius: 10px; padding: 1rem;">
-      <div style="font-weight: 700; color: var(--orange); margin-bottom: 0.25rem;">Î± â†’ 1.0 (Reactive)</div>
+      <div style="font-weight: 700; color: var(--orange); margin-bottom: 0.25rem;">α → 1.0 (Reactive)</div>
       <div style="font-size: 0.9rem; color: var(--gray);">Trust recent scores. Good for bursty access patterns.</div>
     </div>
     <div style="background: rgba(0,0,0,0.2); border-radius: 10px; padding: 1rem;">
-      <div style="font-weight: 700; color: var(--cyan); margin-bottom: 0.25rem;">Î± â†’ 0.1 (Stable)</div>
+      <div style="font-weight: 700; color: var(--cyan); margin-bottom: 0.25rem;">α → 0.1 (Stable)</div>
       <div style="font-size: 0.9rem; color: var(--gray);">Trust history. Good for persistent anchors.</div>
     </div>
   </div>
   
   <div class="formula">
-    <span style="color: var(--primary);">priority</span> = (1 âˆ’ score_ema) Ã— recency_decay<br>
-    <span style="color: var(--gray); font-size: 0.85rem;">Higher priority â†’ evict sooner</span>
+    <span style="color: var(--primary);">priority</span> = (1 − score_ema) × recency_decay<br>
+    <span style="color: var(--gray); font-size: 0.85rem;">Higher priority → evict sooner</span>
   </div>
   
   <div class="comparison-grid">
@@ -619,7 +619,7 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
         <tr><td>recency_decay</td><td style="text-align: right;">0.049</td></tr>
         <tr><td>priority</td><td style="text-align: right; color: var(--success);"><strong>0.039</strong></td></tr>
       </table>
-      <div class="verdict">âœ“ KEEP IN CACHE</div>
+      <div class="verdict">✓ KEEP IN CACHE</div>
     </div>
     <div class="compare-card evict">
       <div style="font-weight: 700; margin-bottom: 0.75rem; color: var(--white);">Token B: Low Attention</div>
@@ -643,20 +643,20 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
   <div class="card-grid">
     <div class="card">
       <div style="font-weight: 700; color: var(--primary); margin-bottom: 0.5rem;">🔄 Rotary Encoding</div>
-      <div style="font-size: 0.9rem; color: var(--gray);">RoPE encodes position by rotating Q/K vectors. Nearby positions have similar rotations â†’ higher dot product â†’ higher attention.</div>
+      <div style="font-size: 0.9rem; color: var(--gray);">RoPE encodes position by rotating Q/K vectors. Nearby positions have similar rotations → higher dot product → higher attention.</div>
     </div>
     <div class="card">
       <div style="font-weight: 700; color: var(--cyan); margin-bottom: 0.5rem;">📍 Locality Bias</div>
-      <div style="font-size: 0.9rem; color: var(--gray);">On average, ~70% of attention mass falls within Â±W positions of the query token.</div>
+      <div style="font-size: 0.9rem; color: var(--gray);">On average, ~70% of attention mass falls within ±W positions of the query token.</div>
     </div>
     <div class="card">
       <div style="font-weight: 700; color: var(--success); margin-bottom: 0.5rem;">🎯 Predictable Access</div>
-      <div style="font-size: 0.9rem; color: var(--gray);">If GPU requests position P, it will likely need PÂ±W soon. Prefetch proactively.</div>
+      <div style="font-size: 0.9rem; color: var(--gray);">If GPU requests position P, it will likely need P±W soon. Prefetch proactively.</div>
     </div>
   </div>
   
   <div class="formula" style="background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.3);">
-    <span style="color: var(--primary); font-weight: 700;">Prefetch Rule:</span> GPU accesses position P â†’ Prefetch [P âˆ’ W, P + W]
+    <span style="color: var(--primary); font-weight: 700;">Prefetch Rule:</span> GPU accesses position P → Prefetch [P − W, P + W]
   </div>
   
   <div class="metric-cards">
@@ -669,11 +669,11 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
       <div class="metric-label">Attention Captured</div>
     </div>
     <div class="metric-card">
-      <div class="metric-value" style="color: var(--success);">3.2Ã—</div>
+      <div class="metric-value" style="color: var(--success);">3.2×</div>
       <div class="metric-label">Latency Reduction</div>
     </div>
     <div class="metric-card">
-      <div class="metric-value" style="color: var(--warning);">1.4Ã—</div>
+      <div class="metric-value" style="color: var(--warning);">1.4×</div>
       <div class="metric-label">BW Overhead</div>
     </div>
   </div>
@@ -686,7 +686,7 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
   
   <div class="phase-compare">
     <div class="phase-card prefill">
-      <div class="phase-title">âš¡ Prefill Phase</div>
+      <div class="phase-title">⚡ Prefill Phase</div>
       <table style="margin: 0; font-size: 0.85rem;">
         <tr><td><strong>Bottleneck</strong></td><td>Compute-bound</td></tr>
         <tr><td><strong>Access Pattern</strong></td><td>Sequential writes</td></tr>
@@ -695,7 +695,7 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
         <tr><td><strong>Batching</strong></td><td>Full sequence parallel</td></tr>
       </table>
       <div class="alert alert-warning" style="margin-top: 1rem; margin-bottom: 0; padding: 0.75rem;">
-        <strong>Strategy:</strong> Stream writes directly to CXL. No eviction neededâ€”all entries are new.
+        <strong>Strategy:</strong> Stream writes directly to CXL. No eviction needed—all entries are new.
       </div>
     </div>
     <div class="phase-card decode">
@@ -715,7 +715,7 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
   
   <div class="key-insight">
     <div class="key-insight-title">Phase Detection</div>
-    Endpoint monitors write/read ratio. When reads exceed writes by 10Ã—, switch to decode-optimized policy.
+    Endpoint monitors write/read ratio. When reads exceed writes by 10×, switch to decode-optimized policy.
   </div>
 </section>
 
@@ -760,20 +760,20 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
   <div class="metric-cards">
     <div class="metric-card">
       <div class="metric-value" style="font-size: 1.5rem;">48</div>
-      <div class="metric-label">GB/s FP16â†’INT8</div>
+      <div class="metric-label">GB/s FP16→INT8</div>
     </div>
     <div class="metric-card">
       <div class="metric-value" style="font-size: 1.5rem;">32</div>
-      <div class="metric-label">GB/s FP16â†’INT4</div>
+      <div class="metric-label">GB/s FP16→INT4</div>
     </div>
     <div class="metric-card">
       <div class="metric-value" style="font-size: 1.5rem;">64</div>
-      <div class="metric-label">GB/s INT8â†’FP16</div>
+      <div class="metric-label">GB/s INT8→FP16</div>
     </div>
   </div>
   
   <div class="alert alert-info">
-    <strong>Transparent compression:</strong> GPU writes FP16 â†’ Endpoint stores INT8 â†’ GPU reads FP16. Compression invisible to inference stack.
+    <strong>Transparent compression:</strong> GPU writes FP16 → Endpoint stores INT8 → GPU reads FP16. Compression invisible to inference stack.
   </div>
 </section>
 
@@ -785,7 +785,7 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
   <div class="latency-compare">
     <div class="latency-box bad">
       <div class="latency-box-label">PCIe DMA Transfer</div>
-      <div class="latency-box-value">~13 Î¼s</div>
+      <div class="latency-box-value">~13 μs</div>
       <div style="font-size: 0.8rem; color: var(--gray); margin-top: 0.5rem;">CPU in critical path<br>Driver + DMA setup overhead</div>
     </div>
     <div class="latency-box good">
@@ -796,7 +796,7 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
   </div>
   
   <div class="card" style="text-align: center; background: rgba(34, 197, 94, 0.1); border-color: var(--success);">
-    <div style="font-size: 2.5rem; font-weight: 800; color: var(--success);">65Ã— Latency Improvement</div>
+    <div style="font-size: 2.5rem; font-weight: 800; color: var(--success);">65× Latency Improvement</div>
     <div style="color: var(--gray);">By eliminating the software stack</div>
   </div>
   
@@ -820,7 +820,7 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
   <h2>Layer Prefetch Pipeline</h2>
   
   <div class="alert alert-danger">
-    <strong>Single Endpoint Limitation:</strong> CXL x16 Gen5 = 64 GB/s. For 1.75 GB layer, transfer = 27.3 ms. Layer compute = 5.5 ms. <strong>GPU stalls 5Ã— waiting.</strong>
+    <strong>Single Endpoint Limitation:</strong> CXL x16 Gen5 = 64 GB/s. For 1.75 GB layer, transfer = 27.3 ms. Layer compute = 5.5 ms. <strong>GPU stalls 5× waiting.</strong>
   </div>
   
   <table>
@@ -828,9 +828,9 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
       <tr><th>Endpoints</th><th>Aggregate BW</th><th>Layer Transfer</th><th>Result</th></tr>
     </thead>
     <tbody>
-      <tr><td>1</td><td>64 GB/s</td><td>27.3 ms</td><td style="color: var(--danger);">âŒ GPU stalls (5Ã— slower)</td></tr>
-      <tr><td>3</td><td>192 GB/s</td><td>9.1 ms</td><td style="color: var(--warning);">âš  Borderline</td></tr>
-      <tr><td>5</td><td>320 GB/s</td><td>5.5 ms</td><td style="color: var(--success);">âœ“ Prefetch beats compute</td></tr>
+      <tr><td>1</td><td>64 GB/s</td><td>27.3 ms</td><td style="color: var(--danger);">❌ GPU stalls (5× slower)</td></tr>
+      <tr><td>3</td><td>192 GB/s</td><td>9.1 ms</td><td style="color: var(--warning);">⚠ Borderline</td></tr>
+      <tr><td>5</td><td>320 GB/s</td><td>5.5 ms</td><td style="color: var(--success);">✓ Prefetch beats compute</td></tr>
     </tbody>
   </table>
   
@@ -884,7 +884,7 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
         </div>
       </div>
     </div>
-    <div class="arrow-down">â†“</div>
+    <div class="arrow-down">↓</div>
     <div class="stack-layer">
       <div class="stack-badge" style="background: var(--primary);">Runtime Layer</div>
       <div class="stack-items">
@@ -902,7 +902,7 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
         </div>
       </div>
     </div>
-    <div class="arrow-down">â†“</div>
+    <div class="arrow-down">↓</div>
     <div class="stack-layer">
       <div class="stack-badge" style="background: var(--success);">Driver Layer</div>
       <div class="stack-items">
@@ -916,7 +916,7 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
         </div>
       </div>
     </div>
-    <div class="arrow-down">â†“</div>
+    <div class="arrow-down">↓</div>
     <div class="stack-layer">
       <div class="stack-badge" style="background: var(--cyan);">Hardware Layer</div>
       <div class="stack-items">
@@ -1010,13 +1010,13 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
     <div class="power-box high">
       <div class="power-icon">🔥</div>
       <div class="power-value">2,800 W</div>
-      <div class="power-label">4Ã— B200 GPUs</div>
+      <div class="power-label">4× B200 GPUs</div>
       <div style="font-size: 0.8rem; color: var(--gray); margin-top: 0.5rem;">Liquid cooling required</div>
     </div>
     <div class="power-box low">
-      <div class="power-icon">â„</div>
+      <div class="power-icon">❄</div>
       <div class="power-value">1,100 W</div>
-      <div class="power-label">1× B200 + 5Ã— Endpoints</div>
+      <div class="power-label">1× B200 + 5× Endpoints</div>
       <div style="font-size: 0.8rem; color: var(--gray); margin-top: 0.5rem;">Air cooling sufficient</div>
     </div>
   </div>
@@ -1027,7 +1027,7 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
     </thead>
     <tbody>
       <tr><td>DDR5 (8 channels)</td><td>40 W</td><td>60 W</td></tr>
-      <tr><td>ARM A78 cores (8Ã—)</td><td>15 W</td><td>25 W</td></tr>
+      <tr><td>ARM A78 cores (8×)</td><td>15 W</td><td>25 W</td></tr>
       <tr><td>CXL PHY + controller</td><td>12 W</td><td>18 W</td></tr>
       <tr><td>UCIe interface</td><td>8 W</td><td>12 W</td></tr>
       <tr><td>NVMe controller</td><td>5 W</td><td>8 W</td></tr>
@@ -1037,7 +1037,7 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
   
   <div class="metric-cards">
     <div class="metric-card">
-      <div class="metric-value" style="color: var(--success);">2.5Ã—</div>
+      <div class="metric-value" style="color: var(--success);">2.5×</div>
       <div class="metric-label">Power Efficiency</div>
     </div>
     <div class="metric-card">
@@ -1045,7 +1045,7 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
       <div class="metric-label">Cooling Type</div>
     </div>
     <div class="metric-card">
-      <div class="metric-value" style="color: var(--primary);">45Â°C</div>
+      <div class="metric-value" style="color: var(--primary);">45°C</div>
       <div class="metric-label">Junction Temp</div>
     </div>
     <div class="metric-card">
@@ -1075,7 +1075,7 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
     </div>
     <div class="card" style="border-color: var(--success);">
       <div style="text-align: center; margin-bottom: 1rem;">
-        <div style="font-weight: 700; color: var(--success); font-size: 1.1rem;">1Ã— GPU + 5Ã— Endpoints</div>
+        <div style="font-weight: 700; color: var(--success); font-size: 1.1rem;">1× GPU + 5× Endpoints</div>
       </div>
       <table style="margin: 0; font-size: 0.85rem;">
         <tr><td>Hardware</td><td style="text-align: right;">$42,500</td></tr>
@@ -1089,7 +1089,7 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
   
   <div class="metric-cards">
     <div class="metric-card">
-      <div class="metric-value" style="color: var(--success);">3.7Ã—</div>
+      <div class="metric-value" style="color: var(--success);">3.7×</div>
       <div class="metric-label">TCO Reduction</div>
     </div>
     <div class="metric-card">
@@ -1164,7 +1164,7 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
   
   <div class="metric-cards">
     <div class="metric-card">
-      <div class="metric-value" style="color: var(--success);">65Ã—</div>
+      <div class="metric-value" style="color: var(--success);">65×</div>
       <div class="metric-label">Latency vs PCIe</div>
     </div>
     <div class="metric-card">
@@ -1172,7 +1172,7 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
       <div class="metric-label">Cache Hit Rate</div>
     </div>
     <div class="metric-card">
-      <div class="metric-value" style="color: var(--primary);">3.7Ã—</div>
+      <div class="metric-value" style="color: var(--primary);">3.7×</div>
       <div class="metric-label">TCO Reduction</div>
     </div>
     <div class="metric-card">
@@ -1193,7 +1193,7 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
       <tr><td>Compute</td><td>ARM/RISC-V cores for policy execution</td></tr>
       <tr><td>Tracking granularity</td><td>Per KV-head per layer (640 queues)</td></tr>
       <tr><td>Eviction policy</td><td>EMA attention score + recency decay</td></tr>
-      <tr><td>Prefetch strategy</td><td>RoPE-aware window [Pâˆ’W, P+W]</td></tr>
+      <tr><td>Prefetch strategy</td><td>RoPE-aware window [P−W, P+W]</td></tr>
       <tr><td>Metadata overhead</td><td>~640 MB for 128K context (~1.6%)</td></tr>
     </tbody>
   </table>
@@ -1201,7 +1201,7 @@ pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overfl
   <div class="key-insight" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(16, 185, 129, 0.1)); border-color: rgba(34, 197, 94, 0.5);">
     <div class="key-insight-title" style="color: var(--success);">The Core Insight</div>
     <strong style="color: var(--white);">GPU handles parallel arithmetic. Endpoint handles memory management.</strong><br>
-    The division matches each architecture to its strengthsâ€”enabling long-context LLM inference at scale.
+    The division matches each architecture to its strengths—enabling long-context LLM inference at scale.
   </div>
 </section>
 
