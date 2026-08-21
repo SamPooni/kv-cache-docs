@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Preprocessing Offload</title>
+<link rel="stylesheet" href="../../vendor/fonts.css">
+<link rel="stylesheet" href="../../css/style.css">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--font-sans);
+  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-card) 100%);
+  min-height: 100vh;
+  padding: 2rem;
+  color: var(--text-primary);
+}
+
+.container {
+  max-width: 950px;
+  margin: 0 auto;
+  padding: 0;
+}
+
+/* Header */
+.header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.section-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.35rem 1rem;
+  border-radius: 50px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+
+h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #f8fafc 0%, #94a3b8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+}
+
+/* Path Comparison */
+.paths-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.path-card {
+  border-radius: 16px;
+  padding: 1.75rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.path-card.traditional {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05));
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.path-card.endpoint {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.05));
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.path-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.path-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.path-icon {
+  font-size: 1.5rem;
+}
+
+.path-name {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.path-card.traditional .path-name { color: var(--accent-red); }
+.path-card.endpoint .path-name { color: var(--accent-green); }
+
+.path-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.3rem 0.75rem;
+  border-radius: 50px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.path-card.traditional .path-badge {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--accent-red);
+}
+
+.path-card.endpoint .path-badge {
+  background: rgba(34, 197, 94, 0.2);
+  color: var(--accent-green);
+}
+
+/* Flow Diagram */
+.flow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.flow-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  min-width: 100px;
+  text-align: center;
+}
+
+.flow-node.storage {
+  background: linear-gradient(135deg, #64748b, #475569);
+}
+
+.flow-node.cpu-dram {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+}
+
+.flow-node.cpu-proc {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+}
+
+.flow-node.gpu-dram {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+}
+
+.flow-node.ep-flash {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+}
+
+.flow-node.ep-dram {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+.flow-node.ep-arm {
+  background: linear-gradient(135deg, #06b6d4, #0891b2);
+}
+
+.flow-node.cxl-mem {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.flow-node.gpu {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+}
+
+.node-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: white;
+}
+
+.node-sublabel {
+  font-size: 0.6rem;
+  color: rgba(255,255,255,0.7);
+}
+
+.flow-arrow {
+  color: var(--text-secondary);
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.flow-arrow.highlight {
+  color: var(--accent-green);
+}
+
+/* Bottleneck Indicator */
+.bottleneck {
+  position: relative;
+}
+
+.bottleneck::after {
+  content: "CPU Bottleneck";
+  position: absolute;
+  bottom: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.6rem;
+  color: var(--accent-red);
+  background: rgba(239, 68, 68, 0.2);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+/* Bypass Indicator */
+.bypass-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(34, 197, 94, 0.15);
+  border-radius: 8px;
+  border: 1px dashed rgba(34, 197, 94, 0.4);
+}
+
+.bypass-icon {
+  font-size: 1.1rem;
+}
+
+.bypass-text {
+  font-size: 0.85rem;
+  color: var(--accent-green);
+}
+
+.bypass-text strong {
+  color: var(--accent-green);
+}
+
+/* Tasks Section */
+.tasks-section {
+  background: var(--bg-card);
+  border-radius: 20px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  border: 1px solid var(--border-primary);
+}
+
+.section-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.section-title-icon {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #06b6d4, #0891b2);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+
+.tasks-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+.task-card {
+  background: rgba(0,0,0,0.3);
+  border-radius: 12px;
+  padding: 1.25rem;
+  text-align: center;
+  border: 1px solid var(--border-primary);
+  transition: all 0.2s ease;
+}
+
+.task-card:hover {
+  border-color: var(--accent-teal);
+  transform: translateY(-2px);
+}
+
+.task-icon {
+  font-size: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+.task-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+
+.task-detail {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* ARM Specs */
+.arm-section {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(6, 182, 212, 0.05));
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  border-radius: 16px;
+  padding: 1.75rem;
+  margin-bottom: 2rem;
+}
+
+.arm-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.arm-logo {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #06b6d4, #0891b2);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: white;
+}
+
+.arm-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent-teal);
+}
+
+.arm-subtitle {
+  font-size: 0.85rem;
+  color: var(--accent-teal);
+}
+
+.arm-factors {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.arm-factor {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(0,0,0,0.2);
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+.factor-icon {
+  font-size: 1.5rem;
+}
+
+.factor-content {
+  flex: 1;
+}
+
+.factor-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.factor-value {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Key Insight */
+.insight-section {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(16, 185, 129, 0.1));
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  border-radius: 16px;
+  padding: 1.75rem;
+}
+
+.insight-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.insight-icon {
+  font-size: 1.5rem;
+}
+
+.insight-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent-green);
+}
+
+.insight-content {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.insight-diagram {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(0,0,0,0.3);
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+.insight-node {
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--bg-primary);
+}
+
+.insight-node.arm { background: var(--accent-teal); }
+.insight-node.cxl { background: var(--accent-green); }
+.insight-node.gpu { background: var(--accent-green); }
+
+.insight-arrow {
+  color: var(--accent-green);
+  font-size: 1rem;
+}
+
+.insight-text {
+  flex: 1;
+  font-size: 0.95rem;
+  color: var(--accent-green);
+  line-height: 1.6;
+}
+
+.insight-text strong {
+  color: var(--accent-green);
+}
+
+.cpu-crossed {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: rgba(239, 68, 68, 0.2);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  text-decoration: line-through;
+  color: var(--accent-red);
+}
+
+@media (max-width: 768px) {
+  .tasks-grid { grid-template-columns: repeat(2, 1fr); }
+  .arm-factors { grid-template-columns: 1fr; }
+  .flow { justify-content: center; }
+  .insight-content { flex-direction: column; }
+}
+</style>
+</head>
+<body>
+<div role="note" style="position:sticky;top:0;z-index:9999;background:#f85149;color:#0a0e14;padding:0.85rem 1rem;font-family:'IBM Plex Sans',-apple-system,sans-serif;font-weight:700;font-size:0.95rem;line-height:1.45;border-bottom:3px solid #0a0e14;">
+SUPERSEDED — this figure illustrates a claim withdrawn in v5.0. It is retained only so the retraction remains checkable. Do not cite it. See RETRACTIONS.md and Appendix L (hardware measurements) and Appendix N (simulation) for what replaced it.
+</div>
+
+<div class="container" role="main">
+
+  <p class="sr-only">Figure: preprocessing offload to the endpoint. Two data paths are compared. The traditional CPU-bound path runs storage on NVMe, then CPU DRAM on DDR5, then CPU preprocessing on x86 cores, then GPU DRAM over PCIe, with the two CPU stages marked as the bottleneck. The endpoint path runs endpoint flash, endpoint DRAM, ARM preprocessing on embedded cores, CXL.mem directly, then GPU HBM, so there is no per-access CPU involvement in steady state, though control-plane setup, address mapping, fault handling, drivers and endpoint firmware still run on the host. The offloaded tasks are tokenization with SentencePiece or BPE, image decode and normalization, FP32 to FP16 or BF16 conversion, and batching and padding. The endpoint is modeled with 4 to 16 Cortex-A cores at 1.5 to 2.5 GHz, about 500 thousand tokens per second of tokenization and about 1000 images per second at 224 by 224. The 5 to 10 times figure is a design target, not a benchmark, and is scoped to tokenization and image decode against a single host CPU core. All values are an analytical model, not measured.</p>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="section-badge">Section 6</div>
+    <h1>Preprocessing Offload</h1>
+    <p class="subtitle">Move data preparation to the endpoint — no per-access CPU involvement in steady state</p>
+  </div>
+
+  <!-- Path Comparison -->
+  <div class="paths-container">
+    
+    <!-- Traditional Path -->
+    <div class="path-card traditional">
+      <div class="path-header">
+        <div class="path-title">
+          <span aria-hidden="true" class="path-icon">🐌</span>
+          <span class="path-name">Traditional Path</span>
+        </div>
+        <span class="path-badge">CPU Bound</span>
+      </div>
+      
+      <div class="flow">
+        <div class="flow-node storage" role="img" aria-label="Traditional path step 1: storage on NVMe">
+          <span class="node-label">Storage</span>
+          <span class="node-sublabel">NVMe</span>
+        </div>
+        <span aria-hidden="true" class="flow-arrow">→</span>
+        <div class="flow-node cpu-dram bottleneck" role="img" aria-label="Traditional path step 2: CPU DRAM on DDR5, a bottleneck stage">
+          <span class="node-label">CPU DRAM</span>
+          <span class="node-sublabel">DDR5</span>
+        </div>
+        <span aria-hidden="true" class="flow-arrow">→</span>
+        <div class="flow-node cpu-proc bottleneck" role="img" aria-label="Traditional path step 3: CPU preprocessing on x86 cores, a bottleneck stage">
+          <span class="node-label">CPU Preprocessing</span>
+          <span class="node-sublabel">x86 cores</span>
+        </div>
+        <span aria-hidden="true" class="flow-arrow">→</span>
+        <div class="flow-node gpu-dram" role="img" aria-label="Traditional path step 4: GPU DRAM reached over PCIe">
+          <span class="node-label">GPU DRAM</span>
+          <span class="node-sublabel">via PCIe</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Endpoint Path -->
+    <div class="path-card endpoint">
+      <div class="path-header">
+        <div class="path-title">
+          <span aria-hidden="true" class="path-icon">⚡</span>
+          <span class="path-name">Endpoint Path</span>
+        </div>
+        <span class="path-badge">Direct to GPU</span>
+      </div>
+      
+      <div class="flow">
+        <div class="flow-node ep-flash" role="img" aria-label="Endpoint path step 1: endpoint flash on NVMe">
+          <span class="node-label">Endpoint Flash</span>
+          <span class="node-sublabel">NVMe</span>
+        </div>
+        <span aria-hidden="true" class="flow-arrow highlight">→</span>
+        <div class="flow-node ep-dram" role="img" aria-label="Endpoint path step 2: endpoint DRAM on DDR5">
+          <span class="node-label">Endpoint DRAM</span>
+          <span class="node-sublabel">DDR5</span>
+        </div>
+        <span aria-hidden="true" class="flow-arrow highlight">→</span>
+        <div class="flow-node ep-arm" role="img" aria-label="Endpoint path step 3: ARM preprocessing on embedded cores">
+          <span class="node-label">ARM Preprocessing</span>
+          <span class="node-sublabel">Embedded cores</span>
+        </div>
+        <span aria-hidden="true" class="flow-arrow highlight">→</span>
+        <div class="flow-node cxl-mem" role="img" aria-label="Endpoint path step 4: CXL.mem, direct">
+          <span class="node-label">CXL.mem</span>
+          <span class="node-sublabel">Direct</span>
+        </div>
+        <span aria-hidden="true" class="flow-arrow highlight">→</span>
+        <div class="flow-node gpu" role="img" aria-label="Endpoint path step 5: GPU HBM">
+          <span class="node-label">GPU</span>
+          <span class="node-sublabel">HBM</span>
+        </div>
+      </div>
+
+      <div class="bypass-indicator">
+        <span aria-hidden="true" class="bypass-icon">⚙</span>
+        <span class="bypass-text"><strong>No per-access CPU involvement in steady state</strong> — the host CPU is off the
+        per-token data path, but it is not removed from the system. Control-plane setup, address
+        mapping and CXL region programming, page-fault handling, device drivers and endpoint
+        firmware all still run on and through the host.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preprocessing Tasks -->
+  <div class="tasks-section">
+    <div class="section-title">
+      <div aria-hidden="true" class="section-title-icon">⚙</div>
+      Preprocessing Tasks for Embedded ARM
+    </div>
+
+    <div class="tasks-grid">
+      <div class="task-card">
+        <div aria-hidden="true" class="task-icon">📍</div>
+        <div class="task-name">Tokenization</div>
+        <div class="task-detail">SentencePiece, BPE</div>
+      </div>
+      <div class="task-card">
+        <div aria-hidden="true" class="task-icon">🖼</div>
+        <div class="task-name">Image Decode</div>
+        <div class="task-detail">JPEG/PNG + normalize</div>
+      </div>
+      <div class="task-card">
+        <div aria-hidden="true" class="task-icon">🔄</div>
+        <div class="task-name">Format Conversion</div>
+        <div class="task-detail">FP32 → FP16/BF16</div>
+      </div>
+      <div class="task-card">
+        <div aria-hidden="true" class="task-icon">📦</div>
+        <div class="task-name">Batching & Padding</div>
+        <div class="task-detail">Sequence alignment</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ARM Performance Factors -->
+  <div class="arm-section">
+    <div class="arm-header">
+      <div class="arm-logo">ARM</div>
+      <div>
+        <div class="arm-title">Embedded ARM Cores</div>
+        <div class="arm-subtitle">Throughput depends on core count and clock speed — <strong>design target, unbenchmarked</strong></div>
+      </div>
+    </div>
+
+    <div class="arm-factors">
+      <div class="arm-factor">
+        <div aria-hidden="true" class="factor-icon">📢</div>
+        <div class="factor-content">
+          <div class="factor-label">Core Count</div>
+          <div class="factor-value">4–16 Cortex-A cores</div>
+        </div>
+      </div>
+      <div class="arm-factor">
+        <div aria-hidden="true" class="factor-icon">⏱</div>
+        <div class="factor-content">
+          <div class="factor-label">Clock Speed</div>
+          <div class="factor-value">1.5–2.5 GHz</div>
+        </div>
+      </div>
+      <div class="arm-factor">
+        <div aria-hidden="true" class="factor-icon">📊</div>
+        <div class="factor-content">
+          <div class="factor-label">Tokenization Rate</div>
+          <div class="factor-value">~500K tokens/sec</div>
+        </div>
+      </div>
+      <div class="arm-factor">
+        <div aria-hidden="true" class="factor-icon">🖼</div>
+        <div class="factor-content">
+          <div class="factor-label">Image Throughput</div>
+          <div class="factor-value">~1000 img/sec (224×224)</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bypass-indicator" style="margin-top:1.25rem;">
+      <span aria-hidden="true" class="bypass-icon">🎯</span>
+      <span class="bypass-text">
+        <strong>5–10× — DESIGN TARGET, NOT A BENCHMARK.</strong>
+        No hardware measurement has been run. The target is scoped narrowly to
+        <strong>tokenization (SentencePiece/BPE) and image decode + normalization</strong>
+        executed on the endpoint's ARM cores, compared against the same work on a
+        <strong>single host CPU core</strong>. It is not a claim about end-to-end
+        inference throughput, and it does not generalize to the other preprocessing
+        tasks shown above. The rates above (≈500K tokens/s, ≈1000 img/s) are modeled
+        from core count and clock, not observed.
+      </span>
+    </div>
+  </div>
+
+  <!-- Key Insight -->
+  <div class="insight-section">
+    <div class="insight-header">
+      <span aria-hidden="true" class="insight-icon">💡</span>
+      <span class="insight-title">Key Insight: Direct Data Path</span>
+    </div>
+    
+    <div class="insight-content">
+      <div class="insight-diagram">
+        <div class="insight-node arm">ARM</div>
+        <span aria-hidden="true" class="insight-arrow">→</span>
+        <div class="insight-node cxl">CXL.mem</div>
+        <span aria-hidden="true" class="insight-arrow">→</span>
+        <div class="insight-node gpu">GPU</div>
+      </div>
+      
+      <div class="insight-text">
+        Once a region is mapped, data reaches the GPU-accessible CXL.mem region with
+        <strong>no per-access CPU involvement in steady state</strong>: no per-token host copies,
+        no per-transfer DMA descriptor setup, no completion interrupt per access.
+        What remains on the CPU: initial region mapping and enumeration, control-plane
+        setup and teardown, address translation and fault handling, drivers, and the
+        endpoint firmware that must be loaded and managed.
+      </div>
+    </div>
+  </div>
+
+
+  <p style="text-align:center;color:var(--text-secondary);font-size:0.8rem;margin-top:2rem;padding-top:1rem;border-top:1px solid rgba(148,163,184,0.25);">
+    Analytical model / design target — no hardware benchmark was run. Throughput and speedup
+    figures on this page are modeled, not measured. Canonical numbers v4.0.
+  </p>
+</div>
+</body>
+</html>

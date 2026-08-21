@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Appendix N: Tiering Simulation and Erratum — KV-Cache Offloading</title>
+  <link rel="stylesheet" href="../vendor/fonts.css">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <div class="watermark">
+    © 2025–2026 Subramaniyam (Sam) Pooni<br>
+    All Rights Reserved<br>
+    Proprietary & Confidential
+  </div>
+
+  <nav class="nav"><div class="nav-inner"><a href="../index.html" class="nav-brand"><span class="nav-brand-icon" aria-hidden="true">⚡</span> KV-Cache Architecture</a><div class="nav-links"><a href="index.html" class="nav-link">Appendix Index</a><a href="a-transformer-fundamentals.html" class="nav-link">A</a><a href="b-attention-mechanism.html" class="nav-link">B</a><a href="c-kv-cache-math.html" class="nav-link">C</a><a href="d-rope-encoding.html" class="nav-link">D</a><a href="e-head-specialization.html" class="nav-link">E</a><a href="f-cxl-technology.html" class="nav-link">F</a><a href="g-ema-algorithm.html" class="nav-link">G</a><a href="h-memory-hierarchy.html" class="nav-link">H</a><a href="i-bandwidth-calculations.html" class="nav-link">I</a><a href="j-implementation-reference.html" class="nav-link">J</a><a href="k-methodology.html" class="nav-link">K</a><a href="l-measurements.html" class="nav-link">L</a><a href="m-formal-core.html" class="nav-link">M</a><a href="n-simulation.html" class="nav-link active">N</a></div></div></nav>
+  <div class="page-wrapper">
+    <div class="container" role="main">
+      <header class="chapter-header">
+        <div class="chapter-label">Appendix N</div>
+        <h1 class="chapter-title">Tiering Simulation and Erratum</h1>
+        <p class="chapter-subtitle">Revision 2 of the KV tiering study, every result table labelled with the experiment that produced it, and the full erratum for the Revision 1 defect that inverted four of five findings.</p>
+      </header>
+
+      <div class="callout important">
+        <div class="callout-title"><span class="danger">Standing caveat — required wherever any number on this page appears</span></div>
+        <p>A single data-structure defect in Revision 1 <strong>inverted four of five findings</strong>
+        (99.6% wrong victims for EMA α=0.15; §N.7). Revision 2 is
+        <strong><span class="mono">Simulated (provisional)</span> — provisional, not settled</strong>: no
+        Belady bound, no bandwidth/queueing model, whole-context residency assumed, synthetic workload,
+        2–3 seeds, no hardware validation. Every table below repeats this caveat, and §N.9 states it in
+        full as a closing section. <strong>The only <span class="mono">Measured</span> evidence in this
+        package is in <a href="l-measurements.html">Appendix L</a>; nothing on this page is
+        measured.</strong></p>
+      </div>
+
+      <h2>N.1 Setup</h2>
+
+      <p>Everything on this page comes from one simulator run over one workload generator. The configuration
+      is stated here once, in full, so that any table below can be checked against it.</p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th scope="col">Parameter</th><th scope="col">Value</th></tr></thead>
+          <tbody>
+            <tr><td>Model geometry</td><td>Llama-3 70B, GQA, 8 KV heads — <span class="mono">320 KiB/token</span></td></tr>
+            <tr><td>Block granularity</td><td><span class="mono">16 tokens = 5.00 MiB</span></td></tr>
+            <tr><td>Sessions</td><td><span class="mono">200</span></td></tr>
+            <tr><td>Return-frequency distribution</td><td><span class="mono">Zipf(1.1)</span></td></tr>
+            <tr><td>Context lengths</td><td><span class="mono">1–12K</span> tokens</td></tr>
+            <tr><td>Shared prefix</td><td><span class="mono">2048</span> tokens, common to all sessions</td></tr>
+            <tr><td>Turns simulated</td><td><span class="mono">2500</span></td></tr>
+            <tr><td><strong>Total footprint</strong></td><td class="mono"><strong>421 GiB</strong></td></tr>
+            <tr><td>Tier structure</td><td>HBM tier over a <span class="mono">512 GiB</span> CXL tier</td></tr>
+            <tr><td>Seeds</td><td><span class="mono">2–3</span> per configuration (stated per table)</td></tr>
+            <tr><td>Simulator</td><td><span class="mono">scripts/kv_tiering_sim_v2.py</span></td></tr>
+            <tr><td>Raw results</td><td><span class="mono">data/results_v2.json</span></td></tr>
+            <tr><td>Revision 1 simulator, retained</td><td><span class="mono">scripts/kv_tiering_sim_rev1_retained_for_audit.py</span></td></tr>
+            <tr><td>Audit scripts</td><td><span class="mono">scripts/bug_check.py</span>, <span class="mono">scripts/bug_check2.py</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout note">
+        <div class="callout-title">How to check any number on this page</div>
+        <p>Each results table below names the experiment key it was computed from —
+        <span class="mono">e1</span>, <span class="mono">e2</span>, <span class="mono">e3</span>,
+        <span class="mono">e5loc</span>/<span class="mono">e5per</span>,
+        <span class="mono">e6no</span>/<span class="mono">e6ov</span>. Those keys are the top-level record
+        prefixes in <span class="mono">data/results_v2.json</span>, so every cell is traceable to the record
+        it came from without re-running anything. Where this page and
+        <span class="mono">CANONICAL-NUMBERS.md</span> disagree, <strong>the canonical spec
+        governs</strong>: it is computed directly from <span class="mono">results_v2.json</span>.</p>
+      </div>
+
+      <h2>N.2 Hit Rate versus HBM Budget</h2>
+
+      <p class="text-muted"><strong>Experiment <span class="mono">e1</span></strong> — no persistent
+      metadata, no overlap, 2 seeds. <span class="mono">Simulated (provisional)</span>.</p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th scope="col">HBM budget</th><th scope="col">LRU</th><th scope="col">LFU</th><th scope="col">EMA α=0.15</th><th scope="col">EMA α=0.01</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">8 GiB</td><td class="mono">8.52</td><td class="mono">8.76</td><td class="mono"><strong>12.35</strong></td><td class="mono">12.12</td></tr>
+            <tr><td class="mono">16 GiB</td><td class="mono">17.87</td><td class="mono">12.70</td><td class="mono"><strong>22.58</strong></td><td class="mono">18.70</td></tr>
+            <tr><td class="mono">32 GiB</td><td class="mono">38.34</td><td class="mono">16.09</td><td class="mono"><strong>44.18</strong></td><td class="mono">35.91</td></tr>
+            <tr><td class="mono">64 GiB</td><td class="mono">67.12</td><td class="mono">23.00</td><td class="mono"><strong>69.65</strong></td><td class="mono">66.83</td></tr>
+            <tr><td class="mono">128 GiB</td><td class="mono">88.01</td><td class="mono">32.70</td><td class="mono">88.14</td><td class="mono"><strong>91.59</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="text-muted">Values are hit rate in percent. <strong>Standing caveat applies</strong> (§N.9):
+      these are <span class="mono">Simulated (provisional)</span> numbers from a simulator whose predecessor
+      was wrong about exactly this table.</p>
+
+      <ul>
+        <li>EMA α=0.15 leads at <strong>4 of 5 budgets</strong>; EMA α=0.01 leads at 128 GiB.</li>
+        <li><strong>The margin over LRU is <span class="mono">+2.5 to +5.8 pts</span>, not
+        <span class="mono">+25</span>.</strong> The retracted v4.0 figure was <span class="mono">+25</span>
+        points and never came from an ablation at all
+        (<span class="mono">CANONICAL-NUMBERS.md</span> §7).</li>
+        <li><strong>LFU collapses</strong> once decode growth is modelled — classical LFU aging: fresh
+        count-1 blocks are evicted in favour of stale high-count blocks.</li>
+      </ul>
+
+      <h2>N.3 α Is Non-Monotonic, with an Interior Optimum</h2>
+
+      <p class="text-muted"><strong>Experiment <span class="mono">e2</span></strong> — the α grid at a
+      32 GiB budget, 1 seed. <span class="mono">Simulated (provisional)</span>.</p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th scope="col">α</th><th scope="col">0.5</th><th scope="col">0.3</th><th scope="col">0.15</th><th scope="col">0.05</th><th scope="col">0.01</th><th scope="col">0.003</th><th scope="col">0.001</th><th scope="col">LFU</th><th scope="col">LRU</th></tr></thead>
+          <tbody>
+            <tr><td><strong>hit %</strong></td><td class="mono">37.20</td><td class="mono">38.84</td><td class="mono">44.33</td><td class="mono"><strong>55.96</strong></td><td class="mono">31.54</td><td class="mono">25.47</td><td class="mono">24.44</td><td class="mono">15.56</td><td class="mono">36.85</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="text-muted"><strong>Standing caveat applies</strong> (§N.9).
+      <span class="mono">Simulated (provisional)</span>, 1 seed — the thinnest evidence on this page.</p>
+
+      <p class="highlight"><strong>α ≈ 0.05 is the optimum, <span class="mono">+19.1 pts</span> over
+      LRU.</strong> There is <strong>no convergence onto LFU as α → 0</strong>; the Revision 1 claim that
+      there was is <strong>withdrawn</strong> (§N.8).</p>
+
+      <div class="callout warning">
+        <div class="callout-title">Why §N.2 and §N.3 differ at 32 GiB — and the rule that follows</div>
+        <p>At the 32 GiB budget the two tables disagree: LRU <span class="mono">38.34</span> versus
+        <span class="mono">36.85</span>, EMA α=0.15 <span class="mono">44.18</span> versus
+        <span class="mono">44.33</span>, LFU <span class="mono">16.09</span> versus
+        <span class="mono">15.56</span>. <strong>They are different experiments in
+        <span class="mono">results_v2.json</span></strong>: §N.2 is <span class="mono">e1</span> (2 seeds),
+        §N.3 is <span class="mono">e2</span> (1 seed, the α grid).</p>
+        <p><strong>Quote each table against its own baseline. Never mix a row from one experiment with a row
+        from another.</strong> A comparison assembled across the two is not a comparison of policies; it is
+        a comparison of seeds. The spread between them is itself a useful indication of <strong>seed noise
+        at this scale</strong>, and it is roughly the same size as some of the policy margins being claimed
+        — which is a further reason the standing caveat is not a formality.</p>
+      </div>
+
+      <div class="callout note">
+        <div class="callout-title">Where this appendix and <span class="mono">ERRATUM.md</span> differ</div>
+        <p><strong><span class="mono">CANONICAL-NUMBERS.md</span> is authoritative</strong>; it is computed
+        directly from <span class="mono">results_v2.json</span>. The erratum quotes
+        <span class="mono">55.93%</span> for the α optimum where the spec gives
+        <span class="mono">55.96%</span>, and <span class="mono">50–67%</span> for warm recompute where the
+        spec gives <span class="mono">44–89%</span> across all budgets and policies. The erratum was written
+        from a narrower slice of the data. This page follows the spec, and §N.8 reproduces the erratum's
+        status table with the spec's figures substituted where the two differ.</p>
+      </div>
+
+      <h2>N.4 The Largest Effect in the Study — Persistent Scoring Metadata</h2>
+
+      <p class="text-muted"><strong>Experiments <span class="mono">e5loc</span> (metadata reset) and
+      <span class="mono">e5per</span> (metadata persists)</strong> — 32 GiB budget.
+      <span class="mono">Simulated (provisional)</span>.</p>
+
+      <p>The intervention is to let <strong>identity-keyed policy state survive HBM eviction</strong>, rather
+      than re-admitting a block as if it were newly created. This is the
+      <a href="m-formal-core.html">Appendix M §M.2.3</a> claim, tested.</p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th scope="col">Policy</th><th scope="col">Metadata reset on eviction <span class="mono">(e5loc)</span></th><th scope="col">Metadata persists <span class="mono">(e5per)</span></th><th scope="col">Δ</th></tr></thead>
+          <tbody>
+            <tr><td>LFU</td><td class="mono">15.56%</td><td class="mono">49.71%</td><td class="mono"><strong>+34.15 pts</strong></td></tr>
+            <tr><td>EMA α=0.01</td><td class="mono">31.54%</td><td class="mono">56.39%</td><td class="mono"><strong>+24.85 pts</strong></td></tr>
+            <tr><td>EMA α=0.15</td><td class="mono">44.33%</td><td class="mono">44.12%</td><td class="mono">−0.21 pts</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="text-muted"><strong>Standing caveat applies</strong> (§N.9).
+      <span class="mono">Simulated (provisional)</span>.</p>
+
+      <p class="highlight"><strong>Persistence is worth more than the choice of policy.</strong> It also
+      <strong>removes the small-α collapse</strong>, identifying metadata reset as its cause — the α=0.01
+      column of §N.3 recovers from <span class="mono">31.54%</span> to <span class="mono">56.39%</span> under
+      the same budget.</p>
+
+      <div class="callout insight">
+        <div class="callout-title">This is a protocol result, testable with no CXL hardware</div>
+        <p>It is claim <strong>C4</strong> of <a href="m-formal-core.html">Appendix M §M.3.2</a>, and it is
+        the only one of the four that <strong>does not require the controller to be on the device</strong>.
+        If C4 is the claim that survives contact with hardware, the contribution is the object model and
+        protocol, and CXL is simply where it runs
+        (<span class="mono">CANONICAL-NUMBERS.md</span> §6).</p>
+      </div>
+
+      <h2>N.5 Workload Dependence</h2>
+
+      <p class="text-muted"><strong>Experiment <span class="mono">e3</span></strong> — 32 GiB budget,
+      3 seeds. <span class="mono">Simulated (provisional)</span>.</p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th scope="col">Workload</th><th scope="col">LRU</th><th scope="col">LFU</th><th scope="col">EMA α=0.15</th><th scope="col">EMA α=0.01</th></tr></thead>
+          <tbody>
+            <tr><td>zipf (returning sessions)</td><td class="mono">39.08</td><td class="mono">15.12</td><td class="mono"><strong>44.44</strong></td><td class="mono">38.87</td></tr>
+            <tr><td>scan (one-shot flood)</td><td class="mono">31.51</td><td class="mono">12.52</td><td class="mono">32.57</td><td class="mono"><strong>36.26</strong></td></tr>
+            <tr><td>loop (cyclic sweep)</td><td class="mono">9.83</td><td class="mono"><strong>22.06</strong></td><td class="mono">9.83</td><td class="mono">9.83</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="text-muted">Values are hit rate in percent. <strong>Standing caveat applies</strong> (§N.9).
+      <span class="mono">Simulated (provisional)</span>.</p>
+
+      <p><strong>Only LFU survives the cyclic sweep</strong> — the workload on which every recency-weighted
+      policy degenerates to the same <span class="mono">9.83%</span>.
+      <strong class="highlight">No policy dominates across all three.</strong> Any claim of the form "policy X
+      is the right policy" is therefore under-specified unless it names the workload, and the retracted v4.0
+      headline set named none.</p>
+
+      <h2>N.6 Where Turn Stall Goes</h2>
+
+      <p class="text-muted"><strong>Experiments <span class="mono">e6no</span> (no overlap) and
+      <span class="mono">e6ov</span> (idealised transfer/compute overlap)</strong> — 32 GiB budget.
+      <span class="mono">Simulated (provisional)</span>.</p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th scope="col">Regime</th><th scope="col">Experiment</th><th scope="col">Fetch per turn</th><th scope="col">Recompute share of stall</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>No overlap</td>
+              <td class="mono">e6no</td>
+              <td>Fully exposed</td>
+              <td class="mono"><strong>44–89%</strong> depending on budget and policy</td>
+            </tr>
+            <tr>
+              <td>Idealised transfer/compute overlap</td>
+              <td class="mono">e6ov</td>
+              <td class="mono"><strong>0.35–1.25 ms/turn</strong></td>
+              <td class="mono"><strong>&gt;99%</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="text-muted"><strong>Standing caveat applies</strong> (§N.9).
+      <span class="mono">Simulated (provisional)</span>. The <span class="mono">44–89%</span> range is the
+      spec's figure across all budgets and policies; <span class="mono">ERRATUM.md</span> quotes
+      <span class="mono">50–67%</span> from a narrower slice — see the note in §N.3.</p>
+
+      <p>Recompute is <strong>not the 97% of stall claimed in Revision 1</strong>. And the second row is the
+      structural result: <strong>once movement is hidden, recompute avoidance is the only term that
+      matters.</strong> That is a statement about where design effort should go, and it points at the
+      <span class="mono">HIDING</span> constraint of <a href="m-formal-core.html">Appendix M §M.4.3</a>
+      rather than at the choice of replacement policy.</p>
+
+      <h2>N.7 Erratum — The Revision 1 Defect, in Full</h2>
+
+      <div class="callout important">
+        <div class="callout-title"><span class="danger">Peer review of Revision 1 identified a defect in the eviction data structure</span></div>
+        <p>Correcting it, together with three experimental-design problems, <strong>reverses or substantially
+        alters every policy finding</strong> of Revision 1. The KV-memory sizing correction (C1 in §N.8) is
+        unaffected — it is analytic and simulator-independent.</p>
+      </div>
+
+      <h3>N.7.1 The defect</h3>
+
+      <p><span class="mono">_pick_victim()</span> re-inserted a popped heap entry <strong>only when its
+      recomputed score exceeded the stored key</strong>. This is the standard lazy-revalidation idiom, and it
+      is correct for exactly one of the two policies it was serving:</p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th scope="col">Policy</th><th scope="col">How scores move</th><th scope="col">How stored keys go wrong</th><th scope="col">Is the idiom correct?</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>LFU</strong></td>
+              <td>Counts <strong>rise</strong> over time</td>
+              <td>Keys are <strong>stale-low</strong></td>
+              <td class="text-green"><strong>Yes.</strong> A popped entry whose true score has risen above its key must be re-inserted, and the guard catches exactly that case.</td>
+            </tr>
+            <tr>
+              <td><strong>Decaying EMA</strong></td>
+              <td>Scores <strong>fall</strong> between touches</td>
+              <td>Keys are <strong>stale-high</strong></td>
+              <td class="text-red"><strong>No.</strong> The recomputed score is <em>below</em> the stored key, so the guard never fires and the popped entry is returned as the victim <strong>without checking whether another block decayed further</strong>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>The result is that under a decaying EMA the eviction heap did not return the minimum-score block. It
+      returned an essentially arbitrary block from the frontier of the heap.</p>
+
+      <h3>N.7.2 The audit — against brute-force argmin</h3>
+
+      <p>Every eviction decision was re-evaluated against a brute-force <span class="mono">argmin</span> over
+      all resident blocks, using <span class="mono">scripts/bug_check.py</span>:</p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th scope="col">Policy</th><th scope="col">Wrong victims</th><th scope="col">Evictions</th><th scope="col">Rate</th></tr></thead>
+          <tbody>
+            <tr><td>EMA α=0.15</td><td class="mono">114,114</td><td class="mono">114,528</td><td class="mono text-red"><strong>99.6%</strong></td></tr>
+            <tr><td>EMA α=0.01</td><td class="mono">73,650</td><td class="mono">74,987</td><td class="mono text-red"><strong>98.2%</strong></td></tr>
+            <tr><td>LFU</td><td class="mono">0</td><td class="mono">74,987</td><td class="mono text-green"><strong>0.0%</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>The pattern is exactly what §N.7.1 predicts: <strong>LFU is untouched, both EMA configurations are
+      almost entirely wrong.</strong> At 99.6%, the Revision 1 EMA policy was not a poorly tuned EMA — it was
+      not an EMA at all.</p>
+
+      <h3>N.7.3 The fix — an exact order-preserving key</h3>
+
+      <p>The repair is to store a key that <strong>orders identically to the current decayed score at any
+      time</strong>, so that no lazy re-evaluation is needed and the heap invariant never goes stale:</p>
+
+      <div class="equation">
+        K = ln S<sub>touch</sub> + t<sub>touch</sub> · ( −ln(1 − α) )
+        <div class="equation-label">Stored at touch time; monotone in the decayed score at every later time, for every block</div>
+      </div>
+
+      <p>Because the decay factor is common to all blocks, taking logarithms turns the multiplicative decay
+      into an additive term that depends only on the touch time. The ordering of
+      <span class="mono">K</span> across blocks is therefore the ordering of their decayed scores at any
+      instant, and the minimum of the heap is the true <span class="mono">argmin</span> without
+      revalidation.</p>
+
+      <h3>N.7.4 The re-audit</h3>
+
+      <div class="equation">
+        0 wrong victims out of 78,860 evictions
+        <div class="equation-label">Re-audit against brute-force argmin — <span class="mono">scripts/bug_check2.py</span></div>
+      </div>
+
+      <div class="callout warning">
+        <div class="callout-title">The Revision 1 simulator is retained, unmodified</div>
+        <p><span class="mono">scripts/kv_tiering_sim_rev1_retained_for_audit.py</span> is the
+        <strong>unmodified Revision 1 simulator</strong>. It is kept in the bundle deliberately, so that the
+        defect and its effect on the published Revision 1 numbers <strong>remain independently
+        checkable</strong> rather than having to be taken on this page's word. A retraction that deletes the
+        code that produced the retracted numbers cannot be audited.</p>
+      </div>
+
+      <h2>N.8 Revision 1 → Revision 2 Status</h2>
+
+      <p>What was reversed, what was withdrawn, and what stands. Figures are quoted from
+      <span class="mono">CANONICAL-NUMBERS.md</span> where it and
+      <span class="mono">ERRATUM.md</span> differ (see §N.3).</p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th scope="col">Revision 1 finding</th><th scope="col">Status</th><th scope="col">Revision 2</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>R1</strong> — EMA α=0.15 worst at every budget</td>
+              <td class="text-orange"><strong>Reversed</strong></td>
+              <td><strong>R1′</strong> — EMA α=0.15 <em>best</em> at 4 of 5 budgets
+              (<span class="mono">44.18%</span> vs LRU <span class="mono">38.34%</span> at 32 GiB,
+              <span class="mono">e1</span>)</td>
+            </tr>
+            <tr>
+              <td><strong>R2</strong> — hit rate monotone as α → 0, converging exactly onto LFU</td>
+              <td class="text-red"><strong>Withdrawn</strong></td>
+              <td><strong>R3′</strong> — non-monotonic, interior optimum α ≈ 0.05
+              (<span class="mono">55.96%</span>, <span class="mono">e2</span>); no convergence onto LFU</td>
+            </tr>
+            <tr>
+              <td><strong>R3</strong> — LRU wins the scan workload</td>
+              <td class="text-red"><strong>Withdrawn</strong></td>
+              <td>EMA α=0.01 leads scan (<span class="mono">36.26%</span> vs
+              <span class="mono">31.51%</span>, <span class="mono">e3</span>)</td>
+            </tr>
+            <tr>
+              <td><strong>R4</strong> — EMA wins the cyclic sweep 2.2×</td>
+              <td class="text-red"><strong>Withdrawn</strong></td>
+              <td>Only LFU survives loop (<span class="mono">22.06%</span>); EMA tracks LRU at
+              <span class="mono">9.83%</span> (<span class="mono">e3</span>)</td>
+            </tr>
+            <tr>
+              <td><strong>R5</strong> — 97% of stall is recompute; policy nearly irrelevant</td>
+              <td class="text-red"><strong>Withdrawn</strong></td>
+              <td><strong>R5′</strong> — recompute is <span class="mono">44–89%</span> of stall depending on
+              budget and policy (<span class="mono">e6no</span>); under idealised overlap it becomes
+              <span class="mono">&gt;99%</span> (<span class="mono">e6ov</span>)</td>
+            </tr>
+            <tr>
+              <td><strong>C1</strong> — 8K Llama-3 70B KV is 2.50 GiB, not 20 GB</td>
+              <td class="text-green"><strong>Stands</strong></td>
+              <td>Unchanged. Analytic, simulator-independent, and independently confirmed
+              (<span class="mono">CANONICAL-NUMBERS.md</span> §2)</td>
+            </tr>
+            <tr>
+              <td><strong>New in Revision 2</strong> — persistent scoring metadata</td>
+              <td class="text-orange"><strong>Added</strong></td>
+              <td><strong>R4′</strong> — the largest effect in the study:
+              <span class="mono">+34.15 pts</span> to LFU, <span class="mono">+24.85 pts</span> to
+              EMA α=0.01 (<span class="mono">e5loc</span>/<span class="mono">e5per</span>; §N.4)</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p><strong>Four of five policy findings did not survive.</strong> The one that stands, C1, is the one
+      that never went through the simulator. That is the correct reading of this table, and it is the reason
+      §N.9 exists.</p>
+
+      <h2>N.9 The Standing Caveat</h2>
+
+      <div class="callout important">
+        <div class="callout-title"><span class="danger">Revision 2 is provisional, not settled</span></div>
+        <p>A single data-structure defect inverted four of five findings. Everything on this page is
+        <span class="mono">Simulated (provisional)</span>, and the following are unaddressed:</p>
+        <ul>
+          <li><strong>No Belady bound.</strong> There is no offline-optimal reference, so no result here can
+          be expressed as a fraction of what was achievable. Every margin quoted is a margin over another
+          heuristic, not over the ceiling.</li>
+          <li><strong>No bandwidth or queueing model.</strong> Transfers are accounted for in bytes and
+          nominal rates. The <span class="mono">LINK</span>, <span class="mono">SUSTAINABILITY</span> and
+          <span class="mono">HIDING</span> constraints of <a href="m-formal-core.html">Appendix M §M.4.3</a>
+          are not enforced by this simulator.</li>
+          <li><strong>Whole-context residency is assumed.</strong> A session's context is resident or it is
+          not; partial residency and per-block admission within a context are not modelled.</li>
+          <li><strong>Synthetic workload.</strong> Zipf(1.1) returns over 200 generated sessions with a
+          shared prefix. No production trace was replayed.</li>
+          <li><strong>2–3 seeds.</strong> §N.3 runs on one. The disagreement between
+          <span class="mono">e1</span> and <span class="mono">e2</span> at 32 GiB is the size of the seed
+          noise, and it is comparable to some of the policy margins claimed.</li>
+          <li><strong>No hardware validation.</strong> No CXL device was measured, and no part of this study
+          ran on the hardware of <a href="l-measurements.html">Appendix L</a>.</li>
+        </ul>
+        <p class="highlight"><strong>One defect already inverted four of five findings. That is why Revision 2
+        is provisional</strong> — not as a formality, but because the failure mode has been demonstrated
+        once, in this codebase, at a 99.6% error rate, and was found by external review rather than by
+        internal confidence. The correct posture toward the tables above is the posture that found the
+        Revision 1 defect.</p>
+      </div>
+
+      <p>The measured results of <a href="l-measurements.html">Appendix L</a> are a different and stronger
+      class of evidence and do not inherit this caveat. The specification of
+      <a href="m-formal-core.html">Appendix M</a> does not depend on these numbers for its correctness — only
+      claim C4 of §M.3.2 draws support from them, and it is stated there as a hypothesis with both a
+      supporting and a refuting measurement named.</p>
+
+      <div class="chapter-nav">
+        <a href="m-formal-core.html" class="chapter-nav-btn prev"><span class="chapter-nav-label">← Previous</span><span class="chapter-nav-title">Appendix M: Formal Core</span></a>
+        <a href="../index.html" class="chapter-nav-btn next"><span class="chapter-nav-label">Back to →</span><span class="chapter-nav-title">Home</span></a>
+      </div>
+    </div>
+    <footer class="footer">
+      <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-primary);">
+        <p style="font-size: 0.8rem; color: var(--text-muted);">
+          © 2025–2026 Subramaniyam (Sam) Pooni. All Rights Reserved.<br>
+          This document contains proprietary and confidential information.<br>
+          Unauthorized reproduction or distribution is strictly prohibited.
+        </p>
+      </div>
+      <p>Distributed Endpoint Architecture for KV-Cache Offloading in LLM Inference</p>
+      <p style="margin-top: 0.5rem;">Technical Documentation v5.0 — August 2026</p>
+    </footer>
+  </div>
+</body>
+</html>

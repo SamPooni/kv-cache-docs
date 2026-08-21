@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Appendix M: Formal Core — Object Model, Plane Split, Objective Function — KV-Cache Offloading</title>
+  <link rel="stylesheet" href="../vendor/fonts.css">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <div class="watermark">
+    © 2025–2026 Subramaniyam (Sam) Pooni<br>
+    All Rights Reserved<br>
+    Proprietary & Confidential
+  </div>
+
+  <nav class="nav"><div class="nav-inner"><a href="../index.html" class="nav-brand"><span class="nav-brand-icon" aria-hidden="true">⚡</span> KV-Cache Architecture</a><div class="nav-links"><a href="index.html" class="nav-link">Appendix Index</a><a href="a-transformer-fundamentals.html" class="nav-link">A</a><a href="b-attention-mechanism.html" class="nav-link">B</a><a href="c-kv-cache-math.html" class="nav-link">C</a><a href="d-rope-encoding.html" class="nav-link">D</a><a href="e-head-specialization.html" class="nav-link">E</a><a href="f-cxl-technology.html" class="nav-link">F</a><a href="g-ema-algorithm.html" class="nav-link">G</a><a href="h-memory-hierarchy.html" class="nav-link">H</a><a href="i-bandwidth-calculations.html" class="nav-link">I</a><a href="j-implementation-reference.html" class="nav-link">J</a><a href="k-methodology.html" class="nav-link">K</a><a href="l-measurements.html" class="nav-link">L</a><a href="m-formal-core.html" class="nav-link active">M</a><a href="n-simulation.html" class="nav-link">N</a></div></div></nav>
+  <div class="page-wrapper">
+    <div class="container" role="main">
+      <header class="chapter-header">
+        <div class="chapter-label">Appendix M</div>
+        <h1 class="chapter-title">Formal Core — Object Model, Plane Split, Objective Function</h1>
+        <p class="chapter-subtitle">Three things locked down: what a KV block object is, where policy ends and mechanism begins, and what is being minimised subject to what. No new prose argument — this is the specification the chapters' prose serves.</p>
+      </header>
+
+      <div class="callout definition">
+        <div class="callout-title">What class of evidence this appendix is</div>
+        <p>Almost everything on this page is <strong>specification</strong>, not result. Where a number
+        appears it carries its own class. The one term that has moved from assumption to measurement is the
+        decode cost model, and it moved because of <a href="l-measurements.html">Appendix L</a>: the
+        objective function of §M.4 was written assuming a single memory bandwidth, and there are two. The
+        policy claims — admission, residency budgets, metadata persistence, device-side control — remain
+        specification. <a href="n-simulation.html">Appendix N</a> tests some of them in simulation, and
+        those results are <span class="mono">Simulated (provisional)</span>.</p>
+      </div>
+
+      <h2>M.1 One Property the Rest Depends On</h2>
+
+      <div class="callout insight">
+        <div class="callout-title">KV blocks are write-once</div>
+        <p>For a given <span class="mono">(sequence, layer, position range)</span>, K and V are computed
+        <strong>once</strong> — during prefill, or at the decode step that produces that token — and are
+        never subsequently modified. <strong>Nothing in autoregressive decoding mutates existing KV.</strong></p>
+      </div>
+
+      <p>Four consequences follow, and all four distinguish this from a general-purpose cache:</p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th scope="col">#</th><th scope="col">Consequence</th><th scope="col">Why it matters</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="mono">1</td>
+              <td>A tier copy, once written, <strong>never becomes stale</strong>.</td>
+              <td>There is no coherence problem on the payload. The hard part of tiered-memory design does not apply here.</td>
+            </tr>
+            <tr>
+              <td class="mono">2</td>
+              <td>Eviction of a block that already has a tier copy is a <strong>clean discard</strong>.</td>
+              <td>No writeback. Eviction costs nothing on the link.</td>
+            </tr>
+            <tr>
+              <td class="mono">3</td>
+              <td>Each block is therefore demoted <strong>at most once</strong> in its lifetime, however many times it is promoted.</td>
+              <td>This is what bounds the traffic metric of §M.5.1 and gives it a floor of 2 rather than 1.</td>
+            </tr>
+            <tr>
+              <td class="mono">4</td>
+              <td>The only mutable state associated with a block is its <strong>control metadata</strong>.</td>
+              <td>Orders of magnitude smaller than the payload, and handled separately — see §M.2.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warning">
+        <div class="callout-title">The exception, stated explicitly</div>
+        <p><strong>In-place re-quantisation or re-compression of a resident block writes new payload bytes
+        and breaks write-once for that block.</strong> Systems that do this must account for it: consequence
+        1 fails (the tier copy is now stale), consequence 2 fails (the discard is no longer clean), and
+        consequence 3 fails (the demotion count is no longer bounded by one). Given that
+        <a href="l-measurements.html">Appendix L §L.5.1</a> makes compression the dominant lever, this is not
+        a hypothetical corner — it is the most likely way a real implementation would leave the regime this
+        specification describes.</p>
+      </div>
+
+      <h2>M.2 KV Object Model</h2>
+
+      <h3>M.2.1 The object</h3>
+
+      <p>A <strong>KV block object</strong> is the unit of placement, migration and accounting. It carries
+      a payload and three classes of state.</p>
+
+      <div class="figure">
+        <div class="figure-label">Diagram M.1 — KV block object</div>
+        <div class="figure-content">
+<pre aria-hidden="true">
+KV BLOCK OBJECT  b
+├─ PAYLOAD            K/V tensors for (sequence, layer, position range)   [write-once]
+├─ IDENTITY   (immutable)
+│    sequence id · position range · layer · head group
+│    prefix hash · provenance / parent block
+├─ POLICY     (mutable in place, WITHOUT migrating the payload)
+│    tenant · QoS class · priority · reuse score · recency
+│    scheduler-supplied residency intent
+└─ MECHANISM  (mutable, owned by whichever plane holds the block)
+     residency location · compression format · transfer state
+     validity · in-flight/pinned flags
+</pre>
+          <p class="sr-only">Text equivalent of Diagram M.1. A KV block object, labelled b, has four
+          parts. First, PAYLOAD: the K and V tensors for one sequence, layer and position range; it is
+          write-once. Second, IDENTITY, which is immutable, comprising sequence id, position range, layer,
+          head group, prefix hash, and provenance or parent block. Third, POLICY, which is mutable in place
+          without migrating the payload, comprising tenant, QoS class, priority, reuse score, recency, and
+          scheduler-supplied residency intent. Fourth, MECHANISM, which is mutable and owned by whichever
+          plane currently holds the block, comprising residency location, compression format, transfer
+          state, validity, and in-flight or pinned flags.</p>
+        </div>
+        <div class="figure-caption">The split into identity, policy and mechanism is the whole content of the object model. Everything in §M.2.2 is a statement about which of the three travels with the bytes.</div>
+      </div>
+
+      <h3>M.2.2 What migrates, and what does not</h3>
+
+      <p>This is the correction to "migrate metadata with the block". Migrating <em>all</em> metadata as one
+      physically inseparable unit is wrong, because <strong>policy metadata changes while the block does not
+      move</strong> — QoS is reassigned, priority shifts, scheduler intent updates every step.</p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th scope="col">Class</th><th scope="col">Lifetime</th><th scope="col">Migrates with payload?</th><th scope="col">Mutable without migration?</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Identity</strong></td><td>Fixed at creation</td><td>Yes — it <em>is</em> the block's name</td><td>No</td></tr>
+            <tr><td><strong>Policy</strong></td><td>Changes on scheduler events</td><td><strong>Logically bound, physically separable</strong></td><td><strong>Yes</strong></td></tr>
+            <tr><td><strong>Mechanism</strong></td><td>Changes on every transfer</td><td>No — regenerated per location</td><td>Yes</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>So the design claim is not "one physically fused object". It is:</p>
+
+      <div class="equation">
+        A logically migratable KV object with independently updatable control metadata
+        <div class="equation-label">The formulation the rest of the specification is built on</div>
+      </div>
+
+      <p><strong>Identity travels with the payload.</strong> <strong>Policy is <em>associated</em> with
+      identity</strong> and may be updated in place, on either side, without moving a byte.
+      <strong>Mechanism is local</strong> to wherever the block currently sits.</p>
+
+      <h3>M.2.3 What is actually being proposed</h3>
+
+      <p>Today, in the systems reviewed, <strong>a block evicted from HBM loses its accumulated policy state
+      and is re-admitted as if newly created</strong>. The proposal is that
+      <strong>identity-keyed policy state survives the round trip</strong>.</p>
+
+      <div class="callout insight">
+        <div class="callout-title">This is a protocol claim, not a hardware claim</div>
+        <p>It is testable <strong>without any CXL device</strong>, and it has been tested in simulation:
+        <a href="n-simulation.html">Appendix N §N.4</a> reports it as the largest single effect in the study
+        — <span class="mono">+34.15 pts</span> to LFU and <span class="mono">+24.85 pts</span> to
+        EMA α=0.01 at a 32 GiB budget. Those figures are
+        <span class="mono">Simulated (provisional)</span> and carry the standing caveat of §N.9. That one of
+        the four claims in §M.3.2 needs no device at all is the point of §M.3.2's closing note.</p>
+      </div>
+
+      <h3>M.2.4 Overhead — what is and is not negligible</h3>
+
+      <p><strong>Payload-capacity overhead is negligible.</strong> 64 B of metadata against a
+      <span class="mono">5.00 MiB</span> block is <span class="mono">0.0012%</span>.
+      <span class="mono">Analytical model</span>, over the block granularity fixed in
+      <span class="mono">CANONICAL-NUMBERS.md</span> §2 (16 tokens at 320 KiB/token for Llama-3 70B GQA).</p>
+
+      <div class="callout important">
+        <div class="callout-title"><span class="danger">Metadata processing overhead is not established and must be measured</span></div>
+        <p>The capacity argument bounds none of it. The open items, each of which is a separate measurement
+        and none of which has been made:</p>
+        <ul>
+          <li><strong>Lookup bandwidth on the promotion path</strong> — how much of a promotion is spent
+          finding the block rather than moving it.</li>
+          <li><strong>Atomic update cost under concurrent scheduler writes</strong> — policy state is written
+          by the scheduler while the data plane reads it.</li>
+          <li><strong>Controller SRAM footprint for the resident index</strong> — the index must fit
+          somewhere, and that somewhere is the scarcest memory in the system.</li>
+          <li><strong>Coherence of policy state between planes</strong> — the payload has no coherence
+          problem (§M.1); the policy metadata does.</li>
+          <li><strong>Per-transaction overhead on the link</strong> — small metadata transactions are the
+          worst case for a protocol optimised for bulk movement.</li>
+        </ul>
+        <p>Quoting <span class="mono">0.0012%</span> as though it answered the overhead question is the
+        error this callout exists to prevent. It answers a capacity question only.</p>
+      </div>
+
+      <h2>M.3 Control Plane / Data Plane</h2>
+
+      <h3>M.3.1 The split</h3>
+
+      <p>The null hypothesis is strong and should be stated first, before any argument for the design:</p>
+
+      <div class="callout warning">
+        <div class="callout-title">Null hypothesis</div>
+        <p><strong>The host serving runtime knows more than any device-side controller can.</strong> It holds
+        the active decode set, next-step candidates, tenant priorities, preemption decisions, sequence
+        completion, speculative-decoding acceptance, and admission state. <strong>A CXL controller has none
+        of that intrinsically.</strong></p>
+      </div>
+
+      <p>The defensible decomposition follows directly from the null hypothesis rather than against it:</p>
+
+      <div class="equation">
+        Host owns policy. Device owns mechanism.
+        <div class="equation-label">The only division of labour the null hypothesis leaves standing</div>
+      </div>
+
+      <div class="figure">
+        <div class="figure-label">Diagram M.2 — Control plane and data plane</div>
+        <div class="figure-content">
+<pre aria-hidden="true">
+              SERVING SCHEDULER
+                     │  execution intent: decode set, priorities,
+                     │  prefetch horizon, QoS, preemption
+                     ▼
+        ┌──────────────────────────────┐
+        │   KV CONTROL PLANE  (host)   │
+        │   admission · residency      │
+        │   prefetch horizon · QoS     │
+        │   representation choice      │
+        └──────────────┬───────────────┘
+                       │  placement intent (block ids + deadlines + priority)
+                       ▼
+        ┌──────────────────────────────┐
+        │   KV DATA PLANE  (device)    │
+        │   promotion · demotion · DMA │
+        │   transfer scheduling        │
+        │   compression execution      │
+        │   metadata maintenance       │
+        └──────────────┬───────────────┘
+                       │
+          ┌────────────┴────────────┐
+          ▼                         ▼
+       GPU HBM                 Tier memory
+          │                         │
+          └────────► metrics ◄──────┘
+                       │
+                       ▼
+               control feedback
+</pre>
+          <p class="sr-only">Text equivalent of Diagram M.2. A vertical flow in five stages. At the top, the
+          SERVING SCHEDULER passes execution intent downward: the decode set, priorities, prefetch horizon,
+          QoS and preemption. It feeds the KV CONTROL PLANE, which runs on the host and owns admission,
+          residency, prefetch horizon, QoS and representation choice. The control plane passes placement
+          intent downward — block ids, deadlines and priority. That feeds the KV DATA PLANE, which runs on
+          the device and owns promotion, demotion, DMA, transfer scheduling, compression execution and
+          metadata maintenance. The data plane fans out to two destinations: GPU HBM on the left and tier
+          memory on the right. Both return metrics, which merge into a single control-feedback path running
+          back up to the control plane. Intent flows down; metrics flow up.</p>
+        </div>
+        <div class="figure-caption">The device does not decide which tenant deserves HBM. It is told priorities and deadlines and decides <strong>how</strong> to execute the resulting movement efficiently.</div>
+      </div>
+
+      <h3>M.3.2 What would justify device residency — as falsifiable claims</h3>
+
+      <p>Each of the following is a hypothesis with a measurement attached. <strong>None is assumed
+      true.</strong> Each row names both the measurement that would support it and the measurement that would
+      refute it, so that neither outcome can be reinterpreted after the fact.</p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th scope="col">Claim</th><th scope="col">Measurement that would support it</th><th scope="col">Measurement that would refute it</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>C1.</strong> Device-local decisions remove host round-trips from the promotion path</td>
+              <td>Promotion latency with device-side scheduling versus host-issued DMA, under load</td>
+              <td>Host-issued path already hidden behind compute; no exposed stall difference</td>
+            </tr>
+            <tr>
+              <td><strong>C2.</strong> Metadata lookup at memory latency matters</td>
+              <td>Fraction of promotion latency spent in metadata lookup</td>
+              <td>Lookup is off the critical path, or is trivially cacheable in host DRAM</td>
+            </tr>
+            <tr>
+              <td><strong>C3.</strong> Frees host CPU under multi-tenancy</td>
+              <td>Host CPU utilisation attributable to KV movement, at scale</td>
+              <td>CPU is not the bottleneck at realistic tenant counts</td>
+            </tr>
+            <tr>
+              <td><strong>C4.</strong> Sustains policy state across eviction and re-admission</td>
+              <td>Hit rate and movement amplification, with and without persistent policy state</td>
+              <td>Host-side persistence achieves the same result</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout insight">
+        <div class="callout-title">C4 is the only one that does not require the controller to be on the device</div>
+        <p>And C4 is the one with simulation support behind it (<a href="n-simulation.html">Appendix N
+        §N.4</a>). <strong>If C4 is the claim that survives, the contribution is the object model and
+        protocol of §M.2, and CXL is simply where it runs</strong> — which is still a contribution, just a
+        different one from the one the architecture was originally argued for. This is the level at which
+        <span class="mono">CANONICAL-NUMBERS.md</span> §6 states the contribution, and it is deliberately
+        weaker than the v4.0 framing.</p>
+      </div>
+
+      <h2>M.4 Objective Function</h2>
+
+      <h3>M.4.1 Decision variables</h3>
+
+      <p>For each block <span class="mono">b</span> and time step <span class="mono">t</span>:</p>
+
+<pre>x_b(t) ∈ {0,1}        block b resident in HBM at t
+p_b(t) ∈ {0,1}        promotion of b initiated at t   (tier → HBM)
+d_b(t) ∈ {0,1}        demotion of b initiated at t    (HBM → tier)</pre>
+
+      <p><span class="mono">M_b</span> = payload bytes of block <span class="mono">b</span>.
+      <span class="mono">Δt</span> = step duration.</p>
+
+      <h3>M.4.2 Correctness constraint — the line between lossless and lossy</h3>
+
+      <p>Let <span class="mono">Read(t)</span> be the set of blocks attention reads at step
+      <span class="mono">t</span>.</p>
+
+      <div class="equation">
+        LOSSLESS: &nbsp; x<sub>b</sub>(t) = 1 &nbsp; ∀ b ∈ Read(t), &nbsp; ∀ t &nbsp; <em>(hard)</em>
+        <div class="equation-label">Every block attention reads must be resident at the step it is read</div>
+      </div>
+
+      <div class="callout definition">
+        <div class="callout-title">This single constraint is the formal content of the lossless/lossy distinction</div>
+        <p><strong>Lossy methods</strong> — token eviction, sparse retrieval, approximate reconstruction —
+        operate by <em>relaxing</em> it: they permit <span class="mono">b ∈ Read(t)</span> with
+        <span class="mono">x_b(t) = 0</span>, substituting an approximation. <strong>Everything else in the
+        model is common to both.</strong> That is why the distinction can be drawn here in one line rather
+        than argued qualitatively.</p>
+      </div>
+
+      <p>Under dense attention, <span class="mono">Read(t)</span> is <strong>the entire context of every
+      sequence in the decode set</strong>. This is why "which blocks" is not the interesting question — the
+      answer is <em>all of them</em> — and why <em>when</em> and <em>at whose expense</em> are. It is also
+      the formal reason the retracted v4.0 claim that a 5.4% hot set captured 97% of accesses was a category
+      error: it conflated a cache hit rate with attention sparsity, two different claims with different
+      obligations (<span class="mono">CANONICAL-NUMBERS.md</span> §7).</p>
+
+      <h3>M.4.3 Resource constraints</h3>
+
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th scope="col">Constraint</th><th scope="col">Statement</th><th scope="col">What it binds</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="mono"><strong>CAPACITY</strong></td>
+              <td class="mono">Σ_b M_b · x_b(t) ≤ C_HBM &nbsp; ∀t</td>
+              <td>How much may be resident at once</td>
+            </tr>
+            <tr>
+              <td class="mono"><strong>LINK</strong></td>
+              <td class="mono">Σ_b M_b · (p_b(t) + d_b(t)) / Δt ≤ B_tier(t) &nbsp; ∀t</td>
+              <td>How fast the boundary may be crossed</td>
+            </tr>
+            <tr>
+              <td class="mono"><strong>SUSTAINABILITY</strong></td>
+              <td class="mono">Σ_{i ∈ decode set} R_KV,i ≤ B_tier</td>
+              <td>Aggregate KV consumption rate across <strong>all</strong> concurrently decoding sequences, not one sequence</td>
+            </tr>
+            <tr>
+              <td class="mono"><strong>HIDING</strong></td>
+              <td class="mono">T_transfer(chunk) ≤ T_compute(previous chunk) + prefetch_slack</td>
+              <td>Per transfer — <strong>not</strong> on average</td>
+            </tr>
+            <tr>
+              <td class="mono"><strong>QoS</strong></td>
+              <td class="mono">TTFT_j ≤ τ_j, &nbsp; ITL_j ≤ ι_j &nbsp; ∀ tenants j</td>
+              <td>What the workload is entitled to</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warning">
+        <div class="callout-title">Sustainability and hiding are independent</div>
+        <p><strong>The first can hold while the second fails</strong>, producing stalls at satisfactory
+        average bandwidth. Both must be stated because techniques act on different terms: <strong>link width
+        and compression</strong> raise or relieve the first; <strong>prefetch depth, chunk sizing and
+        traversal order</strong> address the second. A design that reports only aggregate bandwidth cannot
+        tell the two failures apart. This is the same distinction that
+        <span class="mono">CANONICAL-NUMBERS.md</span> §5 draws between the tier-ingress wall and the
+        transfer/latency wall.</p>
+      </div>
+
+      <h3>M.4.4 The objective</h3>
+
+      <p>The workload and its QoS targets are the <strong>constraint</strong>; resources consumed are the
+      <strong>objective</strong>. Minimising HBM occupancy for its own sake would be degenerate — the point
+      is to serve the same work with less.</p>
+
+<pre>minimise    Σ_t Σ_b  M_b · x_b(t) · Δt                    ← HBM byte-time
+     + λ ·  Σ_t Σ_b  M_b · (p_b(t) + d_b(t))              ← tier traffic
+     + μ ·  Σ_t       stall_exposed(t)                     ← unhidden transfer
+
+subject to  the constraints of §M.4.2 – §M.4.3</pre>
+
+      <div class="callout insight">
+        <div class="callout-title">Byte-time is the scarce commodity, not bytes</div>
+        <p><strong>5 MiB held for 1 ms and 5 MiB held for 500 ms are not the same allocation.</strong> This
+        is what makes idle inter-turn state and active decode state comparable on one scale, and it is why
+        the problem is <strong>temporal resource allocation</strong> rather than caching.</p>
+      </div>
+
+      <div class="callout important">
+        <div class="callout-title"><span class="danger">The byte-counting terms are now known to need weighting</span></div>
+        <p>This objective was written assuming a single memory bandwidth. <a href="l-measurements.html">Appendix L</a>
+        measures two: KV read at <strong>26–28% of achievable bandwidth</strong> against
+        <strong>87% for weights</strong>, a <strong>3.4× per-byte penalty on KV</strong>, stable across two
+        frameworks and two attention kernels. <span class="mono">Measured</span>. <strong>A KV byte is not
+        interchangeable with a weight byte</strong>, and the terms above should be weighted accordingly. This
+        is the one place where measurement has already amended the specification.</p>
+      </div>
+
+      <h3>M.4.5 Admission, and where eviction sits</h3>
+
+      <p>Under a binding capacity constraint, <strong>admission and eviction are dual</strong>: admitting
+      <span class="mono">b</span> when HBM is full forces some <span class="mono">b′</span> out.
+      <strong>Eviction does not disappear.</strong></p>
+
+      <div class="callout definition">
+        <div class="callout-title">The reframing</div>
+        <p>Conventional eviction asks which resident object should leave. A tiered KV controller begins one
+        level higher: <strong>which state deserves HBM residency over the upcoming scheduling
+        horizon?</strong> Eviction becomes a <em>consequence</em> of that decision rather than an independent
+        policy.</p>
+      </div>
+
+      <p>Formally, admission over a horizon <span class="mono">H</span> with per-block value
+      <span class="mono">V_b</span> — derived from QoS, expected reuse and scheduler intent — and residency
+      cost <span class="mono">M_b · H</span>:</p>
+
+      <div class="equation">
+        maximise &nbsp; Σ<sub>b</sub> V<sub>b</sub> · x<sub>b</sub> &nbsp;&nbsp; subject to &nbsp;&nbsp; Σ<sub>b</sub> M<sub>b</sub> · x<sub>b</sub> ≤ C<sub>HBM</sub>
+        <div class="equation-label">A knapsack over the decode set, re-solved as the set changes</div>
+      </div>
+
+      <p><strong>Replacement policy is what remains once this is fixed</strong>, which is the formal statement
+      of "subordinate to admission" — and the reason the phrasing is <em>subordination</em> rather than
+      <em>elimination</em>.</p>
+
+      <h3>M.4.6 Terminology</h3>
+
+      <p>Continuous batching means there is no <em>currently scheduled sequence</em>. There is a
+      <strong>currently scheduled decode set</strong>, membership of which changes step to step. All residency
+      language in this package should use the set, not the singular.</p>
+
+      <h2>M.5 Metrics</h2>
+
+      <h3>M.5.1 Movement amplification — corrected</h3>
+
+      <p>The Rev 3 definition conflated directions and asserted a floor of <span class="mono">1.0</span>,
+      which is wrong. Two metrics replace it, plus the write-once bound from §M.1.</p>
+
+      <p>Let <span class="mono">U</span> be the unique payload bytes the computation requires. For block
+      <span class="mono">b</span>, let <span class="mono">n_b</span> be the number of promotions and
+      <span class="mono">δ_b</span> the number of demotions.</p>
+
+<pre>A_read     =  Σ_b n_b · M_b  /  U            promotion traffic per useful byte
+A_traffic  =  Σ_b (n_b + δ_b) · M_b  /  U    total boundary traffic per useful byte</pre>
+
+      <p><strong>Write-once gives <span class="mono">δ_b ≤ 1</span></strong> (§M.1): once a tier copy exists
+      it stays valid, so later evictions are clean discards. Therefore:</p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th scope="col">Block history</th><th scope="col">δ, n</th><th scope="col">Contribution to A_traffic</th><th scope="col">Reading</th></tr></thead>
+          <tbody>
+            <tr><td>Never leaves HBM</td><td class="mono">δ=0, n=0</td><td class="mono">0</td><td>Free</td></tr>
+            <tr><td>Written out, never recalled</td><td class="mono">δ=1, n=0</td><td class="mono">1</td><td>Paid once, no benefit sought</td></tr>
+            <tr><td><strong>Written out, recalled once</strong></td><td class="mono">δ=1, n=1</td><td class="mono"><strong>2</strong></td><td><strong>The floor for any block that round-trips</strong></td></tr>
+            <tr><td>Written out, recalled 3×</td><td class="mono">δ=1, n=3</td><td class="mono">4</td><td>Thrashing</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout important">
+        <div class="callout-title"><span class="danger">A_traffic = 2 is the floor for round-tripping blocks, not 1</span></div>
+        <p>Values materially above the workload's own lower bound indicate the <strong>placement policy is
+        thrashing</strong> — which presents identically to a poor replacement rule in hit rate, but has a
+        different fix. Diagnosing one as the other is the failure this metric exists to prevent.</p>
+      </div>
+
+      <div class="callout warning">
+        <div class="callout-title">No universal threshold is asserted</div>
+        <p>The Rev 3 decision tree contained a <span class="mono">1.5</span> that nothing in the document
+        established. <strong>It is removed.</strong> The comparison is against the
+        <strong>workload-specific lower bound</strong>, computed by simulating the same trace with an
+        offline-optimal placement. There is no number here that transfers between workloads, and any
+        threshold quoted as if it did is being invented.</p>
+      </div>
+
+      <h3>M.5.2 Reuse per moved byte — the economic objective</h3>
+
+      <p>A block may cross the boundary once and be read by attention hundreds of times from HBM. That ratio
+      is the reason residency is worth paying for at all:</p>
+
+      <div class="equation">
+        reuse ratio &nbsp;=&nbsp; Σ<sub>b</sub> (attention reads of b while resident) · M<sub>b</sub> &nbsp;÷&nbsp; Σ<sub>b</sub> (n<sub>b</sub> + δ<sub>b</sub>) · M<sub>b</sub>
+        <div class="equation-label">Useful HBM reads earned per byte moved across the tier boundary</div>
+      </div>
+
+      <p>A block that round-trips once (traffic <span class="mono">2·M_b</span>) and is read 500 times during
+      a generation has a reuse ratio of <strong>250</strong>. <span class="mono">Illustrative</span>.</p>
+
+      <p class="highlight"><strong>Maximising useful HBM reuse per tier byte moved is a better policy
+      objective than hit rate</strong>, because hit rate is blind to what the hit cost to arrange.</p>
+
+      <h3>M.5.3 Instrumentation set</h3>
+
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th scope="col">Metric</th><th scope="col">Instruments</th></tr></thead>
+          <tbody>
+            <tr><td>HBM byte-time (GiB·s) per completed request</td><td>The objective's first term</td></tr>
+            <tr><td>Tier bytes per generated token</td><td>The second term; easiest to measure, easiest to compare</td></tr>
+            <tr><td><span class="mono">A_read</span>, <span class="mono">A_traffic</span> versus offline-optimal</td><td>Placement quality</td></tr>
+            <tr><td>Reuse ratio</td><td>Whether residency is earning its cost</td></tr>
+            <tr><td>Exposed stall per token</td><td>Whether <span class="mono">HIDING</span> holds</td></tr>
+            <tr><td>Prefetch accuracy (fetched-and-used ÷ fetched)</td><td>Prefetch policy quality</td></tr>
+            <tr><td>TTFT, inter-token latency, throughput</td><td><span class="mono">QoS</span> constraint satisfaction</td></tr>
+            <tr><td>Host CPU utilisation attributable to KV movement</td><td>The control/data-plane claim C3 (§M.3.2)</td></tr>
+            <tr><td>Per-tenant QoS attainment under contention</td><td>Admission fairness</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="highlight"><strong>All of these are obtainable on host DRAM over PCIe before any CXL hardware
+      is procured.</strong> That is the point of listing them: none of the open questions in §M.3.2 requires
+      a purchase order to begin answering.</p>
+
+      <h2>M.6 What This Specification Settles and Does Not</h2>
+
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th scope="col">Status</th><th scope="col">Content</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>Now measured</strong><br>(was assumed)</td>
+              <td><strong>The decode cost model.</strong> §M.4.4's objective assumed a single memory
+              bandwidth. Measurement on GB10 shows two, with KV read at ~26% of achievable bandwidth against
+              87% for weights — a <strong>3.4× per-byte penalty on KV</strong>, stable across two frameworks
+              and two attention kernels. The objective's byte-counting terms should therefore be weighted.
+              See <a href="l-measurements.html">Appendix L</a>.</td>
+            </tr>
+            <tr>
+              <td><strong>Settles</strong></td>
+              <td>What a KV object is; which metadata migrates and which is updatable in place; where policy
+              lives versus mechanism; what is being minimised subject to what; how the lossless/lossy boundary
+              is expressed formally (§M.4.2); and how movement is measured without the accounting error
+              (§M.5.1).</td>
+            </tr>
+            <tr>
+              <td><strong>Does not settle</strong></td>
+              <td>Whether device-side residency of the mechanism is justified — §M.3.2 lists the four
+              falsifiable claims; whether persistent policy state changes outcomes materially; what the
+              workload-specific amplification floors are; and <strong>whether any of this is novel</strong>,
+              which requires a systematic literature review that nothing in this package constitutes.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout">
+        <div class="callout-title">The honest summary</div>
+        <p><strong>The cost model is now partly measured; the policy claims are not.</strong> Appendix L
+        gives measured bandwidth terms on one machine. Everything about admission, residency budgets,
+        metadata persistence and device-side control remains <strong>specification, not result</strong> —
+        including the simulation evidence in <a href="n-simulation.html">Appendix N</a>, which is
+        <span class="mono">Simulated (provisional)</span> and has already been wrong once. The value of this
+        appendix is that the remaining questions are now stated precisely enough to be settled by experiment
+        rather than by argument.</p>
+      </div>
+
+      <div class="chapter-nav">
+        <a href="l-measurements.html" class="chapter-nav-btn prev"><span class="chapter-nav-label">← Previous</span><span class="chapter-nav-title">Appendix L: Hardware Measurements</span></a>
+        <a href="n-simulation.html" class="chapter-nav-btn next"><span class="chapter-nav-label">Next →</span><span class="chapter-nav-title">Appendix N: Simulation and Erratum</span></a>
+      </div>
+    </div>
+    <footer class="footer">
+      <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-primary);">
+        <p style="font-size: 0.8rem; color: var(--text-muted);">
+          © 2025–2026 Subramaniyam (Sam) Pooni. All Rights Reserved.<br>
+          This document contains proprietary and confidential information.<br>
+          Unauthorized reproduction or distribution is strictly prohibited.
+        </p>
+      </div>
+      <p>Distributed Endpoint Architecture for KV-Cache Offloading in LLM Inference</p>
+      <p style="margin-top: 0.5rem;">Technical Documentation v5.0 — August 2026</p>
+    </footer>
+  </div>
+</body>
+</html>

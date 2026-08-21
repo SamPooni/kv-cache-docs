@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Figure 2.4 — Roofline Model</title>
+<script src="../../vendor/react.production.min.js"></script>
+<script src="../../vendor/react-dom.production.min.js"></script>
+<script src="../../vendor/babel.min.js"></script>
+<link rel="stylesheet" href="../../vendor/fonts.css">
+<link rel="stylesheet" href="../../css/style.css">
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: var(--font-sans); background: var(--bg-primary); min-height: 100vh; color: var(--text-primary); }</style>
+</head>
+<body>
+<div role="note" style="position:sticky;top:0;z-index:9999;background:#f85149;color:#0a0e14;padding:0.85rem 1rem;font-family:'IBM Plex Sans',-apple-system,sans-serif;font-weight:700;font-size:0.95rem;line-height:1.45;border-bottom:3px solid #0a0e14;">
+SUPERSEDED — this figure illustrates a claim withdrawn in v5.0. It is retained only so the retraction remains checkable. Do not cite it. See RETRACTIONS.md and Appendix L (hardware measurements) and Appendix N (simulation) for what replaced it.
+</div>
+
+<div id="root" role="main"></div>
+<script type="text/babel">
+function RooflineModel() {
+  const styles = {
+    container: { maxWidth: '800px', margin: '0 auto', padding: '2rem' },
+    header: { textAlign: 'center', marginBottom: '2rem' },
+    chart: { background: 'var(--bg-card)', borderRadius: '16px', padding: '2rem', marginBottom: '1.5rem', position: 'relative', height: 300 },
+    axis: { position: 'absolute', background: 'var(--text-secondary)' },
+    label: { position: 'absolute', fontSize: '0.75rem', color: 'var(--text-secondary)' },
+    roof: { position: 'absolute', height: 3, background: 'var(--accent-green)' },
+    slope: { position: 'absolute', width: 3, background: 'var(--accent-blue)', transformOrigin: 'bottom left' },
+    point: (color) => ({ position: 'absolute', width: 12, height: 12, borderRadius: '50%', background: color, transform: 'translate(-50%, -50%)' }),
+    legend: { display: 'flex', justifyContent: 'center', gap: '2rem', marginBottom: '1.5rem' },
+    legendItem: { display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem' },
+    dot: (color) => ({ width: 12, height: 12, borderRadius: '50%', background: color }),
+    insight: { background: 'var(--bg-code)', borderRadius: '12px', padding: '1rem' }
+  };
+  return (
+    <div style={styles.container}>
+      <p className="sr-only">Figure 2.4: a roofline plot of performance against arithmetic intensity, with prefill and decode marked on it. Prefill sits to the right, at high arithmetic intensity under the flat compute ceiling, so it is compute-bound; decode sits far to the left on the rising bandwidth-limited slope, so it is memory-bound. A B200 needs 281 FLOPs per byte — 2,250 TFLOPS BF16 dense divided by 8 TB/s — to saturate its compute, and attention delivers a small fraction of that, which is why KV-cache placement rather than raw fabric bandwidth is what matters: in steady state the design moves only 11.4 GB/s across a 256 GB/s CXL fabric. All values are an analytical model, not measured.</p>
+      <div style={styles.header}>
+        <div style={{display: 'inline-block', padding: '0.25rem 0.75rem', background: 'rgba(59,130,246,0.2)', color: 'var(--accent-cyan)', fontSize: '0.75rem', fontFamily: 'var(--font-mono)', borderRadius: '20px', marginBottom: '0.5rem'}}>FIGURE 2.4</div>
+        <h1 style={{fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.5rem'}}>Roofline Model</h1>
+        <p style={{color: 'var(--text-secondary)'}}>Compute vs Memory-bound operations</p>
+      </div>
+      <div style={styles.chart}>
+        <div style={{...styles.axis, bottom: 40, left: 60, right: 20, height: 2}}></div>
+        <div style={{...styles.axis, bottom: 40, left: 60, top: 20, width: 2}}></div>
+        <div style={{...styles.label, bottom: 10, left: '50%', transform: 'translateX(-50%)'}}>Arithmetic Intensity (FLOPs/Byte)</div>
+        <div style={{...styles.label, left: 10, top: '50%', transform: 'rotate(-90deg) translateX(-50%)', transformOrigin: 'left'}}>Performance</div>
+        <div style={{...styles.roof, top: 60, left: 200, right: 40}}></div>
+        <div style={{...styles.slope, bottom: 40, left: 60, height: 160, transform: 'rotate(-50deg)'}}></div>
+        <div style={styles.label}>Compute Ceiling</div>
+        <div style={{...styles.point('var(--accent-green)'), top: 100, left: 500}} role="img" aria-label="Prefill plotted at high arithmetic intensity, up against the compute ceiling"></div>
+        <div style={{...styles.label, top: 80, left: 510, color: 'var(--accent-green)'}}>Prefill (compute-bound)</div>
+        <div style={{...styles.point('var(--accent-orange)'), top: 180, left: 120}} role="img" aria-label="Decode plotted at low arithmetic intensity, on the memory-bandwidth slope"></div>
+        <div style={{...styles.label, top: 160, left: 130, color: 'var(--accent-orange)'}}>Decode (memory-bound)</div>
+      </div>
+      <div style={styles.legend}>
+        <div style={styles.legendItem}><div style={styles.dot('var(--accent-green)')} aria-hidden="true"></div>Prefill: High arithmetic intensity</div>
+        <div style={styles.legendItem}><div style={styles.dot('var(--accent-orange)')} aria-hidden="true"></div>Decode: Low arithmetic intensity</div>
+      </div>
+      <div style={styles.insight}>
+        <div style={{fontWeight: 600, color: 'var(--accent-cyan)', marginBottom: '0.5rem'}}>💡 Key Insight</div>
+        <div style={{color: 'var(--text-secondary)', fontSize: '0.875rem'}}>
+          Decode sits far to the left of the ridge point: a B200 needs 281 FLOPs/byte
+          (2,250 TFLOPS BF16 dense ÷ 8 TB/s) to saturate its compute, and attention delivers a small
+          fraction of that. Decode is therefore limited by the memory system, not by FLOPs — which is why
+          KV-cache placement matters. Note the fix is <em>capacity and locality</em>, not raw fabric bandwidth:
+          in steady state the design moves only 11.4 GB/s across a 256 GB/s CXL fabric.
+        </div>
+      </div>
+      <div style={{fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '1rem', textAlign: 'center'}}>
+        Illustrative roofline; ridge point from vendor specifications. All derived figures are an analytical model, not measured.
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<RooflineModel />);
+</script>
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Current Approaches Comparison</title>
+<script src="../../vendor/react.production.min.js"></script>
+<script src="../../vendor/react-dom.production.min.js"></script>
+<script src="../../vendor/babel.min.js"></script>
+<link rel="stylesheet" href="../../vendor/fonts.css">
+<link rel="stylesheet" href="../../css/style.css">
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: var(--font-sans); background: var(--bg-primary); min-height: 100vh; color: var(--text-primary); }</style>
+</head>
+<body>
+<div role="note" style="position:sticky;top:0;z-index:9999;background:#f85149;color:#0a0e14;padding:0.85rem 1rem;font-family:'IBM Plex Sans',-apple-system,sans-serif;font-weight:700;font-size:0.95rem;line-height:1.45;border-bottom:3px solid #0a0e14;">
+SUPERSEDED — this figure illustrates a claim withdrawn in v5.0. It is retained only so the retraction remains checkable. Do not cite it. See RETRACTIONS.md and Appendix L (hardware measurements) and Appendix N (simulation) for what replaced it.
+</div>
+
+<div id="root" role="main"></div>
+<script type="text/babel">
+function ApproachesComparison() {
+  const approaches = [
+    { name: 'Quantization', desc: 'Reduce precision (FP16→INT4)', mem: '4×', quality: 'Some loss', latency: 'Same', color: 'var(--accent-purple)' },
+    { name: 'Pruning', desc: 'Drop less important tokens', mem: '2-4×', quality: 'Significant loss', latency: 'Same', color: 'var(--accent-orange)' },
+    { name: 'CPU Offload', desc: 'Swap to system RAM over PCIe DMA', mem: '∞', quality: 'None', latency: '13.0 µs/access — 65× worse', color: 'var(--accent-red)' },
+    { name: 'CXL Offload', desc: 'Our approach — load/store to CXL.mem', mem: '6×', quality: 'None', latency: '200 ns/access; 177 ns effective', color: 'var(--accent-green)' }
+  ];
+  const styles = {
+    container: { maxWidth: '900px', margin: '0 auto', padding: '2rem' },
+    header: { textAlign: 'center', marginBottom: '2rem' },
+    table: { width: '100%', background: 'var(--bg-card)', borderRadius: '16px', overflow: 'hidden' },
+    headerRow: { display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr', background: 'var(--bg-code)', padding: '1rem', fontWeight: 600 },
+    row: (color) => ({ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr', padding: '1rem', borderTop: '1px solid var(--border-primary)', borderLeft: `3px solid ${color}` }),
+    name: { fontWeight: 600 },
+    desc: { fontSize: '0.8rem', color: 'var(--text-secondary)' },
+    good: { color: 'var(--accent-green)' },
+    bad: { color: 'var(--accent-red)' },
+    neutral: { color: 'var(--accent-orange)' }
+  };
+  return (
+    <div style={styles.container}>
+      <p className="sr-only">Figure: comparison of four approaches to the KV-cache memory problem, across memory savings, quality impact and latency. Quantization gives 4× memory savings with some quality loss and unchanged latency; pruning gives 2-4× with significant quality loss and unchanged latency; CPU offload gives unbounded capacity with no quality loss but costs 13.0 microseconds per access, 65× worse; CXL offload, the approach proposed here, gives 6× with no quality loss at 200 nanoseconds per access, or 177 nanoseconds effective. The point is that only the CXL path buys capacity without paying in either quality or latency. All values are an analytical model, not measured.</p>
+      <div style={styles.header}>
+        <div style={{display: 'inline-block', padding: '0.25rem 0.75rem', background: 'rgba(16,185,129,0.2)', color: 'var(--accent-green)', fontSize: '0.75rem', fontFamily: 'var(--font-mono)', borderRadius: '20px', marginBottom: '0.5rem'}}>COMPARISON</div>
+        <h1 style={{fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.5rem'}}>Current Approaches</h1>
+      </div>
+      <div style={styles.table}>
+        <div style={styles.headerRow}>
+          <div>Approach</div><div>Memory Savings</div><div>Quality Impact</div><div>Latency</div>
+        </div>
+        {approaches.map((a, i) => (
+          <div key={i} style={styles.row(a.color)}>
+            <div><div style={styles.name}>{a.name}</div><div style={styles.desc}>{a.desc}</div></div>
+            <div style={styles.good} role="img" aria-label={`${a.name}, memory savings ${a.mem}`}>{a.mem}</div>
+            <div style={a.quality === 'None' ? styles.good : styles.bad} role="img" aria-label={`${a.name}, quality impact ${a.quality}`}>{a.quality}</div>
+            <div style={a.latency.includes('worse') ? styles.bad : a.latency === 'Same' ? styles.neutral : styles.good} role="img" aria-label={`${a.name}, latency ${a.latency}`}>{a.latency}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '1rem', textAlign: 'center', lineHeight: 1.6}}>
+        6× = (192 GB HBM + 1,024 GB CXL DRAM) ÷ 192 GB. 65× = 13.0 µs PCIe DMA ÷ 200 ns CXL.mem, same
+        4 KiB payload and same boundary. Effective 177 ns = 0.97 × 100 ns + 0.027 × 200 ns + 0.003 × 25 µs.
+        <br />Analytical model — no hardware benchmark was run.
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<ApproachesComparison />);
+</script>
+</body>
+</html>

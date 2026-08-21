@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Effective Latency Analysis</title>
+<link rel="stylesheet" href="../../vendor/fonts.css">
+<link rel="stylesheet" href="../../css/style.css">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
+  min-height: 100vh;
+  padding: 2rem;
+  color: var(--text-primary);
+}
+
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+/* Header */
+.header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.section-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.35rem 1rem;
+  border-radius: 50px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+
+h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+}
+
+/* Formula Card */
+.formula-card {
+  background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-card-hover) 100%);
+  border: 1px solid var(--border-highlight);
+  border-radius: 16px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.formula-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 1rem;
+}
+
+.formula {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  line-height: 2.2;
+}
+
+.var {
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.var-result {
+  background: linear-gradient(135deg, var(--accent-yellow), var(--accent-orange));
+  color: #1e293b;
+}
+
+.var-dram {
+  background: rgba(59, 130, 246, 0.2);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.var-flash {
+  background: rgba(139, 92, 246, 0.2);
+  color: var(--accent-purple);
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.var-recompute {
+  background: rgba(249, 115, 22, 0.2);
+  color: var(--accent-orange);
+  border: 1px solid rgba(249, 115, 22, 0.3);
+}
+
+.op {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* Variables Section */
+.variables-section {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.var-card {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 1.25rem;
+  border-left: 4px solid;
+}
+
+.var-card.dram { border-color: var(--accent-blue); }
+.var-card.flash { border-color: var(--accent-purple); }
+.var-card.recompute { border-color: var(--accent-orange); }
+
+.var-card-name {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.var-card.dram .var-card-name { color: var(--accent-cyan); }
+.var-card.flash .var-card-name { color: var(--accent-purple); }
+.var-card.recompute .var-card-name { color: var(--accent-orange); }
+
+.var-card-desc {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.var-card-latency {
+  margin-top: 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.var-card.dram .var-card-latency { color: var(--accent-blue); }
+.var-card.flash .var-card-latency { color: var(--accent-purple); }
+.var-card.recompute .var-card-latency { color: var(--accent-orange); }
+
+/* Comparison Section */
+.comparison-section {
+  background: var(--bg-card);
+  border-radius: 16px;
+  padding: 1.75rem;
+  margin-bottom: 2rem;
+  border: 1px solid var(--border-primary);
+}
+
+.comparison-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.comparison-title::before {
+  content: "⚡";
+}
+
+.pcie-path {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.path-step {
+  background: var(--bg-card-hover);
+  border-radius: 8px;
+  padding: 0.6rem 1rem;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.path-step::after {
+  content: "→";
+  color: var(--text-secondary);
+  margin-left: 0.25rem;
+}
+
+.path-step:last-child::after {
+  content: none;
+}
+
+.path-step-icon {
+  font-size: 1rem;
+}
+
+/* Latency Comparison Visual */
+.latency-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.latency-box {
+  border-radius: 12px;
+  padding: 1.25rem;
+  text-align: center;
+}
+
+.latency-box.pcie {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05));
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.latency-box.cxl {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.05));
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.latency-box-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.latency-box.pcie .latency-box-label { color: var(--accent-red); }
+.latency-box.cxl .latency-box-label { color: var(--accent-green); }
+
+.latency-box-value {
+  font-family: var(--font-mono);
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+.latency-box.pcie .latency-box-value { color: var(--accent-red); }
+.latency-box.cxl .latency-box-value { color: var(--accent-green); }
+
+.latency-box-detail {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+}
+
+.improvement-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.improvement-badge span {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  color: white;
+  font-weight: 700;
+  padding: 0.5rem 1.25rem;
+  border-radius: 50px;
+  font-size: 1rem;
+}
+
+/* Degradation Section */
+.degradation-section {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.08), rgba(249, 115, 22, 0.08));
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 16px;
+  padding: 1.75rem;
+  margin-bottom: 2rem;
+}
+
+.degradation-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent-red);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.degradation-title::before {
+  content: "⚠";
+}
+
+.degradation-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.degrade-item {
+  background: var(--bg-code);
+  border-radius: 10px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.degrade-item-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.degrade-item-value {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--accent-red);
+}
+
+/* Solution Section */
+.solution-section {
+  background: linear-gradient(135deg, rgba(34, 197, 94, 0.08), rgba(16, 185, 129, 0.08));
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: 16px;
+  padding: 1.75rem;
+}
+
+.solution-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent-green);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.solution-title::before {
+  content: "✓";
+  background: var(--accent-green);
+  color: white;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.solution-text {
+  color: var(--text-primary);
+  line-height: 1.7;
+  font-size: 0.95rem;
+}
+
+.solution-text strong {
+  color: var(--accent-green);
+}
+
+/* Calculation Section */
+.calc-section {
+  background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-code) 100%);
+  border: 1px solid var(--border-primary);
+  border-radius: 16px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+}
+
+.calc-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.calc-icon {
+  font-size: 2rem;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.calc-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.calc-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.calc-inputs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.calc-input {
+  background: var(--bg-code);
+  border-radius: 12px;
+  padding: 1rem;
+  text-align: center;
+  border: 2px solid transparent;
+}
+
+.calc-input.dram { border-color: rgba(59, 130, 246, 0.4); }
+.calc-input.flash { border-color: rgba(139, 92, 246, 0.4); }
+.calc-input.recompute { border-color: rgba(249, 115, 22, 0.4); }
+
+.calc-input-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.calc-input.dram .calc-input-label { color: var(--accent-cyan); }
+.calc-input.flash .calc-input-label { color: var(--accent-purple); }
+.calc-input.recompute .calc-input-label { color: var(--accent-orange); }
+
+.calc-input-value {
+  font-family: var(--font-mono);
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.calc-steps {
+  background: var(--bg-code);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.calc-step-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 1rem;
+}
+
+.calc-equation {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  line-height: 2;
+}
+
+.calc-line {
+  color: var(--text-primary);
+}
+
+.calc-line.final {
+  font-weight: 700;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-primary);
+}
+
+.hl-dram { color: var(--accent-cyan); }
+.hl-flash { color: var(--accent-purple); }
+.hl-recompute { color: var(--accent-orange); }
+
+.calc-result {
+  background: linear-gradient(135deg, var(--accent-yellow), var(--accent-orange));
+  border-radius: 12px;
+  padding: 1.25rem;
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.calc-result-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: rgba(0, 0, 0, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+}
+
+.calc-result-value {
+  font-family: var(--font-mono);
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #1e293b;
+}
+
+.calc-insight {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+.insight-icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.insight-text {
+  font-size: 0.9rem;
+  color: var(--accent-yellow);
+  line-height: 1.6;
+}
+
+.insight-text strong {
+  color: var(--accent-yellow);
+}
+
+@media (max-width: 768px) {
+  .variables-section,
+  .degradation-grid,
+  .latency-compare,
+  .calc-inputs {
+    grid-template-columns: 1fr;
+  }
+  
+  .formula {
+    font-size: 0.9rem;
+  }
+  
+  h1 {
+    font-size: 1.75rem;
+  }
+}
+</style>
+</head>
+<body>
+<div role="note" style="position:sticky;top:0;z-index:9999;background:#f85149;color:#0a0e14;padding:0.85rem 1rem;font-family:'IBM Plex Sans',-apple-system,sans-serif;font-weight:700;font-size:0.95rem;line-height:1.45;border-bottom:3px solid #0a0e14;">
+SUPERSEDED — this figure illustrates a claim withdrawn in v5.0. It is retained only so the retraction remains checkable. Do not cite it. See RETRACTIONS.md and Appendix L (hardware measurements) and Appendix N (simulation) for what replaced it.
+</div>
+
+<div class="container" role="main">
+
+  <p class="sr-only">Figure: effective latency for the four-tier hierarchy, L_eff = h_HBM × L_HBM + h_CXL × L_CXL + h_NVMe × L_NVMe. The tier latencies are 100 nanoseconds for GPU HBM (10 GB pinned plus a 37 GB evictable hot set), 200 nanoseconds for the 1 TB of CXL DRAM across four endpoints, and 25 microseconds for the 16 TB endpoint NVMe backing store. Against a PCIe baseline of 13.0 microseconds per access the CXL.mem path of 200 nanoseconds is 65× lower for a single 4 KiB access; loaded PCIe degrades further, by 50 to 200 percent from queue depth, 10 to 50 microseconds from interrupt coalescing and up to 100 microseconds of scheduling jitter. Worked at a 97 / 2.7 / 0.3 hit split the model gives 97 + 5.4 + 75 = 177.4 nanoseconds, about 177 ns, which is 11.5× lower than the 2,035 nanosecond baseline end to end. The point is that there is no recompute term — NVMe holds a complete backing store, so the worst case is a 25 microsecond read — and that the 0.3 percent NVMe tail still supplies 75 of the 177 nanoseconds, which is why lifting the HBM hit rate from a 72 percent LRU baseline to 97 percent is what matters. All values are an analytical model, not measured.</p>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="section-badge">Section 4</div>
+    <h1>Effective Latency Analysis</h1>
+    <p class="subtitle">One model for the four-tier hierarchy: GPU HBM, CXL DRAM, endpoint NVMe</p>
+  </div>
+
+  <!-- Formula Card -->
+  <div class="formula-card">
+    <div class="formula-label">Effective Latency Formula</div>
+    <div class="formula">
+      <span class="var var-result">L_eff</span>
+      <span class="op">=</span>
+      <span class="var var-dram">h_HBM</span>
+      <span class="op">×</span>
+      <span class="var var-dram">L_HBM</span>
+      <span class="op">+</span>
+      <span class="var var-flash">h_CXL</span>
+      <span class="op">×</span>
+      <span class="var var-flash">L_CXL</span>
+      <span class="op">+</span>
+      <span class="var var-recompute">h_NVMe</span>
+      <span class="op">×</span>
+      <span class="var var-recompute">L_NVMe</span>
+    </div>
+  </div>
+
+  <!-- Variables -->
+  <div class="variables-section">
+    <div class="var-card dram">
+      <div class="var-card-name">L_HBM</div>
+      <div class="var-card-desc">GPU HBM3e — Tier 0 pinned (10 GB) and Tier 1 evictable hot set (37 GB)</div>
+      <div class="var-card-latency">100 ns</div>
+    </div>
+    <div class="var-card flash">
+      <div class="var-card-name">L_CXL</div>
+      <div class="var-card-desc">Tier 2 CXL DRAM (1 TB across 4 endpoints), reached by load/store</div>
+      <div class="var-card-latency">200 ns</div>
+    </div>
+    <div class="var-card recompute">
+      <div class="var-card-name">L_NVMe</div>
+      <div class="var-card-desc">Tier 3 endpoint NVMe (16 TB) — the complete backing store</div>
+      <div class="var-card-latency">25 μs</div>
+    </div>
+  </div>
+
+  <!-- PCIe Comparison -->
+  <div class="comparison-section">
+    <div class="comparison-title">Comparison to PCIe Baseline</div>
+    <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">PCIe swap path latency components:</p>
+    
+    <div class="pcie-path">
+      <div class="path-step"><span class="path-step-icon" aria-hidden="true">🚨</span> Page fault</div>
+      <div class="path-step"><span class="path-step-icon" aria-hidden="true">🔧</span> Driver intervention</div>
+      <div class="path-step"><span class="path-step-icon" aria-hidden="true">📋</span> DMA setup</div>
+      <div class="path-step"><span class="path-step-icon" aria-hidden="true">📡</span> PCIe transfer</div>
+      <div class="path-step"><span class="path-step-icon" aria-hidden="true">🔓</span> Completion interrupt</div>
+    </div>
+
+    <div class="latency-compare">
+      <div class="latency-box pcie" role="img" aria-label="PCIe path: 13.0 microseconds, from 4.00 + 2.50 + 1.50 + 0.70 + 0.10 + 0.20 + 4.00 microseconds">
+        <div class="latency-box-label">PCIe Path</div>
+        <div class="latency-box-value">13.0 μs</div>
+        <div class="latency-box-detail">4.00 + 2.50 + 1.50 + 0.70 + 0.10 + 0.20 + 4.00 μs</div>
+      </div>
+      <div class="latency-box cxl" role="img" aria-label="CXL.mem direct: 200 nanoseconds, from 15 + 20 + 25 + 40 + 80 + 20 nanoseconds">
+        <div class="latency-box-label">CXL.mem Direct</div>
+        <div class="latency-box-value">200 ns</div>
+        <div class="latency-box-detail">15 + 20 + 25 + 40 + 80 + 20 ns</div>
+      </div>
+    </div>
+    
+    <div class="improvement-badge">
+      <span>65× lower — single access path only</span>
+    </div>
+    <p style="color:var(--text-secondary);font-size:0.8rem;margin-top:1rem;line-height:1.6;text-align:center;">
+      Scope: 13,000 ns ÷ 200 ns = 65.0×, for <em>one access</em> measured across the same boundary
+      (kernel issue → data available) with the same 4 KiB payload, comparing a load/store path against a
+      driver-mediated DMA path. It is not an end-to-end system speedup — for that, see the effective
+      latency below (2,035 ns baseline → 177 ns, 11.5× lower).
+    </p>
+  </div>
+
+  <!-- Degradation Factors -->
+  <div class="degradation-section">
+    <div class="degradation-title">Under Load, PCIe Latency Degrades</div>
+    <div class="degradation-grid">
+      <div class="degrade-item">
+        <div class="degrade-item-label">Queue Depth</div>
+        <div class="degrade-item-value">+50–200%</div>
+      </div>
+      <div class="degrade-item">
+        <div class="degrade-item-label">Interrupt Coalescing</div>
+        <div class="degrade-item-value">+10–50 μs</div>
+      </div>
+      <div class="degrade-item">
+        <div class="degrade-item-label">OS Scheduling</div>
+        <div class="degrade-item-value">+100 μs jitter</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Example Calculation -->
+  <div class="calc-section">
+    <div class="calc-header">
+      <div class="calc-icon" aria-hidden="true">🧮</div>
+      <div>
+        <div class="calc-title">Example Calculation</div>
+        <div class="calc-subtitle">Llama-2-70B, 128K context, 16 users</div>
+      </div>
+    </div>
+
+    <div class="calc-inputs">
+      <div class="calc-input dram">
+        <div class="calc-input-label">HBM Hit Rate</div>
+        <div class="calc-input-value">97%</div>
+      </div>
+      <div class="calc-input flash">
+        <div class="calc-input-label">CXL DRAM Hit Rate</div>
+        <div class="calc-input-value">2.7%</div>
+      </div>
+      <div class="calc-input recompute">
+        <div class="calc-input-label">NVMe Hit Rate</div>
+        <div class="calc-input-value">0.3%</div>
+      </div>
+    </div>
+
+    <div class="calc-steps">
+      <div class="calc-step-title">Substituting Values</div>
+      <div class="calc-equation">
+        <div class="calc-line">L_eff = (<span class="hl-dram">0.97 × 100 ns</span>) + (<span class="hl-flash">0.027 × 200 ns</span>) + (<span class="hl-recompute">0.003 × 25,000 ns</span>)</div>
+        <div class="calc-line">L_eff = <span class="hl-dram">97 ns</span> + <span class="hl-flash">5.4 ns</span> + <span class="hl-recompute">75 ns</span></div>
+        <div class="calc-line final">L_eff = 177.4 ns</div>
+      </div>
+    </div>
+
+    <div class="calc-result">
+      <div class="calc-result-label">Effective Latency</div>
+      <div class="calc-result-value">≈ 177 ns</div>
+    </div>
+
+    <div class="calc-insight">
+      <div class="insight-icon" aria-hidden="true">💡</div>
+      <div class="insight-text">
+        <strong>There is no recompute term.</strong> Tier 3 endpoint NVMe holds a complete 16 TB backing
+        store, so a KV entry is never lost and never has to be regenerated on an access miss — the worst case
+        for any access is a 25 μs read, not a prefill. Recompute happens only on cold start and is modeled
+        separately. The 0.3% NVMe tail still supplies 75 of the 177 ns, which is why raising the HBM hit rate
+        from a 72% LRU baseline to 97% is what matters.
+      </div>
+    </div>
+  </div>
+
+  <!-- Solution -->
+  <div class="solution-section">
+    <div class="solution-title">Intelligent Caching Prevents Thrashing</div>
+    <p class="solution-text">
+      The endpoint's intelligent caching keeps the hot set resident—<strong>high-value entries are not
+      evicted</strong>, so the miss tail stays small. EMA scoring (α = 0.2), anchor pinning, per-head budgets
+      and RoPE-aware prefetch lift the modeled HBM hit rate from a 72% LRU baseline to 97%
+      (+8, +7, +6, +4 percentage points; +25 points in total), while cold entries demote to CXL DRAM and then
+      to NVMe.
+    </p>
+  </div>
+
+  <p style="text-align:center;color:var(--text-secondary);font-size:0.8rem;margin-top:2rem;line-height:1.7;">
+    Degradation figures above are illustrative ranges for a loaded PCIe path.<br>
+    <em>Analytical model — every latency, hit rate and derived result on this page is modeled, not measured.
+    No hardware benchmark was run.</em>
+  </p>
+
+</div>
+</body>
+</html>

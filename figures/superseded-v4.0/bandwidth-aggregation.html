@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bandwidth Aggregation</title>
+<link rel="stylesheet" href="../../vendor/fonts.css">
+<link rel="stylesheet" href="../../css/style.css">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--font-sans);
+  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-card) 100%);
+  min-height: 100vh;
+  padding: 2rem;
+  color: var(--text-primary);
+}
+
+.container {
+  max-width: 950px;
+  margin: 0 auto;
+  padding: 0;
+}
+
+/* Header */
+.header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.section-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, #06b6d4, #0891b2);
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.35rem 1rem;
+  border-radius: 50px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+
+h1 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #f8fafc 0%, #94a3b8 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+}
+
+/* Single Endpoint Limitation */
+.limitation-card {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05));
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.limitation-icon {
+  font-size: 2.5rem;
+  flex-shrink: 0;
+}
+
+.limitation-content h3 {
+  color: var(--accent-red);
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.limitation-content p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.limitation-stat {
+  background: rgba(239, 68, 68, 0.2);
+  border-radius: 10px;
+  padding: 1rem 1.5rem;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.limitation-stat-value {
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent-red);
+}
+
+.limitation-stat-label {
+  font-size: 0.75rem;
+  color: var(--accent-red);
+  margin-top: 0.25rem;
+}
+
+/* Aggregation Diagram */
+.aggregation-section {
+  background: var(--bg-card);
+  border-radius: 20px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  border: 1px solid var(--border-primary);
+}
+
+.section-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.section-title-icon {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #06b6d4, #0891b2);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+
+/* Architecture Diagram */
+.arch-diagram {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+/* GPU */
+.gpu-box {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  border-radius: 12px;
+  padding: 1rem 3rem;
+  text-align: center;
+  box-shadow: 0 10px 40px -10px rgba(34, 197, 94, 0.5);
+}
+
+.gpu-label {
+  font-weight: 700;
+  color: white;
+  font-size: 1.1rem;
+}
+
+.gpu-sublabel {
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.8);
+}
+
+/* Connection Lines */
+.connection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.connection-line {
+  width: 4px;
+  height: 30px;
+  background: linear-gradient(to bottom, #22c55e, #06b6d4);
+  border-radius: 2px;
+}
+
+.connection-label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--accent-teal);
+  background: rgba(6, 182, 212, 0.1);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+/* CXL Switch */
+.switch-box {
+  background: linear-gradient(135deg, #06b6d4, #0891b2);
+  border-radius: 12px;
+  padding: 1rem 2.5rem;
+  text-align: center;
+  position: relative;
+  box-shadow: 0 10px 40px -10px rgba(6, 182, 212, 0.5);
+}
+
+.switch-label {
+  font-weight: 700;
+  color: white;
+  font-size: 1rem;
+}
+
+.switch-sublabel {
+  font-size: 0.7rem;
+  color: rgba(255,255,255,0.8);
+}
+
+/* Fan out connections */
+.fanout {
+  display: flex;
+  justify-content: center;
+  gap: 0;
+  position: relative;
+  height: 40px;
+  width: 100%;
+}
+
+.fanout-line {
+  position: absolute;
+  height: 3px;
+  background: var(--accent-teal);
+  top: 0;
+}
+
+.fanout-line.center {
+  width: 4px;
+  height: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.fanout-line.left {
+  width: 120px;
+  top: 20px;
+  left: calc(50% - 120px);
+  transform-origin: right center;
+  transform: rotate(0deg);
+}
+
+.fanout-line.right {
+  width: 120px;
+  top: 20px;
+  left: 50%;
+}
+
+.fanout-vertical {
+  position: absolute;
+  width: 4px;
+  height: 20px;
+  background: var(--accent-teal);
+  bottom: 0;
+}
+
+.fanout-vertical.v1 { left: calc(50% - 120px); }
+.fanout-vertical.v2 { left: calc(50% - 40px); }
+.fanout-vertical.v3 { left: calc(50% + 38px); }
+.fanout-vertical.v4 { left: calc(50% + 118px); }
+
+/* Endpoints */
+.endpoints {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.endpoint {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  text-align: center;
+  min-width: 80px;
+  box-shadow: 0 8px 30px -8px rgba(139, 92, 246, 0.5);
+}
+
+.endpoint-label {
+  font-weight: 600;
+  color: white;
+  font-size: 0.8rem;
+}
+
+.endpoint-bw {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: rgba(255,255,255,0.8);
+}
+
+/* Aggregated BW */
+.aggregate-result {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  border-radius: 12px;
+  padding: 1.25rem;
+  text-align: center;
+  margin-top: 1.5rem;
+}
+
+.aggregate-label {
+  font-size: 0.8rem;
+  color: rgba(255,255,255,0.8);
+  margin-bottom: 0.25rem;
+}
+
+.aggregate-formula {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  color: white;
+  margin-bottom: 0.5rem;
+}
+
+.aggregate-value {
+  font-family: var(--font-mono);
+  font-size: 2rem;
+  font-weight: 800;
+  color: white;
+}
+
+/* Layer Prefetch Section */
+.prefetch-section {
+  background: var(--bg-card);
+  border-radius: 20px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  border: 1px solid var(--border-primary);
+}
+
+/* Prefetch Diagram */
+.prefetch-diagram {
+  margin-top: 1.5rem;
+}
+
+.predictor-box {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(245, 158, 11, 0.1));
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.predictor-icon {
+  font-size: 1.75rem;
+}
+
+.predictor-title {
+  font-weight: 700;
+  color: var(--accent-yellow);
+  font-size: 1rem;
+}
+
+.predictor-desc {
+  font-size: 0.85rem;
+  color: var(--accent-yellow);
+  margin-top: 0.2rem;
+}
+
+/* Timeline */
+.timeline {
+  position: static;
+  background: rgba(0,0,0,0.3);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin: 1rem 0;
+}
+
+.timeline-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 110px 0.75rem 110px;
+  border-bottom: 1px solid var(--border-primary);
+  margin-bottom: 1rem;
+}
+
+.timeline-time {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.timeline-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.timeline-row:last-child {
+  margin-bottom: 0;
+}
+
+.timeline-label {
+  width: 110px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.label-icon {
+  font-size: 1rem;
+}
+
+.timeline-track {
+  flex: 1;
+  height: 44px;
+  background: rgba(0,0,0,0.3);
+  border-radius: 8px;
+  position: relative;
+  display: flex;
+  overflow: hidden;
+}
+
+.timeline-track.prefetch-track {
+  background: rgba(139, 92, 246, 0.1);
+}
+
+.timeline-track.hbm-track {
+  background: rgba(34, 197, 94, 0.1);
+  height: 36px;
+}
+
+.timeline-block {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: white;
+  border-radius: 6px;
+  gap: 0.1rem;
+}
+
+.timeline-block.compute {
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+}
+
+.timeline-block.transfer {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+}
+
+.block-label {
+  font-size: 0.7rem;
+}
+
+.block-time {
+  font-size: 0.6rem;
+  opacity: 0.8;
+}
+
+.hbm-block {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px dashed rgba(34, 197, 94, 0.3);
+}
+
+.hbm-block:last-child {
+  border-right: none;
+}
+
+.hbm-contents {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--accent-green);
+}
+
+/* Overlap Explanation */
+.overlap-explanation {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.overlap-item {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(0,0,0,0.2);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border-primary);
+}
+
+.overlap-item.success {
+  border-color: rgba(34, 197, 94, 0.4);
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.overlap-icon {
+  font-size: 1.1rem;
+}
+
+.overlap-text {
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.overlap-text strong {
+  color: var(--text-primary);
+}
+
+.overlap-item.success .overlap-text strong {
+  color: var(--accent-green);
+}
+
+/* Factors Grid */
+.factors-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.factor-card {
+  background: rgba(0,0,0,0.3);
+  border-radius: 12px;
+  padding: 1.25rem;
+  text-align: center;
+  border: 1px solid var(--border-primary);
+}
+
+.factor-icon {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.factor-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+
+.factor-desc {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+/* Llama-70B Example */
+.llama-section {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.1), rgba(245, 158, 11, 0.05));
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 20px;
+  padding: 2rem;
+}
+
+.llama-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.llama-icon {
+  font-size: 2.5rem;
+}
+
+.llama-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--accent-yellow);
+}
+
+.llama-subtitle {
+  font-size: 0.85rem;
+  color: var(--accent-yellow);
+}
+
+/* Memory Layout */
+.memory-layout {
+  display: flex;
+  gap: 1.5rem;
+  align-items: stretch;
+}
+
+.memory-tier {
+  flex: 1;
+  border-radius: 12px;
+  padding: 1.25rem;
+  text-align: center;
+}
+
+.memory-tier.dram {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.1));
+  border: 2px solid rgba(59, 130, 246, 0.4);
+}
+
+.memory-tier.flash {
+  background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(139, 92, 246, 0.1));
+  border: 2px solid rgba(139, 92, 246, 0.4);
+}
+
+.memory-tier-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.memory-tier.dram .memory-tier-label { color: var(--accent-cyan); }
+.memory-tier.flash .memory-tier-label { color: var(--accent-purple); }
+
+.memory-tier-content {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.memory-tier-size {
+  font-family: var(--font-mono);
+  font-size: 1.75rem;
+  font-weight: 800;
+}
+
+.memory-tier.dram .memory-tier-size { color: var(--accent-cyan); }
+.memory-tier.flash .memory-tier-size { color: var(--accent-purple); }
+
+.memory-tier-note {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 0.5rem;
+}
+
+.llama-insight {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: 10px;
+  padding: 1rem;
+  margin-top: 1.5rem;
+}
+
+.llama-insight-icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.llama-insight-text {
+  font-size: 0.9rem;
+  color: var(--accent-green);
+  line-height: 1.5;
+}
+
+.llama-insight-text strong {
+  color: var(--accent-green);
+}
+
+/* Byte Math Section */
+.byte-math {
+  background: rgba(0,0,0,0.4);
+  border-radius: 14px;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+  border: 1px solid var(--border-highlight);
+}
+
+.byte-math-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.byte-math-title::before {
+  content: "📢";
+}
+
+.byte-calc-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.byte-calc {
+  background: rgba(6, 182, 212, 0.1);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  border-radius: 10px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.byte-calc-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent-teal);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 0.5rem;
+}
+
+.byte-calc-value {
+  font-family: var(--font-mono);
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.byte-calc-detail {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+}
+
+.byte-scenarios {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.byte-scenario {
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.byte-scenario.bad {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.byte-scenario.ok {
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.byte-scenario.good {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.scenario-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 180px;
+}
+
+.scenario-icon {
+  font-size: 1rem;
+}
+
+.scenario-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.byte-scenario.bad .scenario-title { color: var(--accent-red); }
+.byte-scenario.ok .scenario-title { color: var(--accent-yellow); }
+.byte-scenario.good .scenario-title { color: var(--accent-green); }
+
+.scenario-math {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.math-line {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--text-primary);
+}
+
+.math-line strong {
+  color: var(--text-primary);
+}
+
+.math-result {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.3rem 0.75rem;
+  border-radius: 6px;
+}
+
+.math-result.bad {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--accent-red);
+}
+
+.math-result.ok {
+  background: rgba(251, 191, 36, 0.2);
+  color: var(--accent-yellow);
+}
+
+.math-result.good {
+  background: rgba(34, 197, 94, 0.2);
+  color: var(--accent-green);
+}
+
+@media (max-width: 768px) {
+  .endpoints { flex-wrap: wrap; }
+  .factors-grid, .byte-calc-grid { grid-template-columns: 1fr; }
+  .memory-layout { flex-direction: column; }
+  .limitation-card { flex-direction: column; text-align: center; }
+  .byte-scenario { flex-direction: column; align-items: flex-start; }
+  .scenario-math { flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+  .overlap-explanation { flex-direction: column; }
+  .timeline-header { padding: 0 90px 0.75rem 90px; }
+  .timeline-label { width: 90px; font-size: 0.7rem; }
+}
+</style>
+</head>
+<body>
+<div role="note" style="position:sticky;top:0;z-index:9999;background:#f85149;color:#0a0e14;padding:0.85rem 1rem;font-family:'IBM Plex Sans',-apple-system,sans-serif;font-weight:700;font-size:0.95rem;line-height:1.45;border-bottom:3px solid #0a0e14;">
+SUPERSEDED — this figure illustrates a claim withdrawn in v5.0. It is retained only so the retraction remains checkable. Do not cite it. See RETRACTIONS.md and Appendix L (hardware measurements) and Appendix N (simulation) for what replaced it.
+</div>
+
+<div class="container" role="main">
+
+  <p class="sr-only">Figure: bandwidth aggregation across a CXL 3.0 switch topology. A single x16 PCIe 5.0 endpoint is capped at 64 GB/s, so a B200 GPU is fanned out through a CXL 3.0 switch to four endpoints of 64 GB/s each, a theoretical aggregate of 256 GB/s and a combined 1 TB of DRAM plus 16 TB of flash. Against a Llama-70B per-layer transfer of 2.22 GB — attention 302 MB, FFN 1.41 GB, KV slice 512 MB — inside a 5 to 10 millisecond layer compute budget, the required bandwidth is 222 to 445 GB/s: one endpoint takes 34.8 ms and stalls the GPU, two endpoints take 17.4 ms and still stall, four endpoints take 8.7 ms and fit a 10 ms budget. The counterpoint is that steady-state decode demand is only 11.4 GB/s for 16 users at 10 tokens per second with a 3 percent miss tail, which is 4.5 percent fabric utilization, so the four endpoints are chosen for capacity, 1 TB DRAM and 16 TB flash, not for the 256 GB/s ceiling. The 140 GB of FP16 weights stay HBM-resident and never cross CXL. All values are an analytical model, not measured.</p>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="section-badge">Section 5</div>
+    <h1>Bandwidth Aggregation</h1>
+    <p class="subtitle">Linear scaling through CXL 3.0 switch topology</p>
+  </div>
+
+  <!-- Single Endpoint Limitation -->
+  <div class="limitation-card">
+    <div class="limitation-icon" aria-hidden="true">⚠</div>
+    <div class="limitation-content">
+      <h3>Single Endpoint Limitation</h3>
+      <p>CXL bandwidth per endpoint is constrained by PCIe lane count. A single x16 Gen5 endpoint maxes out regardless of internal capability.</p>
+    </div>
+    <div class="limitation-stat">
+      <div class="limitation-stat-value">64 GB/s</div>
+      <div class="limitation-stat-label">x16 PCIe 5.0 limit</div>
+    </div>
+  </div>
+
+  <!-- Aggregation Architecture -->
+  <div class="aggregation-section">
+    <div class="section-title">
+      <div class="section-title-icon" aria-hidden="true">🔀</div>
+      CXL 3.0 Switch Aggregation
+    </div>
+
+    <div class="arch-diagram">
+      <!-- GPU -->
+      <div class="gpu-box">
+        <div class="gpu-label">GPU</div>
+        <div class="gpu-sublabel">B200</div>
+      </div>
+
+      <!-- Connection to Switch -->
+      <div class="connection">
+        <div class="connection-line"></div>
+        <div class="connection-label">CXL 3.0</div>
+        <div class="connection-line"></div>
+      </div>
+
+      <!-- CXL Switch -->
+      <div class="switch-box">
+        <div class="switch-label">CXL 3.0 Switch</div>
+        <div class="switch-sublabel">Multi-port fabric</div>
+      </div>
+
+      <!-- Fan out -->
+      <div class="fanout">
+        <div class="fanout-line left"></div>
+        <div class="fanout-line right"></div>
+        <div class="fanout-vertical v1"></div>
+        <div class="fanout-vertical v2"></div>
+        <div class="fanout-vertical v3"></div>
+        <div class="fanout-vertical v4"></div>
+      </div>
+
+      <!-- Endpoints -->
+      <div class="endpoints">
+        <div class="endpoint" role="img" aria-label="Endpoint 1, 64 gigabytes per second">
+          <div class="endpoint-label">EP 1</div>
+          <div class="endpoint-bw">64 GB/s</div>
+        </div>
+        <div class="endpoint" role="img" aria-label="Endpoint 2, 64 gigabytes per second">
+          <div class="endpoint-label">EP 2</div>
+          <div class="endpoint-bw">64 GB/s</div>
+        </div>
+        <div class="endpoint" role="img" aria-label="Endpoint 3, 64 gigabytes per second">
+          <div class="endpoint-label">EP 3</div>
+          <div class="endpoint-bw">64 GB/s</div>
+        </div>
+        <div class="endpoint" role="img" aria-label="Endpoint 4, 64 gigabytes per second">
+          <div class="endpoint-label">EP 4</div>
+          <div class="endpoint-bw">64 GB/s</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Aggregate Result -->
+    <div class="aggregate-result">
+      <div class="aggregate-label">Theoretical Aggregate Bandwidth</div>
+      <div class="aggregate-formula">4 endpoints × 64 GB/s =</div>
+      <div class="aggregate-value">256 GB/s</div>
+      <div class="aggregate-label" style="margin-top:0.75rem;font-weight:400;">
+        Theoretical aggregate of the link budget — a supply ceiling, not a measured or achieved rate.
+        Each endpoint contributes 256 GB DRAM and 4 TB flash → <strong>1 TB DRAM + 16 TB flash</strong> total.
+      </div>
+    </div>
+  </div>
+
+  <!-- Layer Prefetch -->
+  <div class="prefetch-section">
+    <div class="section-title">
+      <div class="section-title-icon" aria-hidden="true">⏱</div>
+      Layer Prefetch: Overlap Execution &amp; Transfer
+    </div>
+
+    <div class="prefetch-diagram">
+      <!-- Execution Trace Predictor -->
+      <div class="predictor-box">
+        <div class="predictor-icon" aria-hidden="true">🔮</div>
+        <div class="predictor-content">
+          <div class="predictor-title">Execution Trace Predictor</div>
+          <div class="predictor-desc">Observes GPU execution → predicts next layer → triggers prefetch</div>
+        </div>
+      </div>
+
+      <!-- Timeline -->
+      <div class="timeline">
+        <div class="timeline-header">
+          <div class="timeline-time">0 ms</div>
+          <div class="timeline-time">5 ms</div>
+          <div class="timeline-time">10 ms</div>
+          <div class="timeline-time">15 ms</div>
+          <div class="timeline-time">20 ms</div>
+        </div>
+        
+        <div class="timeline-row">
+          <div class="timeline-label">
+            <span class="label-icon" aria-hidden="true">🖥</span>
+            GPU Compute
+          </div>
+          <div class="timeline-track">
+            <div class="timeline-block compute" role="img" aria-label="GPU compute, Layer N, 5 milliseconds, one quarter of the 20 millisecond timeline" style="width: 25%;">
+              <span class="block-label">Layer N</span>
+              <span class="block-time">5ms</span>
+            </div>
+            <div class="timeline-block compute" role="img" aria-label="GPU compute, Layer N+1, 5 milliseconds, one quarter of the 20 millisecond timeline" style="width: 25%;">
+              <span class="block-label">Layer N+1</span>
+              <span class="block-time">5ms</span>
+            </div>
+            <div class="timeline-block compute" role="img" aria-label="GPU compute, Layer N+2, 5 milliseconds, one quarter of the 20 millisecond timeline" style="width: 25%;">
+              <span class="block-label">Layer N+2</span>
+              <span class="block-time">5ms</span>
+            </div>
+            <div class="timeline-block compute" role="img" aria-label="GPU compute, Layer N+3, 5 milliseconds, one quarter of the 20 millisecond timeline" style="width: 25%;">
+              <span class="block-label">Layer N+3</span>
+              <span class="block-time">5ms</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline-row">
+          <div class="timeline-label">
+            <span class="label-icon" aria-hidden="true">📡</span>
+            Prefetch (k=1)
+          </div>
+          <div class="timeline-track prefetch-track">
+            <div class="timeline-block transfer" role="img" aria-label="Prefetch of layer N+1, overlapped with the compute block before it" style="width: 22%; margin-left: 1.5%;">
+              <span class="block-label">N+1</span>
+            </div>
+            <div class="timeline-block transfer" role="img" aria-label="Prefetch of layer N+2, overlapped with the compute block before it" style="width: 22%; margin-left: 3%;">
+              <span class="block-label">N+2</span>
+            </div>
+            <div class="timeline-block transfer" role="img" aria-label="Prefetch of layer N+3, overlapped with the compute block before it" style="width: 22%; margin-left: 3%;">
+              <span class="block-label">N+3</span>
+            </div>
+            <div class="timeline-block transfer" role="img" aria-label="Prefetch of layer N+4, overlapped with the compute block before it" style="width: 22%; margin-left: 3%;">
+              <span class="block-label">N+4</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="timeline-row">
+          <div class="timeline-label">
+            <span class="label-icon" aria-hidden="true">💾</span>
+            HBM State
+          </div>
+          <div class="timeline-track hbm-track">
+            <div class="hbm-block" role="img" aria-label="HBM holds layers N, N+1 during this interval" style="width: 25%;">
+              <span class="hbm-contents">N, N+1</span>
+            </div>
+            <div class="hbm-block" role="img" aria-label="HBM holds layers N+1, N+2 during this interval" style="width: 25%;">
+              <span class="hbm-contents">N+1, N+2</span>
+            </div>
+            <div class="hbm-block" role="img" aria-label="HBM holds layers N+2, N+3 during this interval" style="width: 25%;">
+              <span class="hbm-contents">N+2, N+3</span>
+            </div>
+            <div class="hbm-block" role="img" aria-label="HBM holds layers N+3, N+4 during this interval" style="width: 25%;">
+              <span class="hbm-contents">N+3, N+4</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Overlap Arrows -->
+      <div class="overlap-explanation">
+        <div class="overlap-item success">
+          <div class="overlap-icon" aria-hidden="true">✓</div>
+          <div class="overlap-text">
+            <strong>Perfect Overlap:</strong> Prefetch N+1 completes before GPU finishes N
+          </div>
+        </div>
+        <div class="overlap-item">
+          <div class="overlap-icon" aria-hidden="true">🔑</div>
+          <div class="overlap-text">
+            <strong>Key Insight:</strong> T<sub>prefetch</sub> &lt; T<sub>compute</sub> → zero stall
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="factors-grid">
+      <div class="factor-card">
+        <div class="factor-icon" aria-hidden="true">⏳</div>
+        <div class="factor-name">Layer Execution Time</div>
+        <div class="factor-desc">Compute budget available for overlap</div>
+      </div>
+      <div class="factor-card">
+        <div class="factor-icon" aria-hidden="true">📦</div>
+        <div class="factor-name">Layer Size</div>
+        <div class="factor-desc">Transfer requirement per layer</div>
+      </div>
+      <div class="factor-card">
+        <div class="factor-icon" aria-hidden="true">📈</div>
+        <div class="factor-name">Aggregate Bandwidth</div>
+        <div class="factor-desc">endpoints × per-endpoint BW</div>
+      </div>
+    </div>
+
+    <!-- Byte Math -->
+    <div class="byte-math">
+      <div class="byte-math-title">The Math: Can Prefetch Keep Up?</div>
+      
+      <div class="byte-calc-grid">
+        <div class="byte-calc">
+          <div class="byte-calc-label">Llama-70B Per-Layer Transfer</div>
+          <div class="byte-calc-value">2.22 GB</div>
+          <div class="byte-calc-detail">attn 302 MB + FFN 1.41 GB + KV slice 512 MB</div>
+        </div>
+        <div class="byte-calc">
+          <div class="byte-calc-label">Layer Compute Budget</div>
+          <div class="byte-calc-value">5–10 ms</div>
+          <div class="byte-calc-detail">B200, BF16 dense (2,250 TFLOPS)</div>
+        </div>
+        <div class="byte-calc">
+          <div class="byte-calc-label">Required BW</div>
+          <div class="byte-calc-value">222–445 GB/s</div>
+          <div class="byte-calc-detail">2.22 GB ÷ 10 ms … ÷ 5 ms</div>
+        </div>
+      </div>
+
+      <div class="byte-scenarios">
+        <div class="byte-scenario bad">
+          <div class="scenario-header">
+            <span class="scenario-icon" aria-hidden="true">❌</span>
+            <span class="scenario-title">1 Endpoint (64 GB/s)</span>
+          </div>
+          <div class="scenario-math">
+            <span class="math-line">2.22 GB ÷ 64 GB/s = <strong>34.8 ms</strong></span>
+            <span class="math-result bad">3.5–7× the layer budget → GPU stalls</span>
+          </div>
+        </div>
+        
+        <div class="byte-scenario ok">
+          <div class="scenario-header">
+            <span class="scenario-icon" aria-hidden="true">⚠</span>
+            <span class="scenario-title">2 Endpoints (128 GB/s)</span>
+          </div>
+          <div class="scenario-math">
+            <span class="math-line">2.22 GB ÷ 128 GB/s = <strong>17.4 ms</strong></span>
+            <span class="math-result ok">Still above a 10 ms budget → stalls</span>
+          </div>
+        </div>
+        
+        <div class="byte-scenario good">
+          <div class="scenario-header">
+            <span class="scenario-icon" aria-hidden="true">✓</span>
+            <span class="scenario-title">4 Endpoints (256 GB/s)</span>
+          </div>
+          <div class="scenario-math">
+            <span class="math-line">2.22 GB ÷ 256 GB/s = <strong>8.7 ms</strong></span>
+            <span class="math-result good">Fits inside a 10 ms layer budget; marginal at 5 ms</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="byte-math-title" style="margin-top:1.75rem;">The Counterpoint: Demand, Not Supply, Sets the Endpoint Count</div>
+      <div class="byte-calc-grid">
+        <div class="byte-calc">
+          <div class="byte-calc-label">Steady-state CXL demand</div>
+          <div class="byte-calc-value">11.4 GB/s</div>
+          <div class="byte-calc-detail">16 users @10 tok/s, 3% miss tail (0.072 GB/user/step)</div>
+        </div>
+        <div class="byte-calc">
+          <div class="byte-calc-label">Theoretical aggregate supply</div>
+          <div class="byte-calc-value">256 GB/s</div>
+          <div class="byte-calc-detail">4 × 64 GB/s link budget</div>
+        </div>
+        <div class="byte-calc">
+          <div class="byte-calc-label">Fabric utilization</div>
+          <div class="byte-calc-value">4.5%</div>
+          <div class="byte-calc-detail">11.4 ÷ 256 — the link is nearly idle in decode</div>
+        </div>
+      </div>
+      <div class="overlap-explanation" style="margin-top:1rem;">
+        <div class="overlap-item success">
+          <div class="overlap-icon" aria-hidden="true">🔑</div>
+          <div class="overlap-text">
+            <strong>The fabric is capacity-driven, not bandwidth-driven.</strong>
+            Full-layer streaming above is the prefill/admission burst case (43 GB written at 256 GB/s = 168 ms).
+            In steady-state decode only the miss tail crosses CXL — 11.4 GB/s, 4.5% of the theoretical aggregate.
+            Four endpoints are chosen to reach <strong>1 TB of DRAM and 16 TB of flash</strong>, not to reach 256 GB/s.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Llama-70B Example -->
+  <div class="llama-section">
+    <div class="llama-header">
+      <div class="llama-icon" aria-hidden="true">🦙</div>
+      <div>
+        <div class="llama-title">Llama-70B Example</div>
+        <div class="llama-subtitle">140 GB FP16 weights total</div>
+      </div>
+    </div>
+
+    <div class="memory-layout">
+      <div class="memory-tier dram" role="img" aria-label="Endpoint DRAM tier 2, four times 256 gigabytes, 1 terabyte total, holding 16 times 43 gigabytes equals 687 gigabytes of warm KV, 67 percent full">
+        <div class="memory-tier-label">Endpoint DRAM (4 × 256 GB)</div>
+        <div class="memory-tier-content">Warm KV — Tier 2</div>
+        <div class="memory-tier-size">1 TB</div>
+        <div class="memory-tier-note">Holds 16 × 43 GB = 687 GB of KV (67% full, 33% headroom)</div>
+      </div>
+      <div class="memory-tier flash" role="img" aria-label="Endpoint flash tier 3, four times 4 terabytes, 16 terabytes total, the complete cold KV backing store">
+        <div class="memory-tier-label">Endpoint Flash (4 × 4 TB)</div>
+        <div class="memory-tier-content">Cold KV — Tier 3 backing store</div>
+        <div class="memory-tier-size">16 TB</div>
+        <div class="memory-tier-note">Complete backing store → a KV entry is never lost</div>
+      </div>
+    </div>
+
+    <div class="llama-insight">
+      <div class="llama-insight-icon" aria-hidden="true">✓</div>
+      <div class="llama-insight-text">
+        <strong>The 140 GB of model weights are HBM-resident and never cross CXL.</strong>
+        Only KV traffic uses the fabric: the miss tail in steady state, and whole-context
+        admission on prefill. That is why four endpoints are sized for capacity
+        (1 TB DRAM + 16 TB flash) rather than for the 256 GB/s theoretical aggregate.
+      </div>
+    </div>
+  </div>
+
+
+  <p style="text-align:center;color:var(--text-secondary);font-size:0.8rem;margin-top:2rem;padding-top:1rem;border-top:1px solid rgba(148,163,184,0.25);">
+    Analytical model — all bandwidths, capacities and times are derived from link budgets and
+    vendor specifications, not measured on hardware. Aggregate figures are theoretical ceilings.
+    Canonical numbers v4.0.
+  </p>
+</div>
+</body>
+</html>

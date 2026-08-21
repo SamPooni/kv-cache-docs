@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Figure 3.2 — Memory Hierarchy</title>
+<script src="../../vendor/react.production.min.js"></script>
+<script src="../../vendor/react-dom.production.min.js"></script>
+<script src="../../vendor/babel.min.js"></script>
+<link rel="stylesheet" href="../../vendor/fonts.css">
+<link rel="stylesheet" href="../../css/style.css">
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: var(--font-sans); background: var(--bg-primary); min-height: 100vh; color: var(--text-primary); }</style>
+</head>
+<body>
+<div role="note" style="position:sticky;top:0;z-index:9999;background:#f85149;color:#0a0e14;padding:0.85rem 1rem;font-family:'IBM Plex Sans',-apple-system,sans-serif;font-weight:700;font-size:0.95rem;line-height:1.45;border-bottom:3px solid #0a0e14;">
+SUPERSEDED — this figure illustrates a claim withdrawn in v5.0. It is retained only so the retraction remains checkable. Do not cite it. See RETRACTIONS.md and Appendix L (hardware measurements) and Appendix N (simulation) for what replaced it.
+</div>
+
+<div id="root" role="main"></div>
+<script type="text/babel">
+function MemoryHierarchy() {
+  const tiers = [
+    { name: 'Tier 0: GPU HBM (Pinned)', cap: '10 GB', lat: '100 ns', color: 'var(--accent-green)', desc: 'Anchor tokens, per-head metadata (640 MiB), staging buffers — non-evictable' },
+    { name: 'Tier 1: GPU HBM (Evictable)', cap: '37 GB', lat: '100 ns', color: 'var(--accent-blue)', desc: 'Hot KV working set — 2.31 GB per user across 16 users' },
+    { name: 'Tier 2: CXL DRAM (4 endpoints)', cap: '1 TB', lat: '200 ns', color: 'var(--accent-purple)', desc: 'Warm KV — 256 GB per endpoint, load/store accessible' },
+    { name: 'Tier 3: Endpoint NVMe', cap: '16 TB', lat: '25 μs', color: 'var(--accent-orange)', desc: 'Cold KV and complete backing store — 4 TB per endpoint, so no entry is ever lost' }
+  ];
+  const styles = {
+    container: { maxWidth: '700px', margin: '0 auto', padding: '2rem' },
+    header: { textAlign: 'center', marginBottom: '2rem' },
+    pyramid: { display: 'flex', flexDirection: 'column', gap: '0.5rem' },
+    tier: (color, i) => ({ background: 'var(--bg-card)', borderLeft: `4px solid ${color}`, borderRadius: '0 12px 12px 0', padding: '1rem 1.5rem', marginLeft: i * 30, transition: 'all 0.2s' }),
+    tierHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' },
+    tierName: (color) => ({ fontWeight: 600, color }),
+    tierStats: { display: 'flex', gap: '1.5rem' },
+    stat: { fontSize: '0.875rem' },
+    statVal: { fontWeight: 600, color: 'var(--accent-cyan)' },
+    desc: { fontSize: '0.8rem', color: 'var(--text-secondary)' }
+  };
+  return (
+    <div style={styles.container}>
+      <p className="sr-only">Figure 3.2: the four-tier memory hierarchy, drawn as a stepped pyramid in which each tier is indented further and holds more but slower memory. Tier 0 is 10 GB of pinned GPU HBM at 100 nanoseconds; Tier 1 is 37 GB of evictable GPU HBM at 100 nanoseconds, the hot working set of 2.31 GB per user across 16 users; Tier 2 is 1 TB of CXL DRAM across four endpoints at 200 nanoseconds; Tier 3 is 16 TB of endpoint NVMe at 25 microseconds, the complete backing store. Blending them at the 97 / 2.7 / 0.3 hit split gives an effective access latency of 177 nanoseconds. All values are an analytical model, not measured.</p>
+      <div style={styles.header}>
+        <div style={{display: 'inline-block', padding: '0.25rem 0.75rem', background: 'rgba(139,92,246,0.2)', color: 'var(--accent-purple)', fontSize: '0.75rem', fontFamily: 'var(--font-mono)', borderRadius: '20px', marginBottom: '0.5rem'}}>FIGURE 3.2</div>
+        <h1 style={{fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.5rem'}}>Four-Tier Memory Hierarchy</h1>
+        <p style={{color: 'var(--text-secondary)', fontSize: '0.875rem'}}>Capacity increases, speed decreases ↓</p>
+      </div>
+      <div style={styles.pyramid}>
+        {tiers.map((t, i) => (
+          <div key={i} style={styles.tier(t.color, i)} role="img" aria-label={`${t.name}: capacity ${t.cap}, latency ${t.lat}. ${t.desc}`}>
+            <div style={styles.tierHeader}>
+              <span style={styles.tierName(t.color)}>{t.name}</span>
+              <div style={styles.tierStats}>
+                <span style={styles.stat}><span style={styles.statVal}>{t.cap}</span></span>
+                <span style={styles.stat}><span style={styles.statVal}>{t.lat}</span></span>
+              </div>
+            </div>
+            <div style={styles.desc}>{t.desc}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '1.5rem', lineHeight: 1.6}}>
+        The 192 GB B200 HBM3e budget: 140 GB weights + 5 GB activations + 10 GB Tier 0 pinned + 37 GB Tier 1 evictable.
+        Effective access latency across the tiers = 0.97 × 100 ns + 0.027 × 200 ns + 0.003 × 25 µs = <strong>177 ns</strong>.
+        <br />Analytical model — capacities and latencies are modeled from vendor specifications; nothing here is measured.
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<MemoryHierarchy />);
+</script>
+</body>
+</html>

@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EMA Calculation</title>
+<link rel="stylesheet" href="../../css/style.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
+  min-height: 100vh;
+  color: var(--text-primary);
+  padding: 2rem;
+}
+.container { max-width: 900px; margin: 0 auto; padding: 0; }
+h1 {
+  text-align: center;
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+.subtitle {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  margin-bottom: 2rem;
+}
+.section {
+  background: var(--bg-card);
+  border-radius: 16px;
+  padding: 1.75rem;
+  border: 2px solid var(--border-primary);
+  margin-bottom: 1.5rem;
+}
+.section-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 1.25rem;
+  color: var(--text-primary);
+}
+.param-row {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+.param {
+  background: var(--bg-code);
+  border: 2px solid var(--border-primary);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  flex: 1;
+  min-width: 150px;
+}
+.param-label {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.25rem;
+}
+.param-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+.param-value.alpha { color: var(--accent-orange); }
+.param-value.score { color: var(--accent-cyan); }
+.param-value.ema { color: var(--accent-green); }
+.calc-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+.calc-table th, .calc-table td {
+  color: var(--text-primary);
+  padding: 1rem;
+  text-align: center;
+  border-bottom: 2px solid var(--border-primary);
+  font-size: 1.05rem;
+}
+.calc-table th {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 700;
+  font-size: 1rem;
+}
+.calc-table tr:last-child td {
+  border-bottom: none;
+}
+.calc-detail {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  background: var(--bg-code);
+  padding: 0.5rem;
+  border-radius: 6px;
+  margin-top: 0.5rem;
+}
+.ema-result {
+  font-weight: 700;
+  color: var(--accent-green);
+  font-family: var(--font-mono);
+}
+.priority-section {
+  margin-top: 1rem;
+}
+.formula-box {
+  background: var(--bg-code);
+  border: 1px solid var(--border-primary);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin: 1rem 0;
+}
+.formula {
+  font-family: var(--font-mono);
+  font-size: 1.15rem;
+  color: var(--text-primary);
+  text-align: center;
+}
+.formula .comment {
+  color: var(--accent-green);
+  font-size: 0.95rem;
+}
+.example-calc {
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-primary);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-top: 1rem;
+}
+.example-title {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.token-badge {
+  background: var(--accent-cyan);
+  color: var(--bg-primary);
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+}
+.calc-line {
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  margin: 0.75rem 0;
+  padding: 0.5rem;
+  background: var(--bg-code);
+  color: var(--text-primary);
+  border-radius: 6px;
+  border-left: 4px solid var(--border-highlight);
+}
+.calc-line.highlight {
+  color: var(--text-primary);
+  background: rgba(88, 166, 255, 0.12);
+  border-left-color: var(--accent-cyan);
+}
+.calc-line.result {
+  background: rgba(63, 185, 80, 0.12);
+  border-left-color: var(--accent-green);
+  font-weight: 600;
+}
+.calc-line.evict {
+  background: rgba(248, 81, 73, 0.12);
+  border-left-color: var(--accent-red);
+}
+.compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.compare-card {
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-primary);
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+.compare-card.keep {
+  border-color: var(--accent-green);
+  background: rgba(63, 185, 80, 0.08);
+}
+.compare-card.evict {
+  border-color: var(--accent-red);
+  background: rgba(248, 81, 73, 0.08);
+}
+.compare-title {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 0.75rem;
+}
+.compare-card.keep .compare-title { color: var(--accent-green); }
+.compare-card.evict .compare-title { color: var(--accent-red); }
+.metric-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border-secondary);
+  font-size: 1rem;
+}
+.metric-row:last-child { border-bottom: none; }
+.metric-label { color: var(--text-secondary); }
+.metric-value { 
+  font-weight: 600; 
+  font-family: var(--font-mono);
+}
+.final-verdict {
+  text-align: center;
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-top: 0.75rem;
+}
+.compare-card.keep .final-verdict {
+  background: var(--accent-green);
+  color: var(--bg-primary);
+}
+.compare-card.evict .final-verdict {
+  background: var(--accent-red);
+  color: var(--bg-primary);
+}
+</style>
+</head>
+<body>
+<div role="note" style="position:sticky;top:0;z-index:9999;background:#f85149;color:#0a0e14;padding:0.85rem 1rem;font-family:'IBM Plex Sans',-apple-system,sans-serif;font-weight:700;font-size:0.95rem;line-height:1.45;border-bottom:3px solid #0a0e14;">
+SUPERSEDED — this figure illustrates a claim withdrawn in v5.0. It is retained only so the retraction remains checkable. Do not cite it. See RETRACTIONS.md and Appendix L (hardware measurements) and Appendix N (simulation) for what replaced it.
+</div>
+
+<div class="container" role="main">
+  <p class="sr-only">Figure: the EMA update and eviction-priority calculation worked end to end. With alpha = 0.2, the implementation default giving a half-life of ln0.5 over ln0.8 = 3.1 decode steps, score[t] = 0.2 x attention[t] + 0.8 x score[t-1] starting from an initial EMA of 0.0 at token position 1024. The five decode steps run: new score 0.45 gives 0.090; 0.12 gives 0.096; 0.30 gives 0.137; 0.08 gives 0.126; 0.35 gives 0.171. Eviction priority is (1 - score_ema) x recency_decay, where recency_decay = 1 - exp(-beta x steps_since_access) with beta = 0.001. The coefficient beta = 0.001 is an uncalibrated design parameter, not a derived or measured value: it sets the timescale over which idleness becomes a reason to evict, a characteristic time of 1 over beta = 1,000 decode steps, about 100 seconds at the canonical 10 tokens per second. Raising beta makes eviction more aggressively recency-driven and puts long-lived but rarely touched tokens such as system prompts at risk; lowering it lets stale entries linger and consume capacity. Beta interacts with alpha and must be swept jointly against real attention traces. Appendix K section K.7 lists it with the package's other uncalibrated parameters. Token A at position 1024, score_ema 0.171 and accessed 50 steps ago, has recency_decay 0.049 and priority 0.041, so it is kept; token B at position 45678, score_ema 0.08 and accessed 2000 steps ago, has recency_decay 0.865 and priority 0.796, so it is evicted. Higher priority means evict sooner. All values are an analytical model, not measured.</p>
+  <h1>EMA + Eviction Priority</h1>
+  <p class="subtitle">Step-by-step calculation with concrete numbers</p>
+
+  <div class="section">
+    <div class="section-title">1. EMA Update (per decode step)</div>
+    
+    <div class="param-row">
+      <div class="param">
+        <div class="param-label">α (smoothing factor)</div>
+        <div class="param-value alpha">0.2</div>
+      </div>
+      <div class="param">
+        <div class="param-label">Token Position</div>
+        <div class="param-value">1024</div>
+      </div>
+      <div class="param">
+        <div class="param-label">Initial EMA</div>
+        <div class="param-value ema">0.0</div>
+      </div>
+    </div>
+
+    <div class="formula-box">
+      <div class="formula">
+        score[t] = 0.2 × attention[t] + 0.8 × score[t−1]<br>
+        <span class="comment"># α = 0.2 (implementation default) → half-life ln0.5/ln0.8 = 3.1 decode steps</span>
+      </div>
+    </div>
+
+    <table class="calc-table">
+      <tr>
+        <th scope="col">Step</th>
+        <th scope="col">new_score</th>
+        <th scope="col">Calculation</th>
+        <th scope="col">score_ema</th>
+      </tr>
+      <tr>
+        <td>t₁</td>
+        <td>0.45</td>
+        <td class="calc-detail">0.2 × 0.45 + 0.8 × 0.000</td>
+        <td class="ema-result" role="img" aria-label="EMA score after step t1, 0.090">0.090</td>
+      </tr>
+      <tr>
+        <td>t₂</td>
+        <td>0.12</td>
+        <td class="calc-detail">0.2 × 0.12 + 0.8 × 0.090</td>
+        <td class="ema-result" role="img" aria-label="EMA score after step t2, 0.096">0.096</td>
+      </tr>
+      <tr>
+        <td>t₃</td>
+        <td>0.30</td>
+        <td class="calc-detail">0.2 × 0.30 + 0.8 × 0.096</td>
+        <td class="ema-result" role="img" aria-label="EMA score after step t3, 0.137">0.137</td>
+      </tr>
+      <tr>
+        <td>t₄</td>
+        <td>0.08</td>
+        <td class="calc-detail">0.2 × 0.08 + 0.8 × 0.137</td>
+        <td class="ema-result" role="img" aria-label="EMA score after step t4, 0.126">0.126</td>
+      </tr>
+      <tr>
+        <td>t₅</td>
+        <td>0.35</td>
+        <td class="calc-detail">0.2 × 0.35 + 0.8 × 0.126</td>
+        <td class="ema-result" role="img" aria-label="EMA score after step t5, 0.171">0.171</td>
+      </tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="section-title">2. Eviction Priority Function</div>
+    
+    <div class="formula-box">
+      <div class="formula">
+        priority = (1 - score_ema) × recency_decay<br>
+        <span class="comment"># Higher priority = evict sooner</span>
+      </div>
+    </div>
+    
+    <div class="formula-box">
+      <div class="formula">
+        recency_decay = 1 - exp(-β × steps_since_access)<br>
+        <span class="comment"># β = 0.001 (uncalibrated design parameter), decays over ~1000 steps</span>
+      </div>
+    </div>
+
+    <div class="callout warning">
+      <div class="callout-title">β = 0.001 is an uncalibrated design parameter</div>
+        <p>The recency-decay coefficient is not derived from anything and was not fitted to data. It is
+        stated here as an assumption.</p>
+        <p><strong>What it controls.</strong> β sets the timescale over which "not accessed recently" becomes
+        a reason to evict. In <span class="mono">1 − e<sup>−β·steps</sup></span> the characteristic time is
+        <span class="mono">1/β = 1,000 decode steps</span>, so a token reaches ~63% decay at 1,000 steps and
+        ~86% at 2,000. At the canonical 10 tok/s per user that is about 100 seconds of wall-clock idleness
+        before a token is treated as fully stale.</p>
+        <p><strong>Which way it pushes.</strong> Raising β shortens that horizon and makes the policy more
+        aggressively recency-driven: idle tokens are surrendered sooner, HBM and CXL DRAM are reclaimed faster,
+        and long-lived-but-rarely-touched entries — system prompts, few-shot exemplars, anchor tokens — start
+        losing to whatever was touched last, which is exactly the failure the +8-point anchor-pinning rung
+        exists to prevent. Lowering β lengthens the horizon toward pure score-based eviction: the hot set holds
+        its shape longer and stale entries linger, consuming capacity that admission of a new user would need.
+        β → 0 removes the recency term entirely and leaves <span class="mono">(1 − score_ema)</span> alone.</p>
+        <p><strong>How it would be calibrated.</strong> β and α interact and must be swept together: α = 0.2
+        already gives a 3.1-step half-life on the score itself, so a β chosen without reference to α
+        double-counts recency. The calibration is a two-dimensional sweep over real per-head attention traces
+        at the canonical 128 K context, scored on hit rate at fixed hot-set size. See
+        <a href="../../appendix/k-methodology.html">Appendix K, section K.7 — Uncalibrated parameters</a>.</p>
+      </div>
+
+    <div class="example-calc">
+      <div class="example-title">
+        <span class="token-badge">Token A</span> pos=1024, accessed 50 steps ago
+      </div>
+      <div class="calc-line">score_ema = 0.171</div>
+      <div class="calc-line">steps_since_access = 50</div>
+      <div class="calc-line highlight">recency_decay = 1 - exp(-0.001 × 50) = 0.049</div>
+      <div class="calc-line result">priority = (1 - 0.171) × 0.049 = 0.041</div>
+    </div>
+
+    <div class="example-calc">
+      <div class="example-title">
+        <span class="token-badge">Token B</span> pos=45678, accessed 2000 steps ago
+      </div>
+      <div class="calc-line">score_ema = 0.08</div>
+      <div class="calc-line">steps_since_access = 2000</div>
+      <div class="calc-line highlight">recency_decay = 1 - exp(-0.001 × 2000) = 0.865</div>
+      <div class="calc-line evict">priority = (1 - 0.08) × 0.865 = 0.796</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">3. Eviction Decision</div>
+    
+    <div class="compare-grid">
+      <div class="compare-card keep">
+        <div class="compare-title">Token A (pos 1024)</div>
+        <div class="metric-row">
+          <span class="metric-label">score_ema</span>
+          <span class="metric-value">0.171</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">steps_since_access</span>
+          <span class="metric-value">50</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">recency_decay</span>
+          <span class="metric-value">0.049</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">eviction_priority</span>
+          <span class="metric-value">0.041</span>
+        </div>
+        <div class="final-verdict" role="img" aria-label="Verdict for token A: keep, eviction priority 0.041, low"><span aria-hidden="true">✓</span> KEEP (low priority)</div>
+      </div>
+      
+      <div class="compare-card evict">
+        <div class="compare-title">Token B (pos 45678)</div>
+        <div class="metric-row">
+          <span class="metric-label">score_ema</span>
+          <span class="metric-value">0.08</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">steps_since_access</span>
+          <span class="metric-value">2000</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">recency_decay</span>
+          <span class="metric-value">0.865</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">eviction_priority</span>
+          <span class="metric-value">0.796</span>
+        </div>
+        <div class="final-verdict" role="img" aria-label="Verdict for token B: evict, eviction priority 0.796, high"><span aria-hidden="true">🗑</span> EVICT (high priority)</div>
+      </div>
+    </div>
+  </div>
+
+  <p style="text-align:center;color:var(--text-secondary);font-size:0.85rem;margin-top:1.5rem;border-top:1px solid var(--border-primary);padding-top:0.75rem;">
+    Analytical model — illustrative worked example, not measured data. α = 0.2, half-life 3.1 decode steps. Canonical numbers v4.0.
+  </p>
+</div>
+</body>
+</html>

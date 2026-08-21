@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Four Constraints</title>
+<link rel="stylesheet" href="../../vendor/fonts.css">
+<link rel="stylesheet" href="../../css/style.css">
+<style>
+/* ---- figure shell: package tokens only, no external assets ---- */
+body{background:var(--bg-primary);color:var(--text-primary);font-family:var(--font-sans);
+     line-height:1.6;font-size:16px;}
+.vz{position:relative;z-index:1;max-width:1120px;margin:0 auto;padding:1.6rem 1.4rem 1.2rem;}
+.vz-eyebrow{font-family:var(--font-mono);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;
+     color:var(--accent-purple);margin:0 0 .4rem;}
+.vz h1{font-family:var(--font-sans);font-size:1.45rem;font-weight:600;line-height:1.25;
+     color:var(--text-primary);margin:0 0 .4rem;letter-spacing:-.01em;}
+.vz h2{font-family:var(--font-sans);font-size:1rem;font-weight:600;color:var(--text-primary);
+     margin:0 0 .5rem;padding:0;border:0;letter-spacing:0;}
+.vz-sub{color:var(--text-secondary);font-size:.94rem;max-width:78ch;margin:0 0 1.1rem;}
+.vz-card{background:var(--bg-card);border:1px solid var(--border-primary);border-radius:14px;
+     padding:1.15rem 1.2rem;}
+.vz-plot{display:block;width:100%;height:auto;overflow:visible;}
+.vz-scroll{overflow-x:auto;}
+.vz-caveat{display:flex;gap:.7rem;align-items:flex-start;background:rgba(210,153,34,.09);
+     border:1px solid rgba(210,153,34,.4);border-left:4px solid var(--accent-orange);
+     border-radius:0 10px 10px 0;padding:.7rem .9rem;margin:0 0 1.1rem;font-size:.85rem;
+     color:var(--text-secondary);}
+.vz-caveat strong{color:var(--accent-orange);}
+.vz-caveat-icon{font-size:1rem;line-height:1.3;flex:0 0 auto;}
+.vz-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:.75rem;margin:1.1rem 0 0;}
+.vz-tile{background:var(--bg-tertiary);border:1px solid var(--border-primary);border-radius:12px;padding:.8rem .9rem;}
+.vz-tile-v{font-family:var(--font-sans);font-size:1.55rem;font-weight:650;color:var(--text-primary);
+     line-height:1.15;letter-spacing:-.02em;}
+.vz-tile-l{font-size:.775rem;color:var(--text-secondary);margin-top:.28rem;line-height:1.45;}
+.vz-legend{display:flex;flex-wrap:wrap;gap:.4rem 1.4rem;margin:.9rem 0 0;font-size:.85rem;
+     color:var(--text-secondary);}
+.vz-legend-item{display:flex;align-items:center;gap:.5rem;}
+.vz-key{flex:0 0 auto;}
+.vz-legend b{color:var(--text-primary);font-weight:600;}
+.vz-legend .vz-eq{font-family:var(--font-mono);font-size:.8rem;color:var(--text-secondary);}
+.vz-note{font-size:.83rem;color:var(--text-secondary);margin:.9rem 0 0;max-width:82ch;}
+.vz-note b{color:var(--text-primary);}
+details.vz-table{margin:1.1rem 0 0;}
+details.vz-table>summary{cursor:pointer;font-size:.83rem;color:var(--accent-cyan);
+     font-family:var(--font-mono);list-style:none;display:inline-flex;align-items:center;gap:.4rem;
+     padding:.3rem .1rem;}
+details.vz-table>summary::-webkit-details-marker{display:none;}
+details.vz-table>summary::before{content:"\25B8";display:inline-block;transition:transform .15s ease;}
+details.vz-table[open]>summary::before{transform:rotate(90deg);}
+details.vz-table table{font-size:.85rem;}
+details.vz-table td,details.vz-table th{padding:.5rem .7rem;}
+details.vz-table td{font-family:var(--font-mono);color:var(--text-secondary);}
+details.vz-table td:first-child{font-family:var(--font-sans);color:var(--text-primary);}
+.vz-foot{margin:1.3rem 0 0;padding-top:.8rem;border-top:1px solid var(--border-secondary);
+     font-family:var(--font-mono);font-size:.74rem;color:var(--text-muted);letter-spacing:.01em;}
+.vz-grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;}
+@media (max-width:860px){.vz-grid2{grid-template-columns:1fr;}}
+/* axis + mark typography inside the SVGs */
+.ax{fill:var(--text-muted);font-family:var(--font-mono);font-size:11px;
+    font-variant-numeric:tabular-nums;}
+.ax-title{fill:var(--text-secondary);font-family:var(--font-sans);font-size:12px;font-weight:500;}
+.lbl{fill:var(--text-primary);font-family:var(--font-sans);font-size:12px;font-weight:600;}
+.lbl-2{fill:var(--text-secondary);font-family:var(--font-sans);font-size:11.5px;}
+.lbl-m{fill:var(--text-secondary);font-family:var(--font-mono);font-size:11px;
+    font-variant-numeric:tabular-nums;}
+.grid{stroke:var(--border-secondary);stroke-width:1;}
+.axis{stroke:var(--border-primary);stroke-width:1;}
+[data-tip]{cursor:default;}
+[data-tip]:focus-visible{outline:2px solid var(--accent-cyan);outline-offset:2px;}
+/* tooltip */
+#vz-tip{position:fixed;z-index:50;pointer-events:none;opacity:0;transition:opacity .1s ease;
+     background:var(--bg-code);border:1px solid var(--border-highlight);border-radius:8px;
+     padding:.45rem .6rem;font-size:.78rem;line-height:1.45;color:var(--text-primary);
+     box-shadow:var(--shadow-md);max-width:280px;}
+#vz-tip.on{opacity:1;}
+#vz-tip .t-h{font-weight:600;display:block;margin-bottom:.15rem;}
+#vz-tip .t-b{color:var(--text-secondary);font-family:var(--font-mono);font-size:.74rem;}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;}}
+
+.vz-walls{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.7rem;}
+.vz-wall{background:var(--bg-tertiary);border:1px solid var(--border-primary);border-radius:12px;padding:.75rem .9rem;}
+.vz-wall-top{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.35rem;}
+.vz-wall-name{font-weight:600;color:var(--text-primary);font-size:.92rem;}
+.vz-badge{flex:0 0 auto;font-family:var(--font-mono);font-size:.68rem;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;border:1px solid;border-radius:999px;padding:.15rem .5rem;white-space:nowrap;}
+.vz-wall-stmt{margin:0 0 .3rem;font-size:.86rem;color:var(--text-primary);line-height:1.5;}
+.vz-wall-why{margin:0 0 .3rem;font-size:.8rem;color:var(--text-secondary);line-height:1.5;}
+.vz-wall-ev{margin:0;font-family:var(--font-mono);font-size:.68rem;color:var(--text-muted);
+  text-transform:uppercase;letter-spacing:.07em;}
+.vz-claim{margin:1.1rem 0 0;background:rgba(63,185,80,.07);border:1px solid rgba(63,185,80,.35);
+  border-left:4px solid var(--accent-green);border-radius:0 12px 12px 0;padding:.95rem 1.1rem;}
+.vz-claim p{margin:0;color:var(--text-secondary);font-size:.9rem;line-height:1.6;}
+.vz-claim b{color:var(--text-primary);}
+.vz-claim .vz-claim-h{display:block;color:var(--text-primary);font-size:1.02rem;font-weight:600;
+  margin-bottom:.35rem;line-height:1.45;}
+.vz-flowwrap{display:grid;grid-template-columns:minmax(300px,.85fr) 1.15fr;gap:1.3rem;align-items:start;}
+@media (max-width:820px){.vz-flowwrap{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<main class="vz" role="main">
+<p class="sr-only">Figure: the four constraints on KV state in a serving system, and what adding a memory tier does to each. A vertical flow runs from the CXL memory tier, across the tier boundary, into HBM, and from HBM into the attention kernel. Constraint one, capacity: HBM cannot hold the KV of all sequences you want resident. Adding a tier RELIEVES it; this is what the tier is for. Constraint two, HBM-side bandwidth: attention re-reads the active KV out of HBM at every decode step. Adding a tier leaves it UNCHANGED; this is measured, with KV slopes within 8 per cent across two attention kernels, 16.34 against 17.58 milliseconds per GiB, so no kernel fixes it either. Constraint three, tier-ingress bandwidth: KV must cross the tier boundary fast enough to feed attention. Adding a tier CREATES it. Constraint four, transfer latency: each individual transfer must complete before compute stalls on it. Adding a tier CREATES it, and it is distinct from tier-ingress bandwidth, because the aggregate rate can hold while individual transfers still stall the pipeline. The claim the figure lands: a memory tier does not eliminate the KV memory wall, it changes its shape, from a capacity wall into a data-movement wall.</p>
+<p class="vz-eyebrow">Figure 3.1 &middot; Analytical model</p>
+<h1>Four constraints, not one wall &mdash; and a tier does something different to each</h1>
+<p class="vz-sub">Conflating the ways KV state limits a serving system produces the false conclusion that
+adding capacity solves KV scaling. There are four constraints, they bind independently, and only one of
+them is the one a memory tier was built to move.</p>
+<div class="vz-card">
+  <div class="vz-flowwrap">
+    <div>
+      <h2>The path a KV byte takes</h2>
+      <svg class="vz-plot" viewBox="0 0 470 560" role="group" aria-label="Vertical flow: CXL memory tier, then tier-ingress bandwidth, then HBM, then HBM-side bandwidth, then the attention kernel; each hop annotated with the constraint it carries"><defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--text-muted)"/></marker></defs><g role="img" aria-label="CXL memory tier. capacity that sits behind HBM"><rect x="14" y="24" width="210" height="78" rx="12" fill="var(--bg-tertiary)" stroke="#a371f7" stroke-width="1.5"/><rect x="14" y="36" width="3" height="54" rx="1.5" fill="#a371f7"/><text class="lbl" x="119" y="52" text-anchor="middle" style="font-size:14px">CXL memory tier</text><text class="lbl-2" x="119" y="71" text-anchor="middle" fill="var(--text-muted)" style="font-size:11px">capacity that sits</text><text class="lbl-2" x="119" y="86" text-anchor="middle" fill="var(--text-muted)" style="font-size:11px">behind HBM</text></g><line x1="119" y1="102" x2="119" y2="212" stroke="var(--text-muted)" stroke-width="1.5" marker-end="url(#ah)" aria-hidden="true"/><g role="img" aria-label="HBM. what attention actually reads from"><rect x="14" y="218" width="210" height="78" rx="12" fill="var(--bg-tertiary)" stroke="#58a6ff" stroke-width="1.5"/><rect x="14" y="230" width="3" height="54" rx="1.5" fill="#58a6ff"/><text class="lbl" x="119" y="246" text-anchor="middle" style="font-size:14px">HBM</text><text class="lbl-2" x="119" y="265" text-anchor="middle" fill="var(--text-muted)" style="font-size:11px">what attention</text><text class="lbl-2" x="119" y="280" text-anchor="middle" fill="var(--text-muted)" style="font-size:11px">actually reads from</text></g><line x1="119" y1="296" x2="119" y2="406" stroke="var(--text-muted)" stroke-width="1.5" marker-end="url(#ah)" aria-hidden="true"/><g role="img" aria-label="Attention kernel. re-reads the active KV every decode step"><rect x="14" y="412" width="210" height="78" rx="12" fill="var(--bg-tertiary)" stroke="#58a6ff" stroke-width="1.5"/><rect x="14" y="424" width="3" height="54" rx="1.5" fill="#58a6ff"/><text class="lbl" x="119" y="440" text-anchor="middle" style="font-size:14px">Attention kernel</text><text class="lbl-2" x="119" y="459" text-anchor="middle" fill="var(--text-muted)" style="font-size:11px">re-reads the active KV</text><text class="lbl-2" x="119" y="474" text-anchor="middle" fill="var(--text-muted)" style="font-size:11px">every decode step</text></g><g role="img" aria-label="Capacity: RELIEVED. HBM cannot hold the KV of all sequences you want resident; the tier can."><line x1="125" y1="63" x2="236" y2="63" stroke="#3fb950" stroke-width="1" stroke-opacity="0.55"/><circle cx="246" cy="63" r="9" fill="none" stroke="#3fb950" stroke-width="1.5"/><text x="246" y="67" text-anchor="middle" fill="#3fb950" style="font-family:var(--font-mono);font-size:11px;font-weight:700">&#10003;</text><text class="lbl" x="262" y="61" style="font-size:12px">Capacity</text><text x="262" y="76" fill="#3fb950" style="font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.08em">RELIEVED</text></g><g role="img" aria-label="Tier-ingress bandwidth: CREATED. KV must cross the tier boundary fast enough to feed attention. This constraint did not exist before."><line x1="125" y1="140" x2="236" y2="140" stroke="#f85149" stroke-width="1" stroke-opacity="0.55"/><circle cx="246" cy="140" r="9" fill="none" stroke="#f85149" stroke-width="1.5"/><text x="246" y="144" text-anchor="middle" fill="#f85149" style="font-family:var(--font-mono);font-size:11px;font-weight:700">+</text><text class="lbl" x="262" y="138" style="font-size:12px">Tier-ingress bandwidth</text><text x="262" y="153" fill="#f85149" style="font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.08em">CREATED</text></g><g role="img" aria-label="Transfer latency: CREATED. Each individual transfer must complete before compute stalls on it. Distinct from tier-ingress bandwidth."><line x1="125" y1="180" x2="236" y2="180" stroke="#f85149" stroke-width="1" stroke-opacity="0.55"/><circle cx="246" cy="180" r="9" fill="none" stroke="#f85149" stroke-width="1.5"/><text x="246" y="184" text-anchor="middle" fill="#f85149" style="font-family:var(--font-mono);font-size:11px;font-weight:700">+</text><text class="lbl" x="262" y="178" style="font-size:12px">Transfer latency</text><text x="262" y="193" fill="#f85149" style="font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.08em">CREATED</text></g><g role="img" aria-label="HBM-side bandwidth: UNCHANGED. Attention re-reads the active KV out of HBM at every decode step. Measured, and no attention kernel fixes it."><line x1="125" y1="351" x2="236" y2="351" stroke="#8b949e" stroke-width="1" stroke-opacity="0.55"/><circle cx="246" cy="351" r="9" fill="none" stroke="#8b949e" stroke-width="1.5"/><text x="246" y="355" text-anchor="middle" fill="#8b949e" style="font-family:var(--font-mono);font-size:11px;font-weight:700">=</text><text class="lbl" x="262" y="349" style="font-size:12px">HBM-side bandwidth</text><text x="262" y="364" fill="#8b949e" style="font-family:var(--font-mono);font-size:10.5px;font-weight:700;letter-spacing:.08em">UNCHANGED</text></g><g aria-hidden="true"><text class="lbl-2" x="107" y="161" text-anchor="end" fill="var(--text-muted)" style="font-size:10.5px">tier &rarr; HBM</text><text class="lbl-2" x="107" y="355" text-anchor="end" fill="var(--text-muted)" style="font-size:10.5px">HBM &rarr; kernel</text></g></svg>
+    </div>
+    <div>
+      <h2>What a tier does to each constraint</h2>
+      <ul class="vz-walls">
+<li class="vz-wall">
+  <div class="vz-wall-top">
+    <span class="vz-wall-name">Capacity</span>
+    <span class="vz-badge" style="color:#3fb950;border-color:#3fb950"><span aria-hidden="true">&#10003;</span> Relieved</span>
+  </div>
+  <p class="vz-wall-stmt">HBM cannot hold the KV of all sequences you want resident.</p>
+  <p class="vz-wall-why">This is what the tier is for &mdash; the one wall it was built to move.</p>
+  <p class="vz-wall-ev">Analytical model</p>
+</li>
+<li class="vz-wall">
+  <div class="vz-wall-top">
+    <span class="vz-wall-name">Bandwidth (a) &mdash; HBM-side</span>
+    <span class="vz-badge" style="color:#8b949e;border-color:#8b949e"><span aria-hidden="true">=</span> Unchanged</span>
+  </div>
+  <p class="vz-wall-stmt">Attention re-reads the active KV out of HBM at every decode step.</p>
+  <p class="vz-wall-why">Measured: KV slopes within 8% across two attention kernels (16.34 vs 17.58 ms/GiB). Capacity added <em>behind</em> HBM cannot touch a constraint that binds on the HBM side, and no kernel fixes it either.</p>
+  <p class="vz-wall-ev">Measured</p>
+</li>
+<li class="vz-wall">
+  <div class="vz-wall-top">
+    <span class="vz-wall-name">Bandwidth (b) &mdash; tier-ingress</span>
+    <span class="vz-badge" style="color:#f85149;border-color:#f85149"><span aria-hidden="true">+</span> Created</span>
+  </div>
+  <p class="vz-wall-stmt">KV must cross the tier boundary fast enough to feed attention.</p>
+  <p class="vz-wall-why">An aggregate rate across the whole decode set. Did not exist before the tier did.</p>
+  <p class="vz-wall-ev">Analytical model</p>
+</li>
+<li class="vz-wall">
+  <div class="vz-wall-top">
+    <span class="vz-wall-name">Transfer / latency</span>
+    <span class="vz-badge" style="color:#f85149;border-color:#f85149"><span aria-hidden="true">+</span> Created</span>
+  </div>
+  <p class="vz-wall-stmt">Each individual transfer must complete before compute stalls on it.</p>
+  <p class="vz-wall-why">Per-transfer, and independent of (b): the aggregate rate can hold while individual transfers still stall the pipeline.</p>
+  <p class="vz-wall-ev">Analytical model</p>
+</li></ul>
+    </div>
+  </div>
+</div>
+<div class="vz-claim">
+  <p><span class="vz-claim-h">A memory tier does not eliminate the KV memory wall. It changes its
+  shape &mdash; from a capacity wall into a data-movement wall.</span>
+  That is a real win, because capacity is a hard limit and data movement is a scheduling problem. But it is
+  a <b>different</b> problem. Sustainability &mdash; the aggregate rate across the decode set &mdash; and hiding
+  &mdash; the per-transfer deadline &mdash; are independent: <b>the first can hold while the second fails</b>,
+  producing stalls at an entirely satisfactory average bandwidth.</p>
+</div>
+<p class="vz-foot">Analytical model &mdash; CANONICAL-NUMBERS.md &sect;4/&sect;5</p>
+</main>
+
+</body>
+</html>

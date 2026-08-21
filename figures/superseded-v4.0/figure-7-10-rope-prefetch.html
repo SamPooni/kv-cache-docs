@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Figure 7.10 — RoPE Prefetch</title>
+<script src="../../vendor/react.production.min.js"></script>
+<script src="../../vendor/react-dom.production.min.js"></script>
+<script src="../../vendor/babel.min.js"></script>
+<link rel="stylesheet" href="../../css/style.css">
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: var(--font-sans); background: linear-gradient(135deg, var(--bg-primary), var(--bg-card)); min-height: 100vh; color: var(--text-primary); }</style>
+</head>
+<body>
+<div role="note" style="position:sticky;top:0;z-index:9999;background:#f85149;color:#0a0e14;padding:0.85rem 1rem;font-family:'IBM Plex Sans',-apple-system,sans-serif;font-weight:700;font-size:0.95rem;line-height:1.45;border-bottom:3px solid #0a0e14;">
+SUPERSEDED — this figure illustrates a claim withdrawn in v5.0. It is retained only so the retraction remains checkable. Do not cite it. See RETRACTIONS.md and Appendix L (hardware measurements) and Appendix N (simulation) for what replaced it.
+</div>
+
+<div id="root" role="main"></div>
+<script type="text/babel">
+const { useState } = React;
+function RoPEPrefetch() {
+  const [currentPos, setCurrentPos] = useState(50);
+  const windowSize = 20;
+  const styles = {
+    container: { maxWidth: '800px', margin: '0 auto', padding: '2rem' },
+    header: { textAlign: 'center', marginBottom: '2rem' },
+    slider: { background: 'var(--bg-card)', borderRadius: '12px', padding: '1.5rem', marginBottom: '1.5rem' },
+    timeline: { display: 'flex', gap: 2, marginBottom: '1rem', overflowX: 'auto', padding: '0.5rem 0' },
+    token: (pos, current) => {
+      const dist = Math.abs(pos - current);
+      const inWindow = dist <= windowSize;
+      const isPrefetch = dist > 0 && dist <= windowSize;
+      return {
+        width: 12, height: 40, borderRadius: 2, flexShrink: 0,
+        background: pos === current ? 'var(--accent-green)' : isPrefetch ? 'var(--accent-cyan)' : inWindow ? 'var(--accent-purple)' : 'var(--border-primary)',
+        opacity: inWindow ? 1 : 0.3
+      };
+    },
+    legend: { display: 'flex', justifyContent: 'center', gap: '2rem', marginBottom: '1.5rem', fontSize: '0.875rem' },
+    dot: (color) => ({ width: 12, height: 12, borderRadius: 2, background: color, display: 'inline-block', marginRight: 8 }),
+    formula: { background: 'var(--bg-primary)', borderRadius: '12px', padding: '1.5rem', textAlign: 'center' },
+    formulaText: { fontFamily: 'var(--font-mono)', color: 'var(--accent-cyan)', marginBottom: '0.5rem' },
+    insight: { background: 'var(--bg-card)', borderRadius: '12px', padding: '1rem', marginTop: '1.5rem' }
+  };
+  return (
+    <div style={styles.container}>
+      <p className="sr-only">Figure: RoPE-aware prefetching over a 100-position timeline. A slider sets the current decode position, 50 by default and adjustable from 20 to 80; the 20 positions on either side form the prefetch window and are shown warm, while everything beyond is cold. The bound is the magnitude of the inner product of q_m and k_n is at most B of the absolute distance m minus n, with B non-increasing — an upper-bound envelope, not a monotonic cosine decay — and the priority actually implemented is prefetch_priority(distance) = 1 divided by (1 plus distance over 100), a hyperbolic falloff. Prefetching on this heuristic contributes plus 4 percentage points of hit rate, 93 percent to 97 percent cumulative. All values are an analytical model, not measured.</p>
+      <div style={styles.header}>
+        <div style={{display: 'inline-block', padding: '0.25rem 0.75rem', background: 'rgba(59,130,246,0.2)', color: 'var(--accent-cyan)', fontSize: '0.75rem', fontFamily: 'var(--font-mono)', borderRadius: '20px', marginBottom: '0.5rem'}}>FIGURE 7.10</div>
+        <h1 style={{fontSize: '1.5rem', fontWeight: 700}}>RoPE-Aware Prefetching</h1>
+        <p style={{color: 'var(--text-secondary)', fontSize: '0.875rem'}}>Modeling assumption: attention mass concentrates on nearby positions</p>
+      </div>
+      <div style={styles.slider}>
+        <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem'}}>
+          <span>Current Position</span><span style={{color: 'var(--accent-green)', fontWeight: 600}}>{currentPos}</span>
+        </div>
+        <input type="range" min="20" max="80" value={currentPos} onChange={e => setCurrentPos(+e.target.value)} style={{width: '100%'}} />
+      </div>
+      <div style={styles.timeline} role="img" aria-label={`Timeline of 100 token positions. Current position ${currentPos}; the prefetch window covers positions ${Math.max(0, currentPos - windowSize)} to ${Math.min(99, currentPos + windowSize)}, a window of ${windowSize} positions either side; all other positions are cold.`}>
+        {Array.from({length: 100}, (_, i) => <div key={i} aria-hidden="true" style={styles.token(i, currentPos)}></div>)}
+      </div>
+      <div style={styles.legend}>
+        <span><span aria-hidden="true" style={styles.dot('var(--accent-green)')}></span>Current</span>
+        <span><span aria-hidden="true" style={styles.dot('var(--accent-cyan)')}></span>Prefetch Window</span>
+        <span><span aria-hidden="true" style={styles.dot('var(--border-primary)')}></span>Cold</span>
+      </div>
+      <div style={styles.formula}>
+        <div style={styles.formulaText}>|⟨q_m, k_n⟩| ≤ B(|m − n|),&nbsp; B non-increasing</div>
+        <div style={{color: 'var(--text-secondary)', fontSize: '0.875rem'}}>
+          The RoPE inner product is a <strong>sum over d/2 frequency pairs</strong>, each rotated by its own
+          θ_i — it is not a single cosine of the distance and it does not decay monotonically.
+          What RoPE gives is an <strong>upper-bound envelope</strong> B on the magnitude as distance grows.
+        </div>
+        <div style={{...styles.formulaText, marginTop: '1rem'}}>prefetch_priority(distance) = 1 / (1 + distance / 100)</div>
+        <div style={{color: 'var(--text-secondary)', fontSize: '0.875rem'}}>The priority actually implemented — a hyperbolic falloff in position distance.</div>
+      </div>
+      <div style={styles.insight}>
+        <div style={{fontWeight: 600, color: 'var(--accent-cyan)', marginBottom: '0.5rem'}}><span aria-hidden="true">💡</span> Prefetch Strategy</div>
+        <div style={{color: 'var(--text-secondary)', fontSize: '0.875rem'}}>Using the distance-decay bound as a heuristic, we prefetch positions likely to be accessed next, contributing <strong>+4 percentage points</strong> of hit rate (93% → 97% cumulative).</div>
+      </div>
+      <div style={{textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '1.5rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-primary)'}}>
+        Analytical model — the locality assumption and the +4 pts contribution are modeled, not measured.
+        Canonical numbers v4.0.
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<RoPEPrefetch />);
+</script>
+</body>
+</html>

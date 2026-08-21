@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RoPE Prefetch Strategy</title>
+<link rel="stylesheet" href="../../css/style.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  padding: 2.5rem;
+  line-height: 1.5;
+}
+.container { max-width: 950px; margin: 0 auto; padding: 0; }
+h1 {
+  font-size: 2.2rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+.subtitle {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 1.15rem;
+  margin-bottom: 2.5rem;
+}
+.section {
+  margin-bottom: 2.5rem;
+}
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+.section-num {
+  width: 36px;
+  height: 36px;
+  background: var(--accent-purple);
+  color: var(--bg-primary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.section-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+.card {
+  background: var(--bg-card);
+  border: 2px solid var(--border-primary);
+  border-radius: 14px;
+  padding: 1.5rem;
+}
+.rope-viz {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+.decay-chart {
+  width: 100%;
+  max-width: 700px;
+  height: 200px;
+  background: var(--bg-code);
+  border: 2px solid var(--border-primary);
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+}
+.decay-curve {
+  position: absolute;
+  bottom: 40px;
+  left: 50px;
+  right: 50px;
+  height: 140px;
+}
+.decay-svg {
+  width: 100%;
+  height: 100%;
+}
+.axis-label {
+  position: absolute;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+.axis-label.y { 
+  left: 8px; 
+  top: 50%; 
+  transform: rotate(-90deg) translateX(-50%);
+  transform-origin: left center;
+}
+.axis-label.x { 
+  bottom: 8px; 
+  left: 50%; 
+  transform: translateX(-50%); 
+}
+.query-marker {
+  position: absolute;
+  bottom: 35px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.query-label {
+  margin-top: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--accent-red);
+}
+.rope-explanation {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.rope-point {
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-primary);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  max-width: 300px;
+}
+.rope-point-title {
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-bottom: 0.3rem;
+  color: var(--accent-purple);
+}
+.rope-point-desc {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+.prefetch-viz {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+.position-line {
+  width: 100%;
+  max-width: 800px;
+  position: relative;
+  padding: 2rem 0;
+}
+.line-base {
+  height: 4px;
+  background: rgba(58, 69, 85, 0.5);
+  border-radius: 2px;
+  position: relative;
+}
+.prefetch-window {
+  position: absolute;
+  top: -8px;
+  height: 20px;
+  background: rgba(163, 113, 247, 0.2);
+  border: 2px solid var(--accent-purple);
+  border-radius: 4px;
+}
+.window-label {
+  position: absolute;
+  top: -35px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--accent-purple);
+  white-space: nowrap;
+}
+.position-markers {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1rem;
+  padding: 0 2%;
+}
+.pos-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+.pos-tick {
+  width: 2px;
+  height: 12px;
+  background: var(--text-secondary);
+}
+.pos-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+.current-pos {
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 24px;
+  background: var(--accent-red);
+  border-radius: 50%;
+  border: 3px solid var(--bg-primary);
+  box-shadow: 0 2px 10px rgba(248,81,73,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--bg-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.pos-p-label {
+  position: absolute;
+  top: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--accent-red);
+}
+.window-edges {
+  position: absolute;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.edge-label {
+  position: absolute;
+  top: 28px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--accent-purple);
+  font-family: var(--font-mono);
+}
+.edge-label.left { left: calc(25% - 20px); }
+.edge-label.right { right: calc(25% - 20px); }
+.token-slots {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  flex-wrap: wrap;
+  max-width: 800px;
+}
+.token-slot {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+.token-slot.cached { background: rgba(63, 185, 80, 0.15); color: var(--accent-green); border: 2px solid var(--accent-green); }
+.token-slot.prefetch { background: rgba(163, 113, 247, 0.18); color: var(--accent-purple); border: 2px solid var(--accent-purple); }
+.token-slot.current { background: var(--accent-red); color: var(--bg-primary); border: 2px solid var(--accent-red); }
+.token-slot.storage { background: var(--bg-code); color: var(--text-secondary); border: 2px solid var(--border-primary); }
+.slot-legend {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+}
+.legend-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+}
+.formula-card {
+  background: rgba(163, 113, 247, 0.10);
+  border: 2px solid var(--accent-purple);
+  border-radius: 12px;
+  padding: 1.25rem;
+  text-align: center;
+}
+.formula-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent-purple);
+  margin-bottom: 0.75rem;
+}
+.formula-content {
+  font-family: var(--font-mono);
+  font-size: 1.2rem;
+  color: var(--text-primary);
+  background: var(--bg-code);
+  padding: 1rem;
+  border-radius: 8px;
+  display: inline-block;
+}
+.formula-note {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin-top: 0.75rem;
+}
+.attn-dist {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+}
+.dist-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 3px;
+  height: 120px;
+  padding: 1rem;
+  background: var(--bg-code);
+  border: 2px solid var(--border-primary);
+  border-radius: 10px;
+}
+.dist-bar {
+  width: 28px;
+  background: linear-gradient(to top, var(--accent-purple), #c4a6fb);
+  border-radius: 4px 4px 0 0;
+  position: relative;
+}
+.dist-bar.in-window {
+  background: linear-gradient(to top, var(--accent-green), #6ede7c);
+}
+.dist-bar.current {
+  background: linear-gradient(to top, var(--accent-red), #fb8a84);
+}
+.dist-label {
+  text-align: center;
+  margin-top: 0.75rem;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+.dist-label strong {
+  color: var(--accent-green);
+}
+.w-selection {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.w-option {
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-primary);
+  border-radius: 10px;
+  padding: 1rem;
+  text-align: center;
+}
+.w-option.recommended {
+  border-color: var(--accent-green);
+  background: rgba(63, 185, 80, 0.10);
+}
+.w-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+.w-option.recommended .w-value { color: var(--accent-green); }
+.w-coverage {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+}
+.w-tradeoff {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-top: 0.5rem;
+}
+</style>
+</head>
+<body>
+<div role="note" style="position:sticky;top:0;z-index:9999;background:#f85149;color:#0a0e14;padding:0.85rem 1rem;font-family:'IBM Plex Sans',-apple-system,sans-serif;font-weight:700;font-size:0.95rem;line-height:1.45;border-bottom:3px solid #0a0e14;">
+SUPERSEDED — this figure illustrates a claim withdrawn in v5.0. It is retained only so the retraction remains checkable. Do not cite it. See RETRACTIONS.md and Appendix L (hardware measurements) and Appendix N (simulation) for what replaced it.
+</div>
+
+<div class="container" role="main">
+  <p class="sr-only">Figure: RoPE-aware prefetching. RoPE rotates Q and K in d/2 two-dimensional subspaces, each with its own frequency, so the inner product is a sum over those pairs and does not fall off monotonically; the guarantee is an upper-bound envelope, the magnitude of the inner product of q_m and k_n is at most B of the absolute distance m minus n with B non-increasing. This design assumes about 70 percent of attention mass falls within plus or minus W positions of the query, an input assumption rather than a universal property. The prefetch rule is: when the GPU accesses position P, prefetch the range P minus W to P plus W, ordering candidates by priority(distance) = 1 divided by (1 plus distance over 100). In the worked strip, current access is position 55 with W = 5, so positions 50 to 54 and 56 to 60 are in the prefetch zone while 48, 49, 61 and 62 stay on storage. Window size is chosen from the assumed distribution: W = 32 captures about 50 percent of attention with low bandwidth but more misses; W = 128 captures about 75 percent and is the balanced choice for Llama-70B; W = 512 captures about 90 percent at high bandwidth overhead. All three window sizes are uncalibrated design parameters, not derived or measured values: they are round powers of two chosen to show the shape of the trade-off. W sets the radius of the prefetch range and so fixes both attention coverage and speculative bandwidth. Raising W lifts coverage but cost grows linearly while return is sharply sublinear, and prefetched entries that are never read waste both CXL bandwidth and HBM residency; lowering W spends less but leaves more of the miss tail to be paid at 200 nanoseconds or 25 microseconds. Calibration requires a measured per-head attention-versus-distance distribution on production traces, and the right W is likely per head type rather than global. Appendix K section K.7 lists it with the package's other uncalibrated parameters. Note also that this prefetch priority is a different function from the tier-placement score P(p) = 0.25 R + 0.55 E + 0.20 N used in the executive summary visual appendix: prefetch priority decides what to fetch next, tier placement decides where a token already held should live. RoPE-aware prefetch contributes plus 4 percentage points of hit rate, 93 percent to 97 percent cumulative. All values are an analytical model, not measured.</p>
+  <h1>RoPE-Aware Prefetching</h1>
+  <p class="subtitle">Exploiting position encoding locality for predictive cache loading</p>
+
+  <!-- Section 1: RoPE Attention Decay -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">1</div>
+      <div class="section-title">RoPE Creates Distance-Dependent Attention</div>
+    </div>
+    <div class="card">
+      <div class="rope-viz">
+        <div class="decay-chart">
+          <span class="axis-label y">Attention</span>
+          <span class="axis-label x">Relative Position (distance from query)</span>
+          <div class="decay-curve">
+            <svg class="decay-svg" viewBox="0 0 600 140" preserveAspectRatio="none" role="img" aria-label="Sketch of the RoPE upper-bound envelope: attention is highest at the query position in the centre and falls away symmetrically with distance in both directions.">
+              <defs>
+                <linearGradient id="curveGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" style="stop-color:var(--accent-purple);stop-opacity:0.3" />
+                  <stop offset="100%" style="stop-color:var(--accent-purple);stop-opacity:0.05" />
+                </linearGradient>
+              </defs>
+              <path d="M0,140 L0,120 Q75,115 150,90 T300,10 T450,90 Q525,115 600,120 L600,140 Z" fill="url(#curveGrad)" />
+              <path d="M0,120 Q75,115 150,90 T300,10 T450,90 Q525,115 600,120" fill="none" stroke="var(--accent-purple)" stroke-width="3" />
+              <circle cx="300" cy="10" r="6" fill="var(--accent-red)" />
+            </svg>
+          </div>
+          <div class="query-marker">
+            <div class="query-label">Query Position</div>
+          </div>
+        </div>
+        <div class="rope-explanation">
+          <div class="rope-point">
+            <div class="rope-point-title">Rotary Encoding — what RoPE actually gives</div>
+            <div class="rope-point-desc">
+              RoPE encodes position by rotating Q/K in d/2 two-dimensional subspaces, each with its own
+              frequency θ_i. The inner product is a <strong>sum over those d/2 frequency pairs</strong>,
+              so it is not a single cosine of the distance and it does not fall off monotonically.
+              The guarantee is an <strong>upper-bound envelope</strong>:
+              <code>|⟨q_m, k_n⟩| ≤ B(|m − n|)</code> with B non-increasing. The curve at left sketches
+              that envelope, not a measured attention trace.
+            </div>
+          </div>
+          <div class="rope-point">
+            <div class="rope-point-title">Locality Bias — an ASSUMPTION of this model</div>
+            <div class="rope-point-desc">
+              This design assumes roughly <strong>70% of attention mass falls within ±W positions</strong>
+              of the query. That figure is <strong>not a universal property of transformers</strong>:
+              it is model-, layer-, head- and workload-dependent, and it is stated here as an input
+              assumption, not as an established fact or a measurement.
+            </div>
+          </div>
+          <div class="rope-point">
+            <div class="rope-point-title">Predictable Access</div>
+            <div class="rope-point-desc">
+              Under that assumption, if the GPU requests position P it will likely need P±W soon,
+              so we prefetch proactively. The priority actually implemented is
+              <code>1 / (1 + distance/100)</code> — a hyperbolic falloff in position distance,
+              not the RoPE envelope itself.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: Prefetch Window -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">2</div>
+      <div class="section-title">Prefetch Window Strategy</div>
+    </div>
+    <div class="card">
+      <div class="prefetch-viz">
+        <div class="formula-card">
+          <div class="formula-title">Prefetch Rule</div>
+          <div class="formula-content">GPU accesses P → Prefetch [P − W, P + W]</div>
+          <div class="formula-content" style="margin-top:0.5rem">priority(distance) = 1 / (1 + distance / 100)</div>
+          <div class="formula-note">W = window size, chosen per model from the <em>assumed</em> attention distribution. Candidates inside the window are ordered by the priority above (the reference implementation's rule).</div>
+        </div>
+        
+        <div class="position-line">
+          <div class="line-base">
+            <div class="prefetch-window" style="left: 25%; width: 50%;">
+              <div class="window-label">Prefetch Window (2W)</div>
+            </div>
+            <div class="current-pos">P</div>
+            <div class="pos-p-label">Current Access</div>
+            <div class="window-edges">
+              <span class="edge-label left">P−W</span>
+              <span class="edge-label right">P+W</span>
+            </div>
+          </div>
+          <div class="position-markers">
+            <div class="pos-marker"><div class="pos-tick"></div><div class="pos-label">P−2W</div></div>
+            <div class="pos-marker"><div class="pos-tick"></div><div class="pos-label">P−W</div></div>
+            <div class="pos-marker"><div class="pos-tick"></div><div class="pos-label">P</div></div>
+            <div class="pos-marker"><div class="pos-tick"></div><div class="pos-label">P+W</div></div>
+            <div class="pos-marker"><div class="pos-tick"></div><div class="pos-label">P+2W</div></div>
+          </div>
+        </div>
+
+        <div class="token-slots">
+          <div class="token-slot storage" role="img" aria-label="Position 48, on storage, outside the prefetch window">48</div>
+          <div class="token-slot storage" role="img" aria-label="Position 49, on storage, outside the prefetch window">49</div>
+          <div class="token-slot prefetch" role="img" aria-label="Position 50, in the prefetch zone">50</div>
+          <div class="token-slot prefetch" role="img" aria-label="Position 51, in the prefetch zone">51</div>
+          <div class="token-slot prefetch" role="img" aria-label="Position 52, in the prefetch zone">52</div>
+          <div class="token-slot prefetch" role="img" aria-label="Position 53, in the prefetch zone">53</div>
+          <div class="token-slot prefetch" role="img" aria-label="Position 54, in the prefetch zone">54</div>
+          <div class="token-slot current" role="img" aria-label="Position 55, the current access position">55</div>
+          <div class="token-slot prefetch" role="img" aria-label="Position 56, in the prefetch zone">56</div>
+          <div class="token-slot prefetch" role="img" aria-label="Position 57, in the prefetch zone">57</div>
+          <div class="token-slot prefetch" role="img" aria-label="Position 58, in the prefetch zone">58</div>
+          <div class="token-slot prefetch" role="img" aria-label="Position 59, in the prefetch zone">59</div>
+          <div class="token-slot prefetch" role="img" aria-label="Position 60, in the prefetch zone">60</div>
+          <div class="token-slot storage" role="img" aria-label="Position 61, on storage, outside the prefetch window">61</div>
+          <div class="token-slot storage" role="img" aria-label="Position 62, on storage, outside the prefetch window">62</div>
+        </div>
+        <div class="slot-legend">
+          <div class="legend-item"><div class="legend-dot" aria-hidden="true" style="background:var(--accent-red)"></div>Current Access (P=55)</div>
+          <div class="legend-item"><div class="legend-dot" aria-hidden="true" style="background:rgba(163,113,247,0.18);border:2px solid var(--accent-purple)"></div>Prefetch Zone (W=5)</div>
+          <div class="legend-item"><div class="legend-dot" aria-hidden="true" style="background:var(--bg-code);border:2px solid var(--border-primary)"></div>On Storage</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 3: Choosing W -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">3</div>
+      <div class="section-title">Window Size Selection (modeled, not empirical)</div>
+    </div>
+    <div class="card">
+      <div class="attn-dist">
+        <div class="dist-bars">
+          <div class="dist-bar" role="img" aria-label="Distance -6 from the query, attention mass 15% of the peak, outside the prefetch window" style="height:15%"></div>
+          <div class="dist-bar" role="img" aria-label="Distance -5 from the query, attention mass 22% of the peak, outside the prefetch window" style="height:22%"></div>
+          <div class="dist-bar" role="img" aria-label="Distance -4 from the query, attention mass 35% of the peak, outside the prefetch window" style="height:35%"></div>
+          <div class="dist-bar in-window" role="img" aria-label="Distance -3 from the query, attention mass 55% of the peak, inside the prefetch window" style="height:55%"></div>
+          <div class="dist-bar in-window" role="img" aria-label="Distance -2 from the query, attention mass 78% of the peak, inside the prefetch window" style="height:78%"></div>
+          <div class="dist-bar in-window" role="img" aria-label="Distance -1 from the query, attention mass 92% of the peak, inside the prefetch window" style="height:92%"></div>
+          <div class="dist-bar current" role="img" aria-label="Query position, attention mass 100% of the peak" style="height:100%"></div>
+          <div class="dist-bar in-window" role="img" aria-label="Distance +1 from the query, attention mass 88% of the peak, inside the prefetch window" style="height:88%"></div>
+          <div class="dist-bar in-window" role="img" aria-label="Distance +2 from the query, attention mass 72% of the peak, inside the prefetch window" style="height:72%"></div>
+          <div class="dist-bar in-window" role="img" aria-label="Distance +3 from the query, attention mass 50% of the peak, inside the prefetch window" style="height:50%"></div>
+          <div class="dist-bar" role="img" aria-label="Distance +4 from the query, attention mass 30% of the peak, outside the prefetch window" style="height:30%"></div>
+          <div class="dist-bar" role="img" aria-label="Distance +5 from the query, attention mass 18% of the peak, outside the prefetch window" style="height:18%"></div>
+          <div class="dist-bar" role="img" aria-label="Distance +6 from the query, attention mass 12% of the peak, outside the prefetch window" style="height:12%"></div>
+        </div>
+        <div class="dist-label">Assumed attention mass distribution (illustrative, not a measured histogram) · <strong>Green = within prefetch window</strong></div>
+      </div>
+      
+      <div class="w-selection">
+        <div class="w-option">
+          <div class="w-value">W = 32</div>
+          <div class="w-coverage">~50% attention captured (assumed)</div>
+          <div class="w-tradeoff">Low bandwidth, more misses</div>
+        </div>
+        <div class="w-option recommended">
+          <div class="w-value">W = 128</div>
+          <div class="w-coverage">~75% attention captured (assumed)</div>
+          <div class="w-tradeoff"><span aria-hidden="true">✓</span> Balanced for Llama-70B</div>
+        </div>
+        <div class="w-option">
+          <div class="w-value">W = 512</div>
+          <div class="w-coverage">~90% attention captured (assumed)</div>
+          <div class="w-tradeoff">High bandwidth overhead</div>
+        </div>
+      </div>
+
+      <div class="callout warning">
+        <div class="callout-title">W = 32 / 128 / 512 are uncalibrated design parameters</div>
+        <p>These three window sizes are not derived and were not selected by experiment. They are round
+        powers of two spanning two orders of magnitude, chosen to show the shape of the trade-off; the
+        coverage percentages beside them (~50% / ~75% / ~90%) are assumptions of the model, not a measured
+        histogram, and W = 128 is labelled "balanced for Llama-70B" as a judgement call, not a fitted result.</p>
+        <p><strong>What W controls.</strong> W sets the radius of the prefetch range
+        <span class="mono">[P − W, P + W]</span> around an accessed position, so 2W + 1 entries are fetched
+        speculatively per access. It therefore fixes the fraction of attention mass the prefetcher can cover
+        and, at the same time, the speculative bandwidth the policy spends to get it.</p>
+        <p><strong>Which way it pushes.</strong> Raising W widens coverage and lifts the hit rate — this is
+        the rung worth +4 percentage points, 93% → 97% — but the cost is linear in W while the return is
+        sharply sublinear, because the assumed attention distribution thins out with distance. Every prefetched
+        entry that is never read is wasted CXL bandwidth and wasted HBM residency, so a large W eats into the
+        hot set it was meant to serve and can lower the effective hit rate. Lowering W spends less bandwidth
+        and leaves more HBM for demand-loaded tokens, but leaves more of the miss tail to be paid at 200 ns
+        (CXL) or 25 µs (flash). At W = 0 the mechanism disappears and the ladder falls back to 93%.</p>
+        <p><strong>How it would be calibrated.</strong> Measure the real per-head attention-versus-distance
+        distribution on production traces for the target model, then choose the smallest W whose marginal
+        coverage still exceeds the marginal bandwidth cost. The right W is very likely per-head-type rather
+        than global: the head-specialisation split in Appendix E implies local heads want a small W and
+        retrieval heads are poorly served by a distance window at any W. See
+        <a href="../../appendix/k-methodology.html">Appendix K, section K.7 — Uncalibrated parameters</a>.</p>
+        <p><strong>Not the same function as the tier-placement weights.</strong> The ordering rule inside the
+        window, <span class="mono">priority(distance) = 1/(1 + distance/100)</span>, and the
+        <span class="mono">0.6 · rope_factor + 0.4 · ema_factor</span> blend in Appendices D and J are
+        <em>prefetch</em> priorities — they decide what to fetch next. The
+        <span class="mono">P(p) = 0.25·R + 0.55·E + 0.20·N</span> weights in the executive-summary visual
+        appendix are a <em>tier-placement</em> score — they decide where a token already held should live.
+        Different questions, different functions; the weights are not comparable and do not contradict
+        each other.</p>
+      </div>
+    </div>
+  </div>
+
+  <p style="text-align:center;color:var(--text-secondary);font-size:0.8rem;margin-top:1.5rem;padding-top:0.75rem;border-top:1px solid var(--border-primary);">
+    Analytical model — the locality percentages and window-coverage figures on this page are
+    assumptions of the model, not measurements. RoPE-aware prefetch contributes +4 percentage points
+    of hit rate (93% &rarr; 97% cumulative). Canonical numbers v4.0.
+  </p>
+</div>
+</body>
+</html>

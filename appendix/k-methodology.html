@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Appendix K: Methodology, Assumptions and Evidence Status — KV-Cache Offloading</title>
+  <link rel="stylesheet" href="../vendor/fonts.css">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <div class="watermark">
+    © 2025–2026 Subramaniyam (Sam) Pooni<br>
+    All Rights Reserved<br>
+    Proprietary & Confidential
+  </div>
+
+  <nav class="nav"><div class="nav-inner"><a href="../index.html" class="nav-brand"><span class="nav-brand-icon" aria-hidden="true">⚡</span> KV-Cache Architecture</a><div class="nav-links"><a href="index.html" class="nav-link">Appendix Index</a><a href="a-transformer-fundamentals.html" class="nav-link">A</a><a href="b-attention-mechanism.html" class="nav-link">B</a><a href="c-kv-cache-math.html" class="nav-link">C</a><a href="d-rope-encoding.html" class="nav-link">D</a><a href="e-head-specialization.html" class="nav-link">E</a><a href="f-cxl-technology.html" class="nav-link">F</a><a href="g-ema-algorithm.html" class="nav-link">G</a><a href="h-memory-hierarchy.html" class="nav-link">H</a><a href="i-bandwidth-calculations.html" class="nav-link">I</a><a href="j-implementation-reference.html" class="nav-link">J</a><a href="k-methodology.html" class="nav-link active">K</a><a href="l-measurements.html" class="nav-link">L</a><a href="m-formal-core.html" class="nav-link">M</a><a href="n-simulation.html" class="nav-link">N</a></div></div></nav>
+  <div class="page-wrapper">
+    <div class="container" role="main">
+      <header class="chapter-header">
+        <div class="chapter-label">Appendix K</div>
+        <h1 class="chapter-title">Methodology, Assumptions and Evidence Status</h1>
+        <p class="chapter-subtitle">What evidence exists behind every number in v5.0: the seven evidence classes with <span class="mono">Measured</span> present for the first time, what the v4.0 headline set claimed and why it is retracted, and the validation programme the remaining projections are still held to.</p>
+      </header>
+
+      <div class="callout important">
+        <div class="callout-title"><span class="danger">v5.0 — this appendix has been reconciled against measurement, and most of what it used to derive is retracted.</span></div>
+        <p>In v4.0 this page opened by declaring that nothing in the package was measured. <strong>That is no
+        longer true.</strong> <a href="l-measurements.html">Appendix L</a> reports hardware measurements
+        taken on a DGX Spark (GB10) on 19 August 2026, and <a href="n-simulation.html">Appendix N</a> reports
+        a corrected trace-driven simulation. Between them they contradict the v4.0 headline set —
+        <span class="mono">16×</span> user capacity, <span class="mono">97%</span> HBM hit rate,
+        <span class="mono">65×</span>, <span class="mono">11.5×</span>, <span class="mono">15.6×</span> —
+        <strong>all of which are retracted</strong>. Their derivations have been removed from §K.3 and
+        replaced by a retraction table pointing at the evidence that displaced each one. The complete list is
+        in <span class="mono">CANONICAL-NUMBERS.md</span> §7 and <span class="mono">RETRACTIONS.md</span>.</p>
+        <p>Nothing retracted here was dishonest. All of it was <strong>constructed rather than
+        observed</strong>, and the construction did not survive contact with a measurement. That is the
+        correct outcome, and this appendix — whose job was always to state what evidence existed — says so
+        plainly.</p>
+      </div>
+
+      <h2>K.1 Evidence Taxonomy</h2>
+
+      <p>Every quantitative claim in this package carries one of <strong>seven</strong> labels, ordered here
+      from strongest evidence to weakest. <strong>For the first time the package contains
+      <span class="mono">Measured</span></strong>, and the two weakest classes,
+      <span class="mono">Design target</span> and <span class="mono">Illustrative</span>, are now clearly
+      separated from anything that could be mistaken for a result.</p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th scope="col">Class</th><th scope="col">Meaning</th><th scope="col">Where it is used in this package</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="mono text-green"><strong>Measured</strong></td>
+              <td>Run on named hardware, with method and raw data published.</td>
+              <td class="text-green"><strong><a href="l-measurements.html">Appendix L</a></strong> — DGX Spark GB10, 19 August 2026: achieved streaming bandwidth, the two-term decode model, both raw tables, the method, and the two measurement bugs found and fixed. This is the <strong>only</strong> source of measured evidence in the package.</td>
+            </tr>
+            <tr>
+              <td class="mono">Simulated (provisional)</td>
+              <td>Trace-driven simulation, corrected after an erratum, and <strong>not settled</strong>.</td>
+              <td><strong><a href="n-simulation.html">Appendix N</a></strong> — KV tiering simulation, Revision 2. Carries a standing caveat wherever quoted, because a single defect in Revision 1 inverted four of five findings.</td>
+            </tr>
+            <tr>
+              <td class="mono">Analytical model</td>
+              <td>Derived from stated inputs. Reproducible on paper; correct only if the model's structure and inputs are correct.</td>
+              <td class="text-orange">Capacity sizing and the per-token KV table (Appendices <a href="c-kv-cache-math.html">C</a>, <a href="i-bandwidth-calculations.html">I</a>); tier economics (§K.3.6); the derived bandwidths in Appendix L, which are computed from fitted coefficients rather than read off an instrument.</td>
+            </tr>
+            <tr>
+              <td class="mono">Vendor specification</td>
+              <td>Copied from a product datasheet and used as an input.</td>
+              <td class="text-orange">The 273 GB/s GB10 spec figure, HBM capacity and bandwidth, DDR5 timings, PCIe/CXL PHY and switch latencies, link and device specs.</td>
+            </tr>
+            <tr>
+              <td class="mono">External literature</td>
+              <td>A third party's published result, cited but not reproduced here.</td>
+              <td class="text-orange">Attention-sparsity and head-specialisation results from H2O, Ada-KV, Quest, SnapKV, Scissorhands, PyramidKV, HeadKV, InfiniGen and the induction-head / retrieval-head literature; LRFU (Lee et al., SIGMETRICS 1999); published vendor benchmarks. Used throughout <a href="e-head-specialization.html">Appendix E</a> and in the prior-art sections of Chapters 2 and 10.</td>
+            </tr>
+            <tr>
+              <td class="mono">Design target</td>
+              <td>Desired, not demonstrated.</td>
+              <td class="text-orange">Endpoint unit cost and endpoint firmware throughput. The 5–10× preprocessing-offload target is <strong>retracted</strong> along with the rest of the v4.0 headline set.</td>
+            </tr>
+            <tr>
+              <td class="mono">Illustrative</td>
+              <td>Pedagogical, <strong>never</strong> a result.</td>
+              <td class="text-orange">Worked EMA examples, per-layer transfer walkthroughs, MoE routing examples, the reuse-ratio example in <a href="m-formal-core.html">Appendix M §M.5.2</a>.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout note">
+        <div class="callout-title">What changed in this taxonomy from v4.0</div>
+        <p>Two rows moved. <span class="mono">Measured</span> was previously annotated
+        "<em>Never. Nothing in this package is measured</em>"; it now points at Appendix L. The v4.0 label
+        <span class="mono">Trace-driven simulation</span>, previously annotated "<em>Not yet performed</em>",
+        has been <strong>run twice</strong> and is renamed <span class="mono">Simulated (provisional)</span>
+        — the parenthesis is not decoration. It records that Revision 1 of that simulation was published,
+        was wrong, and was corrected only after external review (<a href="n-simulation.html">Appendix N
+        §N.7</a>). A label that had never been used is now a label that has already been wrong once, and it
+        is ranked accordingly: below <span class="mono">Measured</span>, above
+        <span class="mono">Analytical model</span>, and never quotable without its caveat.</p>
+      </div>
+
+      <div class="callout warning">
+        <div class="callout-title">External literature carries the same caveat as Vendor specification</div>
+        <p>An <span class="mono">External literature</span> result is a real measurement — but of
+        <em>someone else's system</em>, on their models, their workloads, their hardware and their
+        configuration. It is not evidence about this design, and it never upgrades a claim here toward
+        <span class="mono">Measured</span>. The label exists so that a reader can see immediately when this
+        package is leaning on a published finding rather than on its own arithmetic, and so that the
+        transfer step — "their result implies something about our system" — is visible and arguable rather
+        than silent. Where a published result is used as an input to a model here, the resulting number is
+        labelled <span class="mono">Analytical model</span>, not <span class="mono">External
+        literature</span>; the citation labels the input, not the output. The only claims in this package
+        that are <span class="mono">Measured</span> are the ones in
+        <a href="l-measurements.html">Appendix L</a>, and they are measurements of stock frameworks on stock
+        hardware — not of the proposed architecture, which has still never been built.</p>
+      </div>
+
+      <h2>K.2 The Canonical Scenario (S1)</h2>
+
+      <p>The package uses exactly one scenario. Every derivation below refers to it. Where a chapter
+      appears to quote a different configuration, S1 governs.</p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th scope="col">Parameter</th><th scope="col">Value</th></tr></thead>
+          <tbody>
+            <tr><td>GPU</td><td>1 × NVIDIA B200 (HGX B200 baseboard), <strong>192 GB HBM3e</strong>, 8 TB/s</td></tr>
+            <tr><td>GPU dense compute</td><td><strong>2,250 TFLOPS BF16 dense</strong> (4,500 TFLOPS is the 2:4-sparsity figure)</td></tr>
+            <tr><td>Model</td><td>Llama-2-70B — 80 layers, 64 Q heads, <strong>8 KV heads</strong>, d_head 128, BF16</td></tr>
+            <tr><td>Weights in HBM</td><td>140 GB</td></tr>
+            <tr><td>Activations / workspace</td><td>5 GB</td></tr>
+            <tr><td>Context per user</td><td><strong>128 K tokens (131,072)</strong></td></tr>
+            <tr><td>Target decode rate</td><td><strong>≥ 10 tok/s per user</strong> (≈160 tok/s aggregate)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Derived KV sizing follows directly. Per token:
+      <span class="mono">2 × 80 × 8 × 128 × 2 B = 327,680 B = 320 KiB/token</span>. Per user at 128 K:
+      <span class="mono">327,680 × 131,072 = 40 GiB = 43 GB</span>. Eight such users would need
+      <span class="mono">140 + 8×43 + 5 = 489 GB</span>, which is 2.5× a 192 GB B200. The proposed HBM
+      budget partitions the 192 GB as <span class="mono">140 weights + 5 activations + 10 pinned +
+      37 evictable</span>, with 1 TB of CXL DRAM at 200 ns and 16 TB of endpoint NVMe at 25 µs behind it.</p>
+
+      <div class="callout warning">
+        <div class="callout-title">S1 is retained as a sizing scenario, not as a result</div>
+        <p>The per-token and per-user arithmetic above <strong>stands</strong>:
+        <span class="mono">320 KiB/token</span> and <span class="mono">40 GiB</span> at 128 K are analytic,
+        simulator-independent and independently confirmed
+        (<span class="mono">CANONICAL-NUMBERS.md</span> §7). The <em>partition</em> of the 192 GB into
+        <span class="mono">140 + 5 + 10 + 37</span> does not: it was chosen to serve <strong>16 users at a
+        97% hit rate</strong>, and both of those figures are retracted (§K.3.2). Note also that
+        <strong>S1 is not the machine anything was measured on</strong>. The measurements in
+        <a href="l-measurements.html">Appendix L</a> were taken on a GB10 with 128 GiB of unified LPDDR5X
+        running a 7B model; no B200 was benchmarked, and no claim in this package is measured at the S1
+        scale.</p>
+      </div>
+
+      <h2>K.3 Derivations: What Stands, What Is Retracted, Where the Evidence Now Lives</h2>
+
+      <p>In v4.0 this section derived every headline number. Most of those numbers no longer exist. What
+      follows is the reconciled version: the derivations that survive, the ones that were withdrawn and why,
+      the ones demoted to unmeasured assumptions, and pointers to the measured and simulated evidence that
+      replaced them.</p>
+
+      <h3>K.3.1 What stands</h3>
+
+      <div class="equation">
+        (192 GB HBM + 1,024 GB CXL DRAM) ÷ 192 GB = 6.3× → "6×"
+        <div class="equation-label">6× memory expansion — <span class="mono">Analytical model</span>. Ratio of addressable memory, proposed vs baseline.</div>
+      </div>
+
+      <p>This is a capacity ratio and nothing more. It says nothing about bandwidth, latency or utility, and
+      it never depended on the hit rate — which is exactly why it survived. <strong>Stands.</strong></p>
+
+      <p>So does the KV sizing arithmetic: <span class="mono">320 KiB/token</span> for Llama-2-70B and
+      Llama-3-70B GQA, <span class="mono">5.00 MiB</span> per 16-token block, and the full capacity table in
+      <span class="mono">CANONICAL-NUMBERS.md</span> §2. <span class="mono">Analytical model</span>,
+      simulator-independent, independently confirmed. The decisive term is <strong>kv_heads, not query
+      heads</strong>, and the v4.0-era claim that Llama-2-70B is MHA at 2,560 KiB/token is corrected: that
+      row belongs to Llama-1-65B and the smaller MHA Llama-2 variants.</p>
+
+      <h3>K.3.2 Retracted — the v4.0 headline set</h3>
+
+      <div class="callout important">
+        <div class="callout-title"><span class="danger">Do not use any figure in this table anywhere</span></div>
+        <p>Each row names what replaced it. Where the replacement is
+        <a href="n-simulation.html">Appendix N</a>, the replacing figure is
+        <span class="mono">Simulated (provisional)</span> and carries the standing caveat of §N.9 — a
+        retraction is not an invitation to treat the replacement as settled.</p>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th scope="col">v4.0 figure</th><th scope="col">Status</th><th scope="col">Why, and where the evidence now lives</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="mono">97% HBM hit rate</td>
+              <td class="text-red"><strong>Retracted</strong></td>
+              <td>Never measured. The corrected simulation gives <span class="mono">8.5–91.6%</span> depending on budget, policy and workload — <a href="n-simulation.html">Appendix N §N.2</a>, <span class="mono">Simulated (provisional)</span>.</td>
+            </tr>
+            <tr>
+              <td class="mono">The 72 → 80 → 87 → 93 → 97 ladder<br>(+8 / +7 / +6 / +4 pts)</td>
+              <td class="text-red"><strong>Retracted</strong></td>
+              <td><strong>No ablation ever produced it.</strong> The increments were assumed additive and independent, and the mechanisms they decomposed overlap. The v4.0 text said the additivity was itself an assumption; it was load-bearing and it was wrong.</td>
+            </tr>
+            <tr>
+              <td class="mono">+25 pts over LRU</td>
+              <td class="text-red"><strong>Retracted</strong></td>
+              <td>The corrected simulation gives a spread of <span class="mono">+2.5 to +5.8 pts</span> at the specified α, and <span class="mono">+19.1 pts</span> at the tuned α ≈ 0.05 optimum — <a href="n-simulation.html">Appendix N §N.2, §N.3</a>, <span class="mono">Simulated (provisional)</span>.</td>
+            </tr>
+            <tr>
+              <td class="mono">16× user capacity</td>
+              <td class="text-red"><strong>Retracted</strong></td>
+              <td>Downstream of the 97%. Under dense attention <strong>every block of an active sequence is read every step</strong>, which is the formal statement in <a href="m-formal-core.html">Appendix M §M.4.2</a>.</td>
+            </tr>
+            <tr>
+              <td class="mono">5.4% hot set → 97% of accesses</td>
+              <td class="text-red"><strong>Retracted</strong></td>
+              <td>Conflated <em>cache hit rate</em> with <em>attention sparsity</em> — two different claims with different obligations. The <span class="mono">LOSSLESS</span> constraint separates them formally: <a href="m-formal-core.html">Appendix M §M.4.2</a>.</td>
+            </tr>
+            <tr>
+              <td class="mono">65× (200 ns vs 13.0 µs)</td>
+              <td class="text-red"><strong>Retracted as a headline</strong></td>
+              <td>Compares a hypothetical load/store path against a driver-mediated DMA path. <strong>No CXL hardware was measured.</strong> The component budgets are retained in §K.3.3 as documented assumptions, not as a result.</td>
+            </tr>
+            <tr>
+              <td class="mono">11.5× effective end-to-end latency</td>
+              <td class="text-red"><strong>Retracted</strong></td>
+              <td>Derived from the 97%. The 177 ns effective-access-latency figure it rested on goes with it.</td>
+            </tr>
+            <tr>
+              <td class="mono">15.6× TTFT</td>
+              <td class="text-red"><strong>Retracted</strong></td>
+              <td>Rested on a <span class="mono">16.4 GB/s</span> sustained-offload baseline — an assumed ~32% of link-level bandwidth. <a href="l-measurements.html">Appendix L §L.2</a> measures achieved bandwidth at <strong>87% of spec</strong>, which contradicts a haircut of that size. <span class="mono">Measured</span>.</td>
+            </tr>
+            <tr>
+              <td class="mono">36% CapEx reduction</td>
+              <td class="text-red"><strong>Retracted</strong></td>
+              <td>Priced a configuration whose existence was justified by the 16×. With the 16× gone there is no equal-service-level comparison left to price.</td>
+            </tr>
+            <tr>
+              <td class="mono">5–10× preprocessing offload</td>
+              <td class="text-red"><strong>Retracted</strong></td>
+              <td>A <span class="mono">Design target</span> for endpoint ARM cores that was never benchmarked on silicon, inside an architecture motivated by the retracted hit-rate story.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>K.3.3 Demoted — the 200 ns and 13.0 µs latency budgets</h3>
+
+      <p><span class="mono">200 ns CXL access</span> is <strong>demoted to an unmeasured assumption inside a
+      32–121 GB/s bandwidth range</strong>. The component budgets below are retained because they document
+      precisely what was assumed and where it would break, not because they constitute evidence. Both are
+      sums of <strong>unloaded</strong> component latencies: they contain no queueing term and no contention
+      term, and a real loaded system will be slower.</p>
+
+      <div class="two-column">
+        <div>
+          <p><strong>CXL.mem path</strong> — <span class="mono">Analytical model</span> over
+          <span class="mono">Vendor specification</span> components.</p>
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th scope="col">Component</th><th scope="col">Latency</th></tr></thead>
+              <tbody>
+                <tr><td>GPU/host request issue</td><td class="mono">15 ns</td></tr>
+                <tr><td>PCIe Gen5 ×16 PHY</td><td class="mono">20 ns</td></tr>
+                <tr><td>CXL switch traversal</td><td class="mono">25 ns</td></tr>
+                <tr><td>Endpoint CXL controller decode</td><td class="mono">40 ns</td></tr>
+                <tr><td>DDR5-5600 array access</td><td class="mono">80 ns</td></tr>
+                <tr><td>Return path</td><td class="mono">20 ns</td></tr>
+                <tr><td><strong>Total (assumed)</strong></td><td class="mono"><strong>200 ns</strong></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div>
+          <p><strong>PCIe DMA baseline</strong> — <span class="mono">Analytical model</span>.</p>
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th scope="col">Component</th><th scope="col">Latency</th></tr></thead>
+              <tbody>
+                <tr><td>Driver call + doorbell</td><td class="mono">4.00 µs</td></tr>
+                <tr><td>DMA descriptor fetch/setup</td><td class="mono">2.50 µs</td></tr>
+                <tr><td>Software TLB + pinning management</td><td class="mono">1.50 µs</td></tr>
+                <tr><td>PCIe Gen5 round trip</td><td class="mono">0.70 µs</td></tr>
+                <tr><td>Host DRAM access</td><td class="mono">0.10 µs</td></tr>
+                <tr><td>4 KiB payload @ 32 GB/s</td><td class="mono">0.20 µs</td></tr>
+                <tr><td>Completion interrupt + resync</td><td class="mono">4.00 µs</td></tr>
+                <tr><td><strong>Total (assumed)</strong></td><td class="mono"><strong>13.00 µs</strong></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <p>Of the 13.0 µs, <span class="mono">8.0 µs</span> is software — doorbell and completion — which is
+      what a load/store path would remove. That observation survives. <strong>The ratio between the two
+      columns does not survive as a headline</strong>, for the reason given in §K.3.2: the two budgets
+      describe different mechanisms, neither was measured, and dividing one unmeasured number by another
+      does not produce a result.</p>
+
+      <h3>K.3.4 The measured decode model — <span class="mono">Measured</span></h3>
+
+      <p>What replaced the roofline arithmetic this section used to contain is a fitted two-term model on
+      real hardware. In summary, with the full derivation, raw tables and method in
+      <a href="l-measurements.html">Appendix L</a>:</p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th scope="col">Quantity</th><th scope="col">Value</th><th scope="col">Derived in</th></tr></thead>
+          <tbody>
+            <tr><td>Achieved streaming bandwidth, GB10</td><td class="mono">236.5 GB/s = 87% of spec</td><td><a href="l-measurements.html">L §L.2</a></td></tr>
+            <tr><td>Decode model, HuggingFace + SDPA</td><td class="mono">100.3 + 16.34·KV_GiB ms (R² 0.991)</td><td><a href="l-measurements.html">L §L.3</a></td></tr>
+            <tr><td>Decode model, vLLM + FlashAttention-2</td><td class="mono">73.9 + 17.58·KV_GiB ms (R² 0.945)</td><td><a href="l-measurements.html">L §L.3</a></td></tr>
+            <tr><td>KV read as a fraction of achieved bandwidth</td><td class="mono">26–28%</td><td><a href="l-measurements.html">L §L.3.1</a></td></tr>
+            <tr><td>Per-byte penalty on KV against weights</td><td class="mono"><strong>3.4×</strong></td><td><a href="l-measurements.html">L §L.4</a></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>Two consequences reach back into this appendix. First, the <strong>~50% effective-bandwidth
+      haircut</strong> used in earlier drafts is retired — it was wrong, and wrong in the pessimistic
+      direction, which is what removes the floor from under the 15.6× TTFT derivation. Second,
+      <strong>the kernel is not the lever</strong>: two frameworks with different attention implementations
+      land within 8% on the KV term, so no assumption in §K.7 about kernel-level improvement can be used to
+      rescue a bandwidth argument.</p>
+
+      <h3>K.3.5 The simulated policy results — <span class="mono">Simulated (provisional)</span></h3>
+
+      <p>The trace-driven simulation that §K.6 proposed as validation step 1 <strong>has now been run</strong>
+      — and the first run was wrong. Revision 2 is in <a href="n-simulation.html">Appendix N</a>, with the
+      erratum for Revision 1 in §N.7 and the standing caveat in §N.9. The headline outcomes:</p>
+
+      <ul>
+        <li>Hit rate is <span class="mono">8.5–91.6%</span> across budgets and policies, not 97%
+        (<a href="n-simulation.html">N §N.2</a>).</li>
+        <li>α is <strong>non-monotonic with an interior optimum at α ≈ 0.05</strong>, worth
+        <span class="mono">+19.1 pts</span> over LRU at 32 GiB — not the α = 0.2 default this appendix
+        documents in §K.7 (<a href="n-simulation.html">N §N.3</a>).</li>
+        <li><strong>Persistent scoring metadata is the largest effect in the study</strong>,
+        <span class="mono">+34.15 pts</span> to LFU — worth more than the choice of policy
+        (<a href="n-simulation.html">N §N.4</a>).</li>
+        <li><strong>No policy dominates across workloads</strong> (<a href="n-simulation.html">N §N.5</a>).</li>
+      </ul>
+
+      <p>All four carry the standing caveat. <strong>A single data-structure defect inverted four of five
+      Revision 1 findings</strong>, and that is the reason the evidence class is named
+      <span class="mono">Simulated (provisional)</span> rather than simply "simulated".</p>
+
+      <h3>K.3.6 Tier economics — <span class="mono">Analytical model</span></h3>
+
+      <p>Per <span class="mono">5.00 MiB</span> block (16 tokens, Llama-3 70B GQA):</p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th scope="col">Operation</th><th scope="col">Cost</th><th scope="col">Basis</th></tr></thead>
+          <tbody>
+            <tr><td>Tier fetch @ 121 GB/s</td><td class="mono">43 µs</td><td>CXL 3.0 ×16 theoretical, one direction</td></tr>
+            <tr><td>Tier fetch @ <strong>64 GB/s</strong></td><td class="mono"><strong>82 µs</strong></td><td>Mid-range assumption — <strong>no CXL hardware was measured</strong></td></tr>
+            <tr><td>Tier fetch @ 32 GB/s</td><td class="mono">164 µs</td><td>Pessimistic</td></tr>
+            <tr><td>Forward compute, 16 tokens, linear term</td><td class="mono">9 / 11 / 18 ms</td><td>50% / 40% / 25% MFU</td></tr>
+            <tr><td>Regeneration of an arbitrary <em>interior</em> block</td><td class="mono">≥ the above, potentially far higher</td><td>Interior KV is not independently reproducible — hidden states depend recursively on all preceding context</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warning">
+        <div class="callout-title">Claim the order of magnitude, not a precise multiple</div>
+        <p><strong>Moving a block is two to three orders of magnitude cheaper than regenerating it.</strong>
+        The two quantities do not measure the same operation, so a single ratio between them is not
+        meaningful. The <span class="mono">218×</span> figure in circulation is <em>one point</em> in that
+        range (<span class="mono">17.9 ms ÷ 82 µs</span>) and <strong>must always be quoted with its
+        inputs</strong> — including the fact that the 82 µs denominator is an assumption about hardware
+        nobody in this project has measured.</p>
+      </div>
+
+      <h2>K.4 Assumptions That Carry the Result</h2>
+
+      <p>The v4.0 version of this section listed six assumptions, five of which supported figures that are
+      now retracted. What follows is the v5.0 set: the assumptions that carry what the package still claims.
+      If any one of them is wrong, specific things move in specific directions.</p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th scope="col">Assumption</th><th scope="col">If it is wrong</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>The GB10 measurement generalises in direction, if not in magnitude.</strong> KV is read at roughly a quarter of achievable bandwidth, and this is a property of the attention read pattern rather than of one part.</td>
+              <td>The <span class="mono">3.4×</span> per-byte penalty becomes a GB10-specific number. "Compression dominates placement" (<a href="l-measurements.html">L §L.5.1</a>) narrows to a claim about LPDDR5X-class unified memory, and the argument would need re-running on an HBM part before it could be stated generally. This is the single most consequential open question in the package, and closing it needs one afternoon on a borrowed H100.</td>
+            </tr>
+            <tr>
+              <td><strong>fp8 KV halves KV bytes without doubling the slope</strong> — outcome A of <a href="l-measurements.html">L §L.10</a>.</td>
+              <td>If outcome B lands instead, dequantisation cost cancels the byte saving: fp8 buys <strong>capacity but not bandwidth</strong>, and the compression lever is representation-limited rather than byte-limited. The measurement is not yet run and both outcomes are named in advance.</td>
+            </tr>
+            <tr>
+              <td><strong>The Revision 2 simulator is now correct.</strong> The exact order-preserving key of <a href="n-simulation.html">N §N.7.3</a> fixed the defect and introduced no other.</td>
+              <td>Four of five findings could invert a second time. The precedent is not hypothetical: Revision 1's defect produced <strong>99.6% wrong victims</strong> and was found by external review, not internally. The re-audit reports 0 wrong of 78,860, which bounds this specific failure mode and nothing else.</td>
+            </tr>
+            <tr>
+              <td><strong>A synthetic Zipf(1.1) return pattern over 200 sessions resembles production reuse.</strong></td>
+              <td><a href="n-simulation.html">N §N.5</a> already shows the policy ranking is workload-dependent, and that <strong>no policy dominates all three</strong> synthetic workloads. If real traces look like the cyclic sweep, only LFU survives; if they look like the one-shot flood, the ranking changes again. No production trace has been replayed.</td>
+            </tr>
+            <tr>
+              <td><strong>Whole-context residency</strong> — a session's context is resident or it is not.</td>
+              <td>The entire hit-rate accounting in Appendix N changes. Partial residency and per-block admission within a context are the regime the object model of <a href="m-formal-core.html">Appendix M</a> actually describes, and the simulator does not model it.</td>
+            </tr>
+            <tr>
+              <td><strong>Tier bandwidth lies in the 32–121 GB/s range</strong>, with 64 GB/s as the mid-range working assumption.</td>
+              <td>The tier-economics table of §K.3.6 moves by up to 4× end to end. <strong>No CXL hardware was measured</strong>, so this range is a specification-derived bracket, not an observation, and the 218× figure moves with it.</td>
+            </tr>
+            <tr>
+              <td><strong>Metadata processing overhead is small enough not to change the conclusion.</strong> Payload-capacity overhead certainly is — 64 B against a 5.00 MiB block is 0.0012%.</td>
+              <td>Nothing bounds it. <a href="m-formal-core.html">Appendix M §M.2.4</a> enumerates five open items — lookup bandwidth on the promotion path, atomic update cost under concurrent scheduler writes, controller SRAM footprint, cross-plane policy coherence, per-transaction link overhead — <strong>none of which is bounded by the capacity argument</strong>, and none of which has been measured.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>K.5 What Would Falsify the Design</h2>
+
+      <p>Stated as testable propositions. Any one of these is sufficient, and each names an experiment rather
+      than an argument.</p>
+
+      <ul>
+        <li><strong>The fp8 KV run lands on outcome B</strong> — slope roughly doubles to ~35 ms/GiB — so
+        halving KV bytes does not halve KV time. The compression lever, which
+        <a href="l-measurements.html">L §L.5.1</a> currently makes the dominant one, would be
+        representation-limited.</li>
+        <li><strong>Persistent identity-keyed policy state gives no advantage on a real trace</strong>, or
+        host-side persistence achieves the same result. That refutes claim C4 of
+        <a href="m-formal-core.html">Appendix M §M.3.2</a> — the only one of the four that does not require a
+        device — and with it the protocol contribution the package now rests on.</li>
+        <li><strong>Production traces show a workload mix in which LRU or LFU dominates at every
+        budget.</strong> The policy contribution goes, and <a href="n-simulation.html">N §N.5</a> already
+        shows this is workload-decidable rather than settled.</li>
+        <li><strong>An offline-optimal (Belady) bound shows the achieved margins are a negligible fraction of
+        what was available.</strong> No such bound exists in Revision 2; it is the first item in the standing
+        caveat of <a href="n-simulation.html">N §N.9</a>.</li>
+        <li><strong>Measured loaded CXL access latency on real 3.0 hardware lands closer to the 13.0 µs DMA
+        baseline than to the 200 ns budget</strong>, or a shipping GPU platform cannot issue load/store into
+        a mapped CXL.mem range at all. Either removes the platform dependency the architecture assumes.</li>
+        <li><strong>The KV bandwidth gap closes on a different memory technology.</strong> If an HBM part
+        reads KV at the same fraction of achievable bandwidth as weights, the wall this package is organised
+        around is a GB10 artefact.</li>
+      </ul>
+
+      <h2>K.6 Validation Programme</h2>
+
+      <p>The following is what would have to be executed to convert the remaining projections into results.
+      It is specified at the level of detail a reviewer would demand.</p>
+
+      <div class="callout note">
+        <div class="callout-title">Status of this programme in v5.0 — two of four experiments have started</div>
+        <p><strong>Experiment 1 (trace-driven simulation) has been run, twice.</strong> Revision 1 was
+        published and was wrong; Revision 2 is in <a href="n-simulation.html">Appendix N</a> and is
+        <span class="mono">Simulated (provisional)</span>. It did not confirm the design — it retracted four
+        of five of its policy findings and replaced the 97% hit rate with a range of
+        <span class="mono">8.5–91.6%</span>. <strong>Experiment 2 has started on the memory-bandwidth side
+        only:</strong> <a href="l-measurements.html">Appendix L</a> characterises achieved bandwidth and the
+        decode cost model on a GB10, but <strong>no CXL latency characterisation has been done and no CXL
+        hardware has been touched</strong>. Experiments 3 (end-to-end serving benchmark) and 4 (FPGA
+        implementation) remain entirely unstarted. The specification below is retained unchanged as the
+        standard the remaining work is held to.</p>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th scope="col">Element</th><th scope="col">Specification</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>Experiments</strong></td>
+              <td>(1) Trace-driven cache simulation of the full policy. (2) Loaded and unloaded CXL latency characterisation on real hardware. (3) End-to-end serving benchmark with a vLLM KV backend against emulated far memory. (4) FPGA implementation of the scoring, eviction and prefetch engines behind a CXL IP core.</td>
+            </tr>
+            <tr>
+              <td><strong>Workloads</strong></td>
+              <td>Long-context retrieval and QA at 128 K (for example LongBench and ∞Bench-class tasks), multi-turn conversational resumption, shared-system-prompt serving, and a synthetic adversarial pattern with uniformly random access designed to defeat locality. Report each separately; do not average across them.</td>
+            </tr>
+            <tr>
+              <td><strong>Baselines</strong></td>
+              <td>vLLM with PagedAttention and its own CPU offload; SGLang with RadixAttention; InfiniGen; Mooncake; NVIDIA Dynamo; and a 3 × B200 host-DRAM offload configuration matching the cost model's baseline column. Baselines must be run, not modeled.</td>
+            </tr>
+            <tr>
+              <td><strong>Ablations</strong></td>
+              <td>One per rung of the hit-rate ladder: LRU alone; +anchor pinning; +EMA (α ∈ {0.05, 0.1, 0.2}); +per-head tracking versus position-level; +RoPE prefetch. Additionally: max-aggregation versus mean-aggregation across heads; hot-set size swept from 2% to 20% of context; user count swept from 1 to 24 to test the claim that 16 is the bound.</td>
+            </tr>
+            <tr>
+              <td><strong>Metrics</strong></td>
+              <td>HBM hit rate; effective access latency; time to first token; inter-token latency; aggregate and per-user tokens/s; CXL link utilization; endpoint metadata footprint; energy per token; and end-task quality on the retrieval workloads, to confirm the policy does not silently degrade output.</td>
+            </tr>
+            <tr>
+              <td><strong>Statistics</strong></td>
+              <td>Minimum 10 repetitions per configuration; report median with p50/p95/p99 for all latency metrics; 95% confidence intervals on all means; explicit warm-up exclusion; and a stated seed policy for any sampled workload.</td>
+            </tr>
+            <tr>
+              <td><strong>Versions</strong></td>
+              <td>Full disclosure of GPU model and firmware, CXL host platform and BIOS, switch and endpoint part numbers and firmware revisions, kernel version, CUDA version, vLLM/SGLang commit hashes, model checkpoint revision, and the exact simulator source.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="callout warning">
+        <div class="callout-title">What happened when experiment 1 was actually done</div>
+        <p>v4.0 said experiment 1 required no hardware, would settle the central question, should be done
+        first, and should gate everything else. That was correct advice, and taking it is what produced the
+        retractions in §K.3.2. It also produced a second lesson v4.0 did not anticipate: <strong>the first
+        version of the experiment was itself defective</strong>, in a way that inverted its findings and was
+        caught only by external review of the eviction data structure
+        (<a href="n-simulation.html">Appendix N §N.7</a>). An experiment gates the work only if the
+        experiment is itself audited — which is why the unmodified Revision 1 simulator is retained in the
+        bundle at <span class="mono">scripts/kv_tiering_sim_rev1_retained_for_audit.py</span>, and why the
+        eviction audit against brute-force <span class="mono">argmin</span> is now a standing check rather
+        than a one-off.</p>
+      </div>
+
+      <h2>K.7 Uncalibrated Parameters</h2>
+
+      <div class="callout important">
+        <div class="callout-title"><span class="danger">These constants belong to the v4.0 policy, and the policy they parameterise is retracted</span></div>
+        <p>The table below is retained as <strong>the record of what was never fitted</strong>, because that
+        record is the honest explanation of how the retracted hit-rate ladder came to exist. Three specific
+        reconciliations apply to it in v5.0:</p>
+        <ul>
+          <li><strong>α = 0.2 is superseded.</strong> <a href="n-simulation.html">Appendix N §N.3</a> sweeps
+          α and finds a <strong>non-monotonic curve with an interior optimum at α ≈ 0.05</strong>, worth
+          <span class="mono">+19.1 pts</span> over LRU at a 32 GiB budget
+          (<span class="mono">Simulated (provisional)</span>). Every threshold below that is defined relative
+          to α = 0.2 is therefore defined relative to the wrong α.</li>
+          <li><strong>The rows tied to the hit-rate ladder no longer have a result to carry.</strong> The
+          +8 / +7 / +6 / +4 pts attributions the anchor-zone, EMA, per-head and prefetch rows point at were
+          never produced by an ablation and are retracted (§K.3.2).</li>
+          <li><strong>The PCIe contention factor is contradicted, not merely uncalibrated.</strong> Its row
+          calls itself "the cheapest item in the table to measure"; the closest measurement now in the
+          package — achieved bandwidth at <strong>87% of spec</strong>, <a href="l-measurements.html">L
+          §L.2</a> — is inconsistent with a 32% haircut, which is why the 15.6× TTFT figure it multiplied is
+          retracted.</li>
+        </ul>
+        <p>What has <em>not</em> changed is the central point of this section, which survives its own policy:
+        <strong>a derivation can be arithmetically exact and still rest on an input nobody measured.</strong></p>
+      </div>
+
+      <p>The policy described in v4.0 of this package contains a number of bare numeric constants — thresholds,
+      coefficients, window sizes, batch sizes — that are neither derived from the canonical scenario nor
+      fitted to any workload. They were chosen to make the design concrete and legible. They are collected
+      here in one place so that a reader can see the full set at once, argue with any of them, and know
+      what it would take to replace each with a fitted value. Every figure and appendix that uses one of
+      these constants points back to this table.</p>
+
+      <div class="callout warning">
+        <div class="callout-title">What "uncalibrated" means here, and what it does not</div>
+        <p>An uncalibrated parameter is not a labelling category alongside
+        <span class="mono">Analytical model</span> or <span class="mono">Design target</span> — it is a
+        property of an <em>input</em> to those models. The distinction matters, and it is the distinction this
+        whole appendix now turns on: <strong>a derivation can be arithmetically exact and still rest on an
+        input nobody measured.</strong> None of the v4.0 headline numbers was <em>directly</em> computed from
+        the constants below; they entered indirectly, through the modelled hit-rate ladder. That ladder is
+        retracted (§K.3.2), so the honest statement in v5.0 is narrower than the one v4.0 made here: these
+        constants determined whether the ladder was ever achievable, and nobody ever checked.</p>
+        <p>Note also that these parameters are <strong>not independent</strong>. The EMA thresholds are
+        meaningful only relative to α; the recency coefficient β double-counts recency unless swept jointly
+        with α; the tier boundaries are cut points on the score the tier weights define; and the prefetch
+        window, depth and distance scale all trade against the same fabric bandwidth. Calibrating any one in
+        isolation is close to meaningless.</p>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Symbol / name</th>
+              <th scope="col">Value used</th>
+              <th scope="col">What it controls</th>
+              <th scope="col">Where it appears</th>
+              <th scope="col">How it would be calibrated</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="mono">β</td>
+              <td class="mono">0.001</td>
+              <td>Recency-decay coefficient in <span class="mono">1 − e<sup>−β·steps</sup></span>. Sets the
+              horizon (1/β = 1,000 decode steps, ≈100 s at 10 tok/s) past which idleness alone justifies
+              eviction. <em>Raising it</em> reclaims memory faster and makes the policy recency-driven, at the
+              risk of evicting long-lived structural tokens; <em>lowering it</em> lets stale entries linger and
+              consume capacity.</td>
+              <td><a href="../figures/superseded-v4.0/ema-eviction.html">Fig. EMA eviction</a>,
+              <a href="../figures/superseded-v4.0/ema-calculation.html">Fig. EMA calculation</a></td>
+              <td>Two-dimensional sweep jointly with α over replayed per-head attention traces at 128 K
+              context, scored on hit rate at a fixed hot-set size. β chosen without reference to α
+              double-counts recency.</td>
+            </tr>
+            <tr>
+              <td class="mono">keep threshold</td>
+              <td class="mono">0.10</td>
+              <td>EMA score above which an entry stays HBM-resident. Sets the size of the hot set.
+              <em>Raising it</em> frees HBM sooner and admits more users at the cost of hit rate;
+              <em>lowering it</em> raises hit rate and reduces the users the 37 GB evictable budget can
+              serve.</td>
+              <td><a href="../figures/superseded-v4.0/diagram-ema-scoring-html.html">Fig. 7.7 EMA scoring</a></td>
+              <td>Sweep the (keep, evict) pair against real attention traces; take the point meeting the 97%
+              hit-rate SLO at the smallest hot set. Almost certainly differs per head type and per model.</td>
+            </tr>
+            <tr>
+              <td class="mono">evict threshold</td>
+              <td class="mono">0.02</td>
+              <td>EMA score below which an entry is pushed from CXL DRAM to flash. The band between the two
+              thresholds is the demote zone, whose width sets how much traffic the CXL tier absorbs.
+              <em>Raising it</em> reclaims CXL DRAM faster at the cost of more 25 µs flash reads on the miss
+              tail; <em>lowering it</em> keeps more of the context warm and moves pressure onto the 1 TB
+              tier.</td>
+              <td><a href="../figures/superseded-v4.0/diagram-ema-scoring-html.html">Fig. 7.7 EMA scoring</a></td>
+              <td>As above — the pair is swept together. Both are tied to α = 0.2: an EMA lags its input, so
+              0.10 is <em>not</em> "10% of attention", and changing α changes what both numbers mean.</td>
+            </tr>
+            <tr>
+              <td class="mono">W</td>
+              <td class="mono">32 / 128 / 512<br>(128 default)</td>
+              <td>Prefetch window radius: <span class="mono">[P − W, P + W]</span>, so 2W + 1 entries are
+              fetched speculatively per access. Fixes both attention coverage and speculative bandwidth.
+              <em>Raising it</em> widens coverage but cost grows linearly while return is sharply sublinear,
+              and unread prefetches waste CXL bandwidth and HBM residency; <em>lowering it</em> leaves more
+              of the miss tail at 200 ns or 25 µs. At W = 0 the +4-point rung disappears.</td>
+              <td><a href="../figures/superseded-v4.0/rope-prefetch.html">Fig. 7.10 RoPE prefetch</a></td>
+              <td>Measure the real per-head attention-versus-distance distribution on production traces, then
+              take the smallest W whose marginal coverage still exceeds its marginal bandwidth cost. Very
+              likely per-head-type: local heads want a small W; retrieval heads are poorly served by a
+              distance window at any W.</td>
+            </tr>
+            <tr>
+              <td class="mono">tier-placement weights<br>(R, E, N)</td>
+              <td class="mono">0.25 / 0.55 / 0.20</td>
+              <td>Weights in <span class="mono">P(p) = 0.25·R + 0.55·E + 0.20·N</span>, the score deciding
+              which tier an existing entry occupies. <em>Raising E</em> tracks sustained attention and reacts
+              slowly to topic change; <em>raising R</em> does the reverse; <em>raising N</em> hardens the
+              anchor zone at the cost of pinned capacity. They sum to 1, so every increase is another
+              signal's decrease.</td>
+              <td><a href="../figures/superseded-v4.0/visual-appendix.html">Visual appendix,
+              Diagram 12.1</a></td>
+              <td>Fit, do not choose. Log per-token (recency, EMA, anchor-membership, was-attended) tuples
+              from real 128 K traces and solve for the weights maximising hit rate at the fixed 47 GB HBM
+              budget — a small constrained regression or coarse simplex sweep. The tier boundaries below must
+              be re-fitted at the same time.</td>
+            </tr>
+            <tr>
+              <td class="mono">tier boundaries</td>
+              <td class="mono">P = 0.3, P = 0.6</td>
+              <td>Cut points on P(p) separating Tier 2 (CXL) / Tier 1 (HBM) / Tier 0 (pinned). Together they
+              split the HBM budget. <em>Raising either</em> frees HBM sooner and admits more users at the cost
+              of hit rate; <em>lowering either</em> does the reverse.</td>
+              <td><a href="../figures/superseded-v4.0/visual-appendix.html">Visual appendix,
+              Diagram 12.2</a></td>
+              <td>Cannot be tuned independently of the weights above — they are thresholds <em>on</em> the
+              score those weights define. Same sweep, same traces, same SLO.</td>
+            </tr>
+            <tr>
+              <td class="mono">prefetch blend</td>
+              <td class="mono">0.6 / 0.4</td>
+              <td>Weights in <span class="mono">priority = 0.6·rope_factor + 0.4·ema_factor</span>, ranking
+              the <em>prefetch queue</em>. <em>Toward RoPE</em> makes prefetch purely positional — a sliding
+              window, cheap and good for local heads, blind to retrieval heads reaching far back.
+              <em>Toward EMA</em> makes it history-driven — serves retrieval heads, reacts slowly at a context
+              switch, loses the locality that makes prefetch batchable.</td>
+              <td><a href="d-rope-encoding.html">Appendix D</a>,
+              <a href="j-implementation-reference.html">Appendix J §J.2</a></td>
+              <td>Sweep the single free weight (they sum to 1) on replayed traces, scored on <em>prefetch
+              precision</em> — the fraction of prefetched entries actually read before eviction — not on hit
+              rate alone, since a useless prefetch costs bandwidth either way.</td>
+            </tr>
+            <tr>
+              <td class="mono">prefetch_distance_scale</td>
+              <td class="mono">100</td>
+              <td>Denominator in <span class="mono">1/(1 + distance/scale)</span>: the distance at which
+              prefetch priority halves. <em>Raising it</em> flattens the curve so far positions compete more
+              evenly with near ones — better for retrieval heads, more wasted bandwidth; <em>lowering it</em>
+              sharpens it toward a strict sliding window. Canonically fixed at 100 for consistency across the
+              package; the choice of 100 itself was not fitted.</td>
+              <td><a href="j-implementation-reference.html">Appendix J §J.2, §J.4</a>, Chapter 7 §7.6</td>
+              <td>Fit the hyperbola to the measured attention-versus-distance curve rather than assuming it.
+              Interacts directly with W, since both shape what the prefetcher reaches for.</td>
+            </tr>
+            <tr>
+              <td class="mono">anchor_zone_size</td>
+              <td class="mono">100</td>
+              <td>Leading positions exempt from eviction outright. <em>Raising it</em> hardens the
+              attention-sink and system-prompt protection the +8-point anchor-pinning rung depends on, but
+              spends scarce Tier 0 capacity on positions that may never be attended to; <em>lowering it</em>
+              frees Tier 0 and risks evicting the sink tokens.</td>
+              <td><a href="j-implementation-reference.html">Appendix J §J.1, §J.4</a></td>
+              <td>Measure where attention-sink mass actually stops on the target model — the sink is a
+              property of the trained weights, so this is measurable once per model and then fixed, rather
+              than swept per workload.</td>
+            </tr>
+            <tr>
+              <td class="mono">prefetch_depth</td>
+              <td class="mono">2 layers</td>
+              <td>How many layers ahead the prefetcher runs. <em>Raising it</em> widens the delivery window
+              (coverage in I.5.2 scales linearly in it) and buys slack against fabric latency, at the cost of
+              speculating further ahead on less certain predictions and holding more in-flight staging
+              buffer; <em>lowering it</em> tightens the window until the miss tail no longer fits.</td>
+              <td><a href="j-implementation-reference.html">Appendix J §J.4</a>,
+              <a href="i-bandwidth-calculations.html">Appendix I §I.5.2</a></td>
+              <td>I.5.2 takes 2 as an input and computes 2.06× miss-volume coverage from it; it does not
+              derive 2. Calibration means sweeping depth against measured prediction accuracy, since coverage
+              of bandwidth is already comfortable and accuracy is the binding term.</td>
+            </tr>
+            <tr>
+              <td class="mono">eviction_batch</td>
+              <td class="mono">64 entries</td>
+              <td>Entries evicted per policy pass. <em>Raising it</em> amortises the sort and metadata walk
+              over more work, cutting firmware overhead per entry, but coarsens the decision — a large batch
+              evicts entries scored before the batch began and may over-evict past the point where capacity
+              was recovered. <em>Lowering it</em> keeps decisions fresh at higher per-entry firmware
+              cost.</td>
+              <td><a href="j-implementation-reference.html">Appendix J §J.4</a></td>
+              <td>Depends on controller throughput, which is itself a <span class="mono">Design target</span>
+              for unbuilt silicon. Calibrate against firmware cycle cost per pass once a controller model
+              exists; until then it is a placeholder.</td>
+            </tr>
+            <tr>
+              <td class="mono">PCIe contention factor</td>
+              <td class="mono">0.32<br>(16.4 of 51 GB/s)</td>
+              <td>The fraction of link-level PCIe Gen5 ×16 bandwidth the modeled host-DRAM offload baseline is
+              assumed to sustain in service. <em>Raising it</em> toward 1.0 makes the baseline faster and the
+              15.6× TTFT result smaller — at the full 51 GB/s the baseline is 843 ms and the speedup 5.0×;
+              <em>lowering it</em> inflates the result.</td>
+              <td>§K.3.9 above; <a href="../chapters/ch11-performance.html">Chapter 11 §11.6</a>;
+              <a href="../figures/superseded-v4.0/distributed-endpoint-diagrams.html">Fig. 1 bandwidth
+              wall</a></td>
+              <td>Measure achieved offload bandwidth on a loaded host running the baseline configuration —
+              3 × B200 with concurrent weight, activation and NIC traffic. This is the cheapest item in the
+              table to measure and it is a direct multiplier on a headline number.</td>
+            </tr>
+            <tr>
+              <td class="mono">demo thresholds</td>
+              <td class="mono">0.6 / 0.25</td>
+              <td>Keep / evict cut points used only inside the Figure 7.9 animation, chosen to suit its
+              synthetic 0.1–0.9 score spread. Not the design's thresholds and not comparable to them: a real
+              EMA at α = 0.2 saturates near 0.04 for a token drawing 4% of attention, which is why the
+              design's thresholds are an order of magnitude lower.</td>
+              <td><a href="../figures/superseded-v4.0/figure-7-9-ema-eviction-policy.html">Fig. 7.9 EMA
+              eviction policy</a></td>
+              <td>Not calibrated because not calibratable — it is a presentation constant, listed here only
+              so the discrepancy with 0.10 / 0.02 is not mistaken for a contradiction.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p><strong>α = 0.2 is deliberately not in this table</strong>, and v5.0 is the reason that decision
+      aged badly. It was fixed canonically across v4.0 (half-life
+      <span class="mono">ln 0.5 ÷ ln 0.8 = 3.1</span> decode steps), and
+      <a href="g-ema-algorithm.html">Appendix G</a> documents the 0.05 / 0.1 / 0.2 trade-off explicitly, so
+      it was a stated and examined choice rather than a bare constant — but it was never a
+      <em>fitted</em> one. It has since been swept: <a href="n-simulation.html">Appendix N §N.3</a> finds the
+      curve <strong>non-monotonic with an interior optimum at α ≈ 0.05</strong>
+      (<span class="mono">Simulated (provisional)</span>). Because the EMA thresholds and β are all defined
+      relative to α, every row above is defined relative to a value the sweep does not support.</p>
+
+      <p>Of the thirteen rows, the trace-driven sweep that would fit them has now been run once, and it moved
+      α by a factor of four on the first attempt. The PCIe contention factor — the row that called itself
+      the cheapest thing here to measure and a direct multiplier on a headline number — is the clearest
+      illustration of the cost of not measuring: the headline it multiplied is retracted, and the closest
+      measurement in the package contradicts the factor
+      (<a href="l-measurements.html">Appendix L §L.2</a>). The remaining rows are still unfitted, and
+      calibrating them is the same piece of work as making <a href="n-simulation.html">Appendix N</a> less
+      provisional.</p>
+
+      <h2>K.8 Known Limitations of This Document</h2>
+
+      <ul>
+        <li><strong>It is now part model, part evaluation — and the two must not be blurred.</strong> The
+        cost model has been measured on one machine (<a href="l-measurements.html">Appendix L</a>). Every
+        policy claim remains specification (<a href="m-formal-core.html">Appendix M</a>) or provisional
+        simulation (<a href="n-simulation.html">Appendix N</a>). A reader should treat every number that is
+        not labelled <span class="mono">Measured</span> as a hypothesis with a justification attached.</li>
+        <li><strong>The measurement is narrow.</strong> One model (Qwen2.5-7B), one size, one machine
+        (GB10), fixed-length uniform batches, no continuous batching, FlashAttention-2 rather than 3, no
+        thermal log, and <strong>fp8 KV not yet measured</strong>. The full list is
+        <a href="l-measurements.html">L §L.9</a>.</li>
+        <li><strong>The simulation has already been wrong once.</strong> Revision 2 is provisional: no Belady
+        bound, no bandwidth or queueing model, whole-context residency assumed, synthetic workload, 2–3
+        seeds, no hardware validation (<a href="n-simulation.html">N §N.9</a>).</li>
+        <li><strong>The two never met.</strong> Nothing measured in Appendix L was fed into the simulator of
+        Appendix N, and nothing simulated in Appendix N was run on the hardware of Appendix L. They answer
+        different questions at different scales and must not be merged into one narrative.</li>
+        <li><strong>No CXL hardware was measured at any point.</strong> The 200 ns and 13.0 µs budgets omit
+        queueing and contention, the tier-bandwidth range of 32–121 GB/s is specification-derived, and the
+        200 ns figure is demoted to an assumption inside it (§K.3.3, §K.3.6).</li>
+        <li><strong>One scenario for the analytical work.</strong> All sizing conclusions are drawn from S1,
+        which is not the machine anything was measured on. MoE behaviour (DeepSeek-V3 class, 256 experts,
+        top-8) is discussed illustratively only.</li>
+        <li><strong>The head-type split (40/15/25/20) is an assumption</strong>, labelled as such, with
+        pointers to the induction-head and retrieval-head literature. It is not a measurement, and no
+        surviving claim depends on it quantitatively.</li>
+        <li><strong>The cost model is gone rather than corrected.</strong> The 36% CapEx reduction priced a
+        configuration justified by the retracted 16×; no replacement cost model is offered, because there is
+        no longer an equal-service-level comparison to price.</li>
+        <li><strong>Prior art is not exhaustively benchmarked.</strong> H2O, SnapKV, Scissorhands, PyramidKV,
+        Quest, Ada-KV, HeadKV, InfiniGen, Mooncake and PNM-KV (arXiv:2511.00321) are cited as context.
+        Note that the scoring function itself is <strong>not</strong> the contribution: a decayed-frequency
+        score is <strong>LRFU</strong> (Lee et al., SIGMETRICS 1999) and α is its documented LRU↔LFU knob.
+        Whether anything here is novel requires a systematic literature review that this package does not
+        constitute.</li>
+        <li><strong>Uncalibrated policy constants.</strong> Thirteen thresholds, coefficients, window sizes
+        and batch sizes carry the v4.0 policy and none was fitted to a workload. They are enumerated with
+        their trade-offs in §K.7, together with the three reconciliations that v5.0 applies to them.</li>
+        <li><strong>Rounding.</strong> Surviving figures are rounded (6.3× → 6×; 236.5 GB/s ÷ 273 GB/s →
+        87%). Unrounded values are given at the point of derivation and should be used in any
+        re-derivation.</li>
+      </ul>
+
+      <div class="callout">
+        <div class="callout-title">The honest summary</div>
+        <p>v4.0 described an architecture that was internally consistent, arithmetically transparent, and
+        entirely unmeasured, and said so. The correct next step was to run the experiment. The experiment was
+        run, and <strong>the architecture's headline claims did not survive it</strong> — not because the
+        arithmetic was wrong, but because the inputs were constructed rather than observed.</p>
+        <p>What v5.0 has instead is smaller and firmer: <strong>a measured cost model on one machine</strong>
+        showing a 3.4× per-byte penalty on KV that no attention kernel fixes; <strong>a formal
+        specification</strong> precise enough that its open questions are experiments rather than arguments;
+        and <strong>a provisional simulation</strong> whose most interesting result — that persistent
+        identity-keyed policy state is worth more than the choice of policy — is a protocol claim testable
+        without buying anything. That is a reasonable state for a proposal to be in. It is still not a state
+        in which to call the policy numbers a result.</p>
+      </div>
+
+      <div class="chapter-nav">
+        <a href="j-implementation-reference.html" class="chapter-nav-btn prev"><span class="chapter-nav-label">← Previous</span><span class="chapter-nav-title">Appendix J</span></a>
+        <a href="l-measurements.html" class="chapter-nav-btn next"><span class="chapter-nav-label">Next →</span><span class="chapter-nav-title">Appendix L: Hardware Measurements</span></a>
+      </div>
+    </div>
+    <footer class="footer">
+      <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-primary);">
+        <p style="font-size: 0.8rem; color: var(--text-muted);">
+          © 2025–2026 Subramaniyam (Sam) Pooni. All Rights Reserved.<br>
+          This document contains proprietary and confidential information.<br>
+          Unauthorized reproduction or distribution is strictly prohibited.
+        </p>
+      </div>
+      <p>Distributed Endpoint Architecture for KV-Cache Offloading in LLM Inference</p>
+      <p style="margin-top: 0.5rem;">Technical Documentation v5.0 — August 2026</p>
+    </footer>
+  </div>
+</body>
+</html>

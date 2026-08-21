@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Figure 11.1 — Full Architecture</title>
+<script src="../../vendor/react.production.min.js"></script>
+<script src="../../vendor/react-dom.production.min.js"></script>
+<script src="../../vendor/babel.min.js"></script>
+<link rel="stylesheet" href="../../css/style.css">
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: var(--font-sans); background: linear-gradient(135deg, var(--bg-primary), var(--bg-tertiary)); min-height: 100vh; color: var(--text-primary); }</style>
+</head>
+<body>
+<div role="note" style="position:sticky;top:0;z-index:9999;background:#f85149;color:#0a0e14;padding:0.85rem 1rem;font-family:'IBM Plex Sans',-apple-system,sans-serif;font-weight:700;font-size:0.95rem;line-height:1.45;border-bottom:3px solid #0a0e14;">
+SUPERSEDED — this figure illustrates a claim withdrawn in v5.0. It is retained only so the retraction remains checkable. Do not cite it. See RETRACTIONS.md and Appendix L (hardware measurements) and Appendix N (simulation) for what replaced it.
+</div>
+
+<div id="root" role="main"></div>
+<script type="text/babel">
+function FullArchitecture() {
+  const layers = [
+    { name: 'Application Layer', items: ['vLLM', 'SGLang / RadixAttention', 'NVIDIA Dynamo', 'TensorRT-LLM'], color: 'var(--accent-green)' },
+    { name: 'Cache Manager (endpoint firmware)', items: ['Per-head tracking (640 queues)', 'EMA scoring (α = 0.2)', 'RoPE-informed prefetch'], color: 'var(--accent-blue)' },
+    { name: 'CXL Interface', items: ['CXL.mem protocol', 'Load/store semantics — 200 ns', 'Coherency'], color: 'var(--accent-purple)' },
+    { name: 'Hardware', items: ['CXL 3.0 switch', '4× endpoints — 1 TB DDR5, 256 GB/s', '16 TB NVMe backing store'], color: 'var(--accent-orange)' }
+  ];
+  const styles = {
+    container: { maxWidth: '800px', margin: '0 auto', padding: '2rem' },
+    header: { textAlign: 'center', marginBottom: '2rem' },
+    stack: { display: 'flex', flexDirection: 'column', gap: '0.5rem' },
+    layer: (color) => ({ background: 'var(--bg-card)', borderLeft: `4px solid ${color}`, borderRadius: '0 12px 12px 0', padding: '1.25rem' }),
+    layerName: (color) => ({ fontWeight: 700, color, marginBottom: '0.5rem' }),
+    items: { display: 'flex', gap: '1rem', flexWrap: 'wrap' },
+    item: { background: 'var(--bg-code)', padding: '0.5rem 1rem', borderRadius: '8px', fontSize: '0.875rem' },
+    stats: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginTop: '2rem' },
+    stat: { background: 'var(--bg-card)', borderRadius: '12px', padding: '1rem', textAlign: 'center' },
+    statVal: { fontSize: '1.5rem', fontWeight: 700, color: 'var(--accent-green)' },
+    statLabel: { fontSize: '0.75rem', color: 'var(--text-secondary)' },
+    note: { marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border-primary)', color: 'var(--text-secondary)', fontSize: '0.75rem', lineHeight: 1.5, textAlign: 'center' }
+  };
+  return (
+    <div style={styles.container}>
+      <p className="sr-only">Figure: the complete four-layer system architecture for KV-cache offloading on 1×B200 running Llama-2-70B at 128K context for 16 users at 10 tokens per second or better. From top to bottom: an application layer (vLLM, SGLang/RadixAttention, NVIDIA Dynamo, TensorRT-LLM); a cache manager in endpoint firmware (640 per-head tracking queues, EMA scoring with alpha 0.2, RoPE-informed prefetch); a CXL interface (CXL.mem load/store at 200 nanoseconds, coherent); and hardware (a CXL 3.0 switch, four endpoints totalling 1 TB DDR5 at 256 GB/s, and a 16 TB NVMe backing store). Together these yield 6× memory, 16× users, a 97% HBM hit rate, and 36% lower CapEx ($160,000 down to $103,000). All values are an analytical model, not measured.</p>
+      <div style={styles.header}>
+        <div style={{display: 'inline-block', padding: '0.25rem 0.75rem', background: 'rgba(63,185,80,0.18)', color: 'var(--accent-green)', fontSize: '0.75rem', fontFamily: 'var(--font-mono)', borderRadius: '20px', marginBottom: '0.5rem'}}>FIGURE 11.1</div>
+        <h1 style={{fontSize: '1.5rem', fontWeight: 700}}>Complete System Architecture</h1>
+        <p style={{color: 'var(--text-secondary)', fontSize: '0.875rem'}}>1×B200 · Llama-2-70B · 128K context · 16 users @ ≥10 tok/s</p>
+      </div>
+      <div style={styles.stack}>
+        {layers.map((l, i) => (
+          <div key={i} role="img" aria-label={`Architecture layer ${i + 1} of 4, ${l.name}, containing: ${l.items.join(', ')}`} style={styles.layer(l.color)}>
+            <div style={styles.layerName(l.color)}>{l.name}</div>
+            <div style={styles.items}>
+              {l.items.map((item, j) => <div key={j} style={styles.item}>{item}</div>)}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={styles.stats}>
+        <div style={styles.stat} role="img" aria-label="Memory expansion, 6 times: 192 GB HBM plus 1,024 GB CXL divided by 192 GB"><div style={styles.statVal}>6×</div><div style={styles.statLabel}>Memory</div></div>
+        <div style={styles.stat} role="img" aria-label="User capacity, 16 times: 16 concurrent users at 128K context versus 1 user on the baseline"><div style={styles.statVal}>16×</div><div style={styles.statLabel}>Users</div></div>
+        <div style={styles.stat} role="img" aria-label="HBM hit rate, 97 percent: 72 percent under LRU plus 8, 7, 6 and 4 percentage points"><div style={styles.statVal}>97%</div><div style={styles.statLabel}>Hit Rate</div></div>
+        <div style={styles.stat} role="img" aria-label="CapEx reduction, 36 percent: $160,000 down to $103,000"><div style={styles.statVal}>36%</div><div style={styles.statLabel}>CapEx <span aria-hidden="true">↓</span></div></div>
+      </div>
+      <div style={styles.note}>
+        <strong>Evidence label: analytical model.</strong> 6× = (192 GB HBM + 1,024 GB CXL) ÷ 192 GB · 16× = 16 users @128K vs 1 on the baseline ·
+        97% HBM hit rate = 72% LRU + 8 + 7 + 6 + 4 percentage points · 36% = CapEx $160,000 → $103,000. No hardware benchmark was run.
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<FullArchitecture />);
+</script>
+</body>
+</html>

@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Appendix L: Hardware Measurements (DGX Spark GB10) — KV-Cache Offloading</title>
+  <link rel="stylesheet" href="../vendor/fonts.css">
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <div class="watermark">
+    © 2025–2026 Subramaniyam (Sam) Pooni<br>
+    All Rights Reserved<br>
+    Proprietary & Confidential
+  </div>
+
+  <nav class="nav"><div class="nav-inner"><a href="../index.html" class="nav-brand"><span class="nav-brand-icon" aria-hidden="true">⚡</span> KV-Cache Architecture</a><div class="nav-links"><a href="index.html" class="nav-link">Appendix Index</a><a href="a-transformer-fundamentals.html" class="nav-link">A</a><a href="b-attention-mechanism.html" class="nav-link">B</a><a href="c-kv-cache-math.html" class="nav-link">C</a><a href="d-rope-encoding.html" class="nav-link">D</a><a href="e-head-specialization.html" class="nav-link">E</a><a href="f-cxl-technology.html" class="nav-link">F</a><a href="g-ema-algorithm.html" class="nav-link">G</a><a href="h-memory-hierarchy.html" class="nav-link">H</a><a href="i-bandwidth-calculations.html" class="nav-link">I</a><a href="j-implementation-reference.html" class="nav-link">J</a><a href="k-methodology.html" class="nav-link">K</a><a href="l-measurements.html" class="nav-link active">L</a><a href="m-formal-core.html" class="nav-link">M</a><a href="n-simulation.html" class="nav-link">N</a></div></div></nav>
+  <div class="page-wrapper">
+    <div class="container" role="main">
+      <header class="chapter-header">
+        <div class="chapter-label">Appendix L</div>
+        <h1 class="chapter-title">Hardware Measurements (DGX Spark GB10)</h1>
+        <p class="chapter-subtitle">The first measured evidence in this package: achieved streaming bandwidth, a two-term decode model fitted on two frameworks, the raw tables behind both fits, the method, and the two measurement bugs found and fixed on the way.</p>
+      </header>
+
+      <div class="callout important">
+        <div class="callout-title"><span class="danger">This appendix is the package's only source of <span class="mono">Measured</span> evidence.</span></div>
+        <p>Everything below was run on named hardware on <strong>19 August 2026</strong> and is reported with
+        its method, its repetition count and its raw data. Nothing here is simulated, modelled or projected.
+        Every other class of evidence in this package — <span class="mono">Analytical model</span>,
+        <span class="mono">Simulated (provisional)</span>, <span class="mono">Vendor specification</span>,
+        <span class="mono">External literature</span>, <span class="mono">Design target</span>,
+        <span class="mono">Illustrative</span> — is defined and located in
+        <a href="k-methodology.html">Appendix K §K.1</a>. The simulation results, which are a different and
+        weaker class of evidence, are in <a href="n-simulation.html">Appendix N</a> and always carry a
+        provisional caveat.</p>
+      </div>
+
+      <h2>L.1 Platform and Model Geometry</h2>
+
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th scope="col">Parameter</th><th scope="col">Value</th><th scope="col">Evidence</th></tr></thead>
+          <tbody>
+            <tr><td>Machine</td><td>DGX Spark, GB10 Grace Blackwell</td><td class="mono">Measured</td></tr>
+            <tr><td>Memory</td><td>128 GiB coherent unified LPDDR5X</td><td class="mono">Vendor specification</td></tr>
+            <tr><td>Memory bandwidth, spec figure</td><td class="mono">273 GB/s</td><td class="mono">Vendor specification</td></tr>
+            <tr><td>Date of runs</td><td>19 August 2026</td><td class="mono">Measured</td></tr>
+            <tr><td>Model under test</td><td>Qwen2.5-7B-Instruct, fp16</td><td class="mono">Measured</td></tr>
+            <tr><td>Layers</td><td class="mono">28</td><td class="mono">Measured</td></tr>
+            <tr><td>KV heads</td><td class="mono">4</td><td class="mono">Measured</td></tr>
+            <tr><td>head_dim</td><td class="mono">128</td><td class="mono">Measured</td></tr>
+            <tr><td><strong>KV per token</strong></td><td class="mono"><strong>56 KiB/token</strong></td><td class="mono">Analytical model</td></tr>
+            <tr><td><strong>Weights resident</strong></td><td class="mono"><strong>15.2 GB = 14.16 GiB</strong></td><td class="mono">Measured</td></tr>
+            <tr><td>Scripts</td><td><code>../scripts/bw_wall.py</code>, <code>../scripts/vllm_slope.py</code></td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>The KV figure follows the standard sizing identity of
+      <a href="c-kv-cache-math.html">Appendix C</a>:
+      <span class="mono">2 × 28 layers × 4 KV heads × 128 × 2 B = 57,344 B = 56 KiB/token</span>. The
+      decisive term is <strong>KV heads, not query heads</strong> — the same correction that governs the
+      Llama capacity table in <span class="mono">CANONICAL-NUMBERS.md</span> §2.</p>
+
+      <h2>L.2 Achieved Streaming Bandwidth</h2>
+
+      <p>A streaming <span class="mono">copy</span> kernel (read + write), 4 GiB buffers, median of 20
+      repetitions. <span class="mono">Measured</span>, script <code>../scripts/bw_wall.py</code>.</p>
+
+      <div class="equation">
+        236.5 GB/s &nbsp;=&nbsp; 87% of the 273 GB/s spec figure
+        <div class="equation-label">Achieved streaming bandwidth, GB10 unified LPDDR5X, median of 20 at 4 GiB buffers</div>
+      </div>
+
+      <div class="callout insight">
+        <div class="callout-title">What this retires</div>
+        <p>Earlier drafts applied an <strong>undefended ~50% "effective bandwidth" haircut</strong> to the
+        theoretical figure. That haircut is <strong>retired by this measurement</strong>, and it was wrong in
+        the <em>pessimistic</em> direction: real achieved bandwidth on this part is 87% of spec, not 50%.
+        The consequence is not local. The retracted v4.0 TTFT claim of <strong>15.6×</strong> rested on a
+        16.4 GB/s sustained-offload assumption of exactly this kind, and its retraction (see
+        <span class="mono">CANONICAL-NUMBERS.md</span> §7, and the reconciliation note in
+        <a href="k-methodology.html">Appendix K</a>) follows directly from the fact that a measured
+        achieved-versus-spec ratio contradicts it.</p>
+      </div>
+
+      <h2>L.3 The Decode Model Is Two-Term, Not One-Term</h2>
+
+      <p>The single-bandwidth roofline <span class="mono">t = (W + KV) / B</span> does not hold on this
+      hardware. Sweeping resident KV volume across a batch × context grid and fitting a two-term model
+      <span class="mono">t = a + b·KV_GiB</span> separates the constant weight read from the KV read that
+      grows with context:</p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th scope="col">Framework</th><th scope="col">Fit (ms)</th><th scope="col">n</th><th scope="col">R²</th><th scope="col">Weight bandwidth</th><th scope="col">KV bandwidth</th></tr></thead>
+          <tbody>
+            <tr><td>HuggingFace + SDPA, unpaged</td><td class="mono">100.3 + 16.34·KV_GiB</td><td class="mono">7</td><td class="mono"><strong>0.991</strong></td><td class="mono">151.5 GB/s</td><td class="mono"><strong>65.7 GB/s</strong></td></tr>
+            <tr><td>vLLM 0.20.1 + FlashAttention-2, paged</td><td class="mono">73.9 + 17.58·KV_GiB</td><td class="mono">9</td><td class="mono">0.945</td><td class="mono">205.7 GB/s</td><td class="mono"><strong>61.1 GB/s</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="text-muted">Evidence: <span class="mono">Measured</span> (the times and the fit);
+      <span class="mono">Analytical model</span> (the two bandwidths, which are derived from the fit
+      coefficients and the resident weight bytes, not read off an instrument).</p>
+
+      <p>The derived bandwidths follow from the two coefficients. The intercept
+      <span class="mono">a</span> is the KV-independent term and is charged against the 15.2 GB of resident
+      weights; the slope <span class="mono">b</span> is milliseconds per GiB of resident KV:</p>
+
+      <div class="derivation">
+        <div class="derivation-step">
+          <div class="step-num">Weight</div>
+          <div class="step-content">
+            <div class="step-eq">15.2 GB ÷ 100.3 ms = <strong>151.5 GB/s</strong> (HF) &nbsp;·&nbsp; 15.2 GB ÷ 73.9 ms = <strong>205.7 GB/s</strong> (vLLM)</div>
+            <div class="step-explain">The intercept is the per-step weight traversal. It does not depend on context length.</div>
+          </div>
+        </div>
+        <div class="derivation-step">
+          <div class="step-num">KV</div>
+          <div class="step-content">
+            <div class="step-eq">1 GiB ÷ 16.34 ms = <strong>65.7 GB/s</strong> (HF) &nbsp;·&nbsp; 1 GiB ÷ 17.58 ms = <strong>61.1 GB/s</strong> (vLLM)</div>
+            <div class="step-explain">The slope is the per-step KV traversal. It is the term that grows with batch × context.</div>
+          </div>
+        </div>
+      </div>
+
+      <h3>L.3.1 As a fraction of the bandwidth actually achieved</h3>
+
+      <p>The reference point is not the 273 GB/s spec figure but the <strong>236.5 GB/s</strong> the same
+      machine achieves on a streaming copy (§L.2). Against that:</p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th scope="col">Read</th><th scope="col">HuggingFace + SDPA</th><th scope="col">vLLM + FlashAttention-2</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Weight read</strong></td><td class="mono">151.5 GB/s = <strong>64%</strong></td><td class="mono">205.7 GB/s = <strong>87%</strong></td></tr>
+            <tr><td><strong>KV read</strong></td><td class="mono text-red">65.7 GB/s = <strong>28%</strong></td><td class="mono text-red">61.1 GB/s = <strong>26%</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p>vLLM extracts <strong>near-peak achievable bandwidth on weights and roughly a quarter of it on
+      KV</strong>, in the same kernel launch, on the same memory.</p>
+
+      <h2>L.4 The Three Results That Carry the Argument</h2>
+
+      <div class="callout insight">
+        <div class="callout-title">1. KV is read at roughly a quarter of achievable memory bandwidth</div>
+        <p>26–28% of 236.5 GB/s across both frameworks. <span class="mono">Measured</span>. This is an
+        HBM-side property of the attention read pattern, not a property of what sits behind HBM.</p>
+      </div>
+
+      <div class="callout insight">
+        <div class="callout-title">2. A KV byte costs 3.4× a weight byte on this hardware</div>
+        <p><span class="mono">205.7 ÷ 61.1 = 3.4×</span>, taken within the vLLM configuration so that the
+        comparison is like-for-like. <span class="mono">Measured</span>, ratio
+        <span class="mono">Analytical model</span>. The consequence for the objective function of
+        <a href="m-formal-core.html">Appendix M §M.4</a> is direct: its byte-counting terms must be
+        weighted, because a KV byte and a weight byte are not interchangeable.</p>
+      </div>
+
+      <div class="callout insight">
+        <div class="callout-title">3. The kernel is not the lever</div>
+        <p>Two independent frameworks, two different attention implementations, paged versus unpaged KV
+        layout — and the KV slopes land <strong>within 8% of each other</strong>
+        (<span class="mono">16.34</span> vs <span class="mono">17.58 ms/GiB</span>). Over the same change the
+        <em>weight</em> read improves by <strong>34%</strong>
+        (<span class="mono">151.5 → 205.7 GB/s</span>), reaching 87% of achievable bandwidth. The obvious
+        hypothesis — that a better attention kernel closes the KV gap — is refuted by measurement.
+        FlashAttention-2 with paged KV performs the same as SDPA with contiguous KV on the KV term.
+        <span class="mono">Measured</span>.</p>
+      </div>
+
+      <h2>L.5 What This Settles</h2>
+
+      <h3>L.5.1 Compression dominates placement</h3>
+
+      <p>Reducing KV bytes is worth roughly <strong>3.4× the naive byte-accounting estimate</strong>, because
+      the bytes removed are the expensive ones. <strong>Moving KV bytes between tiers does nothing for this
+      wall</strong> — it is an HBM-side property, unaffected by what sits behind HBM. This is the sharpest
+      constraint the measurement places on the architecture: a memory tier relieves the capacity wall and
+      creates two new movement walls, but it leaves the HBM-side bandwidth wall exactly where it found it
+      (<span class="mono">CANONICAL-NUMBERS.md</span> §5).</p>
+
+      <h3>L.5.2 Capacity was never the binding constraint here</h3>
+
+      <p>Every configuration measured fit comfortably in 128 GiB. Throughput collapsed anyway:</p>
+
+      <div class="equation">
+        150 tok/s at batch 16 × 4K &nbsp;→&nbsp; 46 tok/s at batch 16 × 16K
+        <div class="equation-label">With memory to spare and nothing evicted — the fall is bandwidth, not capacity</div>
+      </div>
+
+      <p>Nothing was evicted, nothing was offloaded, and no placement policy ran. A 3.3× fall in decode
+      throughput arrived purely from re-reading more KV per step. Any argument that reaches for a capacity
+      mechanism to explain a throughput fall of this shape is reaching for the wrong mechanism.</p>
+
+      <div class="callout warning">
+        <div class="callout-title">Read this against the simulation, not instead of it</div>
+        <p>§L.5.2 says capacity was not binding <em>in the configurations measured here</em> — one 7B model
+        on one 128 GiB machine. It is not a claim that capacity never binds; the 421 GiB footprint studied in
+        <a href="n-simulation.html">Appendix N</a> is a regime where it plainly does. The two appendices
+        answer different questions and must not be merged into a single narrative. Appendix N's numbers are
+        <span class="mono">Simulated (provisional)</span>; nothing on this page is.</p>
+      </div>
+
+      <h2>L.6 Raw Data</h2>
+
+      <p>Both tables in full. Each row is the median of 20–30 timed decode steps after an untimed warm run,
+      with the step time isolated by the differencing procedure of §L.7.</p>
+
+      <h3>L.6.1 HuggingFace + SDPA (fp16, chunked prefill, unpaged)</h3>
+
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th scope="col">batch</th><th scope="col">ctx</th><th scope="col">KV GiB</th><th scope="col">measured ms/step</th><th scope="col">tok/s</th><th scope="col">KV % of bytes</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">1</td><td class="mono">4096</td><td class="mono">0.22</td><td class="mono">104.6</td><td class="mono">9.6</td><td class="mono">2%</td></tr>
+            <tr><td class="mono">1</td><td class="mono">16384</td><td class="mono">0.88</td><td class="mono">113.9</td><td class="mono">8.8</td><td class="mono">6%</td></tr>
+            <tr><td class="mono">1</td><td class="mono">32768</td><td class="mono">1.75</td><td class="mono">128.5</td><td class="mono">7.8</td><td class="mono">11%</td></tr>
+            <tr><td class="mono">4</td><td class="mono">4096</td><td class="mono">0.88</td><td class="mono">111.8</td><td class="mono">35.8</td><td class="mono">6%</td></tr>
+            <tr><td class="mono">4</td><td class="mono">16384</td><td class="mono">3.50</td><td class="mono">155.4</td><td class="mono">25.7</td><td class="mono">20%</td></tr>
+            <tr><td class="mono">4</td><td class="mono">32768</td><td class="mono">7.00</td><td class="mono">212.4</td><td class="mono">18.8</td><td class="mono">33%</td></tr>
+            <tr><td class="mono">16</td><td class="mono">4096</td><td class="mono">3.50</td><td class="mono">165.1</td><td class="mono">96.9</td><td class="mono">20%</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="text-muted">n = 7. Fit <span class="mono">t = 100.3 + 16.34·KV_GiB</span> ms, R² = 0.991.
+      Script <code>../scripts/vllm_slope.py</code> carries the HuggingFace path as well as the vLLM path.</p>
+
+      <h3>L.6.2 vLLM 0.20.1 + FlashAttention-2 (fp16, paged, prefix caching disabled)</h3>
+
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th scope="col">batch</th><th scope="col">ctx</th><th scope="col">KV GiB</th><th scope="col">measured ms/step</th><th scope="col">tok/s</th></tr></thead>
+          <tbody>
+            <tr><td class="mono">1</td><td class="mono">4096</td><td class="mono">0.22</td><td class="mono">95.1</td><td class="mono">10.5</td></tr>
+            <tr><td class="mono">1</td><td class="mono">16384</td><td class="mono">0.88</td><td class="mono">101.5</td><td class="mono">9.8</td></tr>
+            <tr><td class="mono">1</td><td class="mono">32000</td><td class="mono">1.71</td><td class="mono">107.8</td><td class="mono">9.3</td></tr>
+            <tr><td class="mono">4</td><td class="mono">4096</td><td class="mono">0.88</td><td class="mono">99.9</td><td class="mono">40.0</td></tr>
+            <tr><td class="mono">4</td><td class="mono">16384</td><td class="mono">3.50</td><td class="mono">117.4</td><td class="mono">34.1</td></tr>
+            <tr><td class="mono">4</td><td class="mono">32000</td><td class="mono">6.84</td><td class="mono">162.2</td><td class="mono">24.7</td></tr>
+            <tr><td class="mono">16</td><td class="mono">4096</td><td class="mono">3.50</td><td class="mono">127.5</td><td class="mono"><strong>125.5</strong></td></tr>
+            <tr><td class="mono">16</td><td class="mono">16384</td><td class="mono">14.00</td><td class="mono">345.9</td><td class="mono"><strong>46.2</strong></td></tr>
+            <tr><td class="mono">32</td><td class="mono">4096</td><td class="mono">7.00</td><td class="mono">185.0</td><td class="mono">173.0</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="text-muted">n = 9. Fit <span class="mono">t = 73.9 + 17.58·KV_GiB</span> ms, R² = 0.945.
+      The <span class="mono">16 × 16384</span> row sits <strong>26 ms above the fit</strong> and is the
+      single noisiest point in either table; see §L.9. Script
+      <code>../scripts/vllm_slope.py</code>.</p>
+
+      <div class="callout note">
+        <div class="callout-title">One unreconciled figure, stated rather than smoothed over</div>
+        <p>The <span class="mono">150 tok/s → 46 tok/s</span> collapse quoted in §L.5.2, in
+        <span class="mono">data/measured_results.md</span> §3 and in
+        <span class="mono">CANONICAL-NUMBERS.md</span> §1.3 has its low end exactly in this table:
+        <span class="mono">46.2 tok/s</span> at batch 16 × 16384. Its high end does not. The batch-16 × 4K
+        row here reads <span class="mono">125.5 tok/s</span>
+        (<span class="mono">16 ÷ 127.5 ms</span>), not 150. The two are not reconciled in the source
+        material, so the discrepancy is reported rather than quietly resolved.
+        <strong><span class="mono">CANONICAL-NUMBERS.md</span> governs the quoted headline</strong>; the
+        table above governs any re-derivation, and a re-derivation from the table gives a
+        <span class="mono">2.7×</span> fall rather than <span class="mono">3.3×</span>. The direction and the
+        conclusion — capacity was not binding, bandwidth was — are unaffected either way. A repeat of the
+        batch-16 sweep should settle it, alongside the <span class="mono">16 × 16384</span> outlier noted
+        above.</p>
+      </div>
+
+      <h2>L.7 Method</h2>
+
+      <p>Decode step time is isolated by <strong>differencing</strong>, which cancels prefill and warm-up
+      without requiring either to be modelled:</p>
+
+      <div class="equation">
+        t<sub>step</sub> = ( t(N) − t(2) ) ÷ ( N − 2 ) &nbsp;&nbsp;with N = 32
+        <div class="equation-label">Two generations per configuration; the difference removes every fixed cost they share</div>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th scope="col">Control</th><th scope="col">Setting</th><th scope="col">Why</th></tr></thead>
+          <tbody>
+            <tr><td>Warm run</td><td>One untimed generation before every timed configuration</td><td>Removes allocator, autotune and JIT effects from the timed window</td></tr>
+            <tr><td>Repetitions</td><td>Medians of 20–30 steps</td><td>Median rather than mean, so a single scheduling outlier does not move the fit</td></tr>
+            <tr><td>Batch construction</td><td>Distinct token ids per sequence</td><td>Guarantees no KV is shared between sequences in a batch — see bug 2 in §L.8</td></tr>
+            <tr><td>Prefix caching</td><td><span class="mono">enable_prefix_caching=False</span> (vLLM)</td><td>Same reason, enforced at the framework level as well as at the input</td></tr>
+            <tr><td>Batch shape</td><td>Fixed-length uniform batches</td><td>Makes resident KV exactly computable as <span class="mono">B × L × 56 KiB</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>L.8 Provenance Discipline — Two Bugs Found and Fixed</h2>
+
+      <p>Both are recorded, and recorded in full, because <strong>both produced plausible-looking wrong
+      answers</strong>. A measurement appendix that lists only the runs that worked is not a measurement
+      appendix.</p>
+
+      <h3>L.8.1 Bug 1 — silent fp32 load</h3>
+
+      <p><span class="mono">torch_dtype=</span> is deprecated in current <span class="mono">transformers</span>
+      and was <strong>silently ignored</strong>. Weights loaded in fp32 — <span class="mono">28.4 GiB</span>
+      instead of <span class="mono">14.16 GiB</span> — and the run triggered the OOM killer. The failure mode
+      is worse than it sounds: <strong>unified memory surfaces a CUDA OOM as a Linux OOM kill</strong>, which
+      destroys the process without a CUDA error and obscures the cause entirely.</p>
+
+      <p><strong>Fix.</strong> Use <span class="mono">dtype=</span>. The script now prints resident weight
+      bytes and dtype at load, so a recurrence is visible in the log rather than inferred from a corpse.</p>
+
+      <h3>L.8.2 Bug 2 — prefix-sharing artifact</h3>
+
+      <p>The first vLLM run generated <strong>identical token ids for every sequence in the batch</strong>.
+      vLLM's prefix caching therefore stored <strong>one shared copy</strong> of the KV, so true resident KV
+      was <span class="mono">L × bpt</span>, not <span class="mono">B × L × bpt</span>. The x-axis of the fit
+      was inflated by a factor of <span class="mono">B</span>, and the apparent KV bandwidth came out at:</p>
+
+      <div class="equation">
+        342.9 GB/s &nbsp;&gt;&nbsp; 273 GB/s bus
+        <div class="equation-label">Impossible — and it is the impossibility that exposed the bug</div>
+      </div>
+
+      <p><strong>Fix.</strong> Distinct tokens per sequence, plus
+      <span class="mono">enable_prefix_caching=False</span>.</p>
+
+      <div class="callout important">
+        <div class="callout-title"><span class="danger">The lesson, which is the reason this section exists</span></div>
+        <p><strong>Any measured bandwidth above the bus is a bug, always.</strong> That rule is what caught
+        this one. The instructive part is that bug 2 did <em>not</em> produce an obviously broken number. It
+        produced a <strong>better</strong> number — one that would have supported a more exciting conclusion
+        ("vLLM is 5× more efficient on KV") and that no amount of code inspection was going to volunteer. It
+        was caught by checking the result against a <strong>physical bound</strong>, not by reading the
+        script. A measurement that flatters the hypothesis deserves more scrutiny than one that does not,
+        and the only reliable scrutiny is a bound the result cannot legally cross.</p>
+      </div>
+
+      <h2>L.9 Limitations</h2>
+
+      <ul>
+        <li><strong>One model, one size, one machine.</strong> Qwen2.5-7B on a single GB10. No claim is made
+        about H100, MI300, or larger models. The 3.4× per-byte penalty is a GB10 number.</li>
+        <li><strong>Fixed-length uniform batches.</strong> No continuous batching with mixed arrival, no
+        ragged sequence lengths. Real serving is neither.</li>
+        <li><strong>The vLLM fit is noisier</strong> (R² <span class="mono">0.945</span> against
+        <span class="mono">0.991</span>), and the <span class="mono">16 × 16384</span> point sits
+        <strong>26 ms above the fit</strong>. That point needs a repeat before it is relied on individually;
+        the slope is reported with it included.</li>
+        <li><strong>No thermal log was captured.</strong> EC firmware is
+        <span class="mono">0x03000508</span>, past the versions reported to throttle, and idle temperatures
+        were 45–49 °C — but sustained-load clocks were not recorded. A repeat should log
+        <span class="mono">clocks.sm</span> alongside the timings.</li>
+        <li><strong>FlashAttention-2, not 3.</strong> vLLM selected FA2 on this platform. FA3, or a
+        flash-decoding split-K path, may behave differently at batch 1, where a single query attends to 32K
+        keys with little parallelism to exploit.</li>
+        <li><strong>fp8 KV not yet measured.</strong> This is the gap that matters most, and §L.10 states
+        exactly what closing it would decide.</li>
+      </ul>
+
+      <h2>L.10 The Next Measurement — fp8 KV</h2>
+
+      <p><span class="mono">kv_cache_dtype=fp8</span> halves KV bytes per token, from
+      <span class="mono">56 KiB</span> to <span class="mono">28 KiB</span>. That run is the
+      <strong>direct test of the compression claim</strong> of §L.5.1, and it has exactly two possible
+      outcomes. Both are named here in advance, so that neither can be presented afterwards as the one that
+      was expected.</p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th scope="col">Outcome</th><th scope="col">Signature</th><th scope="col">What it would mean</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><strong>A — bytes are what matter</strong></td>
+              <td>Slope holds near <span class="mono">17.6 ms/GiB</span> while the GiB halve</td>
+              <td><strong>~2× on the KV term.</strong> Confirms that the wall is a byte count and that
+              compression is the lever. The objective function's weighting in
+              <a href="m-formal-core.html">Appendix M §M.4</a> stands as written.</td>
+            </tr>
+            <tr>
+              <td><strong>B — dequantisation cancels the saving</strong></td>
+              <td>Slope roughly doubles to <span class="mono">~35 ms/GiB</span></td>
+              <td>Dequantisation cost cancels the byte saving. fp8 buys <strong>capacity but not
+              bandwidth</strong> on this hardware, and the compression-dominates-placement conclusion of
+              §L.5.1 needs qualifying by representation, not just by byte count.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="highlight"><strong>Either outcome is a result.</strong> The second would be the more
+      interesting one, and it is the one that would cost this package a conclusion it currently holds — which
+      is precisely why it is stated here before the run rather than after it.</p>
+
+      <div class="chapter-nav">
+        <a href="k-methodology.html" class="chapter-nav-btn prev"><span class="chapter-nav-label">← Previous</span><span class="chapter-nav-title">Appendix K: Methodology</span></a>
+        <a href="m-formal-core.html" class="chapter-nav-btn next"><span class="chapter-nav-label">Next →</span><span class="chapter-nav-title">Appendix M: Formal Core</span></a>
+      </div>
+    </div>
+    <footer class="footer">
+      <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-primary);">
+        <p style="font-size: 0.8rem; color: var(--text-muted);">
+          © 2025–2026 Subramaniyam (Sam) Pooni. All Rights Reserved.<br>
+          This document contains proprietary and confidential information.<br>
+          Unauthorized reproduction or distribution is strictly prohibited.
+        </p>
+      </div>
+      <p>Distributed Endpoint Architecture for KV-Cache Offloading in LLM Inference</p>
+      <p style="margin-top: 0.5rem;">Technical Documentation v5.0 — August 2026</p>
+    </footer>
+  </div>
+</body>
+</html>

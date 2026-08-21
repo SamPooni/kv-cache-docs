@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Latency Calculations</title>
+<script src="../../vendor/react.production.min.js"></script>
+<script src="../../vendor/react-dom.production.min.js"></script>
+<script src="../../vendor/babel.min.js"></script>
+<link rel="stylesheet" href="../../vendor/fonts.css">
+<link rel="stylesheet" href="../../css/style.css">
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: var(--font-sans); background: var(--bg-primary); min-height: 100vh; color: var(--text-primary); }</style>
+</head>
+<body>
+<div role="note" style="position:sticky;top:0;z-index:9999;background:#f85149;color:#0a0e14;padding:0.85rem 1rem;font-family:'IBM Plex Sans',-apple-system,sans-serif;font-weight:700;font-size:0.95rem;line-height:1.45;border-bottom:3px solid #0a0e14;">
+SUPERSEDED — this figure illustrates a claim withdrawn in v5.0. It is retained only so the retraction remains checkable. Do not cite it. See RETRACTIONS.md and Appendix L (hardware measurements) and Appendix N (simulation) for what replaced it.
+</div>
+
+<div id="root" role="main"></div>
+<script type="text/babel">
+const { useState } = React;
+function LatencyCalculations() {
+  // Canonical model: HBM hit / CXL DRAM hit / NVMe backing store. No recompute term.
+  const [hbmHit, setHbmHit] = useState(97);
+  const [cxlHit, setCxlHit] = useState(2.7);
+  const nvmeRate = Math.max(0, Math.round((100 - hbmHit - cxlHit) * 10) / 10);
+  const Lhbm = 100;      // ns  - GPU HBM (Tier 0/1)
+  const Lcxl = 200;      // ns  - CXL DRAM (Tier 2)
+  const Lnvme = 25000;   // ns  - endpoint NVMe (Tier 3), 25 microseconds
+  const Leff = (hbmHit/100) * Lhbm + (cxlHit/100) * Lcxl + (nvmeRate/100) * Lnvme;
+  const formatLat = (ns) => ns >= 1000 ? (ns/1000).toFixed(2) + ' µs' : ns.toFixed(1) + ' ns';
+  const styles = {
+    container: { maxWidth: '700px', margin: '0 auto', padding: '2rem' },
+    header: { textAlign: 'center', marginBottom: '2rem' },
+    formula: { background: 'var(--bg-code)', borderRadius: '12px', padding: '1.5rem', marginBottom: '2rem', textAlign: 'center', fontFamily: 'var(--font-mono)', color: 'var(--accent-cyan)' },
+    sliders: { background: 'var(--bg-card)', borderRadius: '16px', padding: '1.5rem', marginBottom: '1.5rem' },
+    slider: { marginBottom: '1.5rem' },
+    sliderLabel: { display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' },
+    input: { width: '100%' },
+    result: { background: 'linear-gradient(135deg, #10b981, #059669)', borderRadius: '16px', padding: '2rem', textAlign: 'center' },
+    resultVal: { fontSize: '2.5rem', fontWeight: 700, color: 'white' },
+    resultLabel: { color: 'rgba(255,255,255,0.8)' },
+    breakdown: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginTop: '1.5rem' },
+    stat: { background: 'var(--bg-code)', borderRadius: '8px', padding: '1rem', textAlign: 'center' },
+    statVal: { fontSize: '1.1rem', fontWeight: 600, color: 'var(--accent-cyan)' },
+    statLabel: { fontSize: '0.7rem', color: 'var(--text-secondary)' }
+  };
+  return (
+    <div style={styles.container}>
+      <p className="sr-only">Figure: an interactive effective-latency calculator for the three-tier hit model, L_eff = h_HBM × 100 ns + h_CXL × 200 ns + h_NVMe × 25 µs. At the canonical operating point of 97 percent HBM, 2.7 percent CXL DRAM and 0.3 percent NVMe it returns 0.97 × 100 ns + 0.027 × 200 ns + 0.003 × 25,000 ns = 97 + 5.4 + 75 = 177.4 nanoseconds, about 177 ns. Two sliders move the HBM and CXL hit rates and the NVMe remainder follows. The point is that the 0.3 percent NVMe tail still contributes 75 of the 177 nanoseconds, and that against a 0.85 / 0.15 baseline of 2,035 nanoseconds the hierarchy is 11.5× lower end to end — a different comparison from the 65× per-access figure. All values are an analytical model, not measured.</p>
+      <div style={styles.header}>
+        <h1 style={{fontSize: '1.5rem', fontWeight: 700}}>Effective Latency Calculator</h1>
+      </div>
+      <div style={styles.formula}>
+        L_eff = h_HBM×100 ns + h_CXL×200 ns + h_NVMe×25 µs
+      </div>
+      <div style={styles.sliders}>
+        <div style={styles.slider}>
+          <div style={styles.sliderLabel}><span>HBM hit rate (Tier 0/1 @ 100 ns)</span><span style={{color: 'var(--accent-green)', fontWeight: 600}}>{hbmHit}%</span></div>
+          <input type="range" min="0" max="100" step="0.1" value={hbmHit} onChange={e => setHbmHit(+e.target.value)} style={styles.input} aria-label="HBM hit rate (Tier 0/1 at 100 ns), percent" />
+        </div>
+        <div style={styles.slider}>
+          <div style={styles.sliderLabel}><span>CXL DRAM hit rate (Tier 2 @ 200 ns)</span><span style={{color: 'var(--accent-purple)', fontWeight: 600}}>{cxlHit}%</span></div>
+          <input type="range" min="0" max={100 - hbmHit} step="0.1" value={cxlHit} onChange={e => setCxlHit(Math.min(+e.target.value, 100 - hbmHit))} style={styles.input} aria-label="CXL DRAM hit rate (Tier 2 at 200 ns), percent" />
+        </div>
+        <div style={{...styles.sliderLabel, color: 'var(--accent-orange)'}}>
+          <span>NVMe backing store (Tier 3 @ 25 µs)</span><span style={{fontWeight: 600}}>{nvmeRate.toFixed(1)}%</span>
+        </div>
+      </div>
+      <div style={styles.result}>
+        <div style={styles.resultVal}>{formatLat(Leff)}</div>
+        <div style={styles.resultLabel}>Effective access latency</div>
+      </div>
+      <div style={styles.breakdown}>
+        <div style={styles.stat}><div style={styles.statVal}>{formatLat((hbmHit/100) * Lhbm)}</div><div style={styles.statLabel}>HBM contribution</div></div>
+        <div style={styles.stat}><div style={styles.statVal}>{formatLat((cxlHit/100) * Lcxl)}</div><div style={styles.statLabel}>CXL DRAM contribution</div></div>
+        <div style={styles.stat}><div style={styles.statVal}>{formatLat((nvmeRate/100) * Lnvme)}</div><div style={styles.statLabel}>NVMe contribution</div></div>
+      </div>
+      <div style={{background: 'var(--bg-code)', borderRadius: '12px', padding: '1.25rem', marginTop: '1.5rem', color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.7}}>
+        <div style={{color: 'var(--text-primary)', fontWeight: 600, marginBottom: '0.5rem'}}>Canonical operating point — 97 / 2.7 / 0.3</div>
+        0.97 × 100 ns + 0.027 × 200 ns + 0.003 × 25,000 ns = 97 + 5.4 + 75 = <strong style={{color: 'var(--accent-green)'}}>177.4 ns ≈ 177 ns</strong>.
+        <br />
+        <strong>There is no recompute term.</strong> Tier 3 NVMe holds a complete backing store (16 TB), so a
+        KV entry is never lost and never has to be regenerated on an access miss. Recompute occurs only on
+        cold start and is modeled separately.
+        <br />
+        Baseline for comparison: 0.85 × 100 ns + 0.15 × 13 µs = <strong>2,035 ns</strong>, so the proposed
+        hierarchy is <strong style={{color: 'var(--accent-green)'}}>11.5× lower</strong> end-to-end. That is distinct from
+        the 65× per-access figure (13.0 µs PCIe DMA ÷ 200 ns CXL.mem).
+        <br />
+        <em style={{color: 'var(--text-secondary)'}}>Analytical model — no hardware benchmark was run.</em>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<LatencyCalculations />);
+</script>
+</body>
+</html>

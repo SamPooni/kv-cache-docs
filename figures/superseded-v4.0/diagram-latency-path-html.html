@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CXL.mem vs PCIe Latency Paths</title>
+    <link rel="stylesheet" href="../../vendor/fonts.css">
+    <link rel="stylesheet" href="../../css/style.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: var(--font-sans);
+            background: var(--bg-primary);
+            min-height: 100vh;
+            color: var(--text-primary);
+            padding: 40px;
+        }
+        
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 8px;
+            background: linear-gradient(90deg, var(--accent-green), var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-bottom: 50px;
+            font-size: 1rem;
+        }
+        
+        .paths-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-bottom: 50px;
+        }
+        
+        .path-card {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid var(--border-primary);
+        }
+        
+        .path-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border-primary);
+        }
+        
+        .path-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+        
+        .path-title.pcie { color: var(--accent-red); }
+        .path-title.cxl { color: var(--accent-green); }
+        
+        .path-total {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+        
+        .path-total.pcie { color: var(--accent-red); }
+        .path-total.cxl { color: var(--accent-green); }
+        
+        .step {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            position: relative;
+        }
+        
+        .step::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 35px;
+            width: 2px;
+            height: calc(100% + 5px);
+            background: var(--border-primary);
+        }
+        
+        .step:last-child::before {
+            display: none;
+        }
+        
+        .step-number {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+            margin-right: 15px;
+        }
+        
+        .step-number.pcie { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
+        .step-number.cxl { background: rgba(34, 197, 94, 0.2); color: var(--accent-green); }
+        
+        .step-content {
+            flex: 1;
+        }
+        
+        .step-name {
+            font-weight: 500;
+            font-size: 0.95rem;
+            margin-bottom: 4px;
+        }
+        
+        .step-detail {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        
+        .step-latency {
+            font-weight: 600;
+            font-size: 0.95rem;
+            text-align: right;
+            min-width: 80px;
+        }
+        
+        .step-latency.pcie { color: var(--accent-red); }
+        .step-latency.cxl { color: var(--accent-green); }
+        
+        /* Comparison Bar */
+        .comparison-section {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 35px;
+            border: 1px solid var(--border-primary);
+        }
+        
+        .comparison-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 30px;
+            text-align: center;
+            color: var(--accent-purple);
+        }
+        
+        .comparison-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+        
+        .comp-row {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .comp-label {
+            width: 180px;
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+        }
+        
+        .comp-bar-container {
+            flex: 1;
+            height: 45px;
+            background: var(--bg-code);
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .comp-bar {
+            height: 100%;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            padding-left: 15px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: white;
+            position: relative;
+        }
+        
+        .comp-bar.pcie {
+            background: linear-gradient(90deg, #ef4444, #dc2626);
+        }
+        
+        .comp-bar.cxl {
+            background: linear-gradient(90deg, #22c55e, #16a34a);
+        }
+        
+        .comp-bar.nvme {
+            background: linear-gradient(90deg, #f59e0b, #d97706);
+        }
+        
+        .improvement-badge {
+            position: absolute;
+            right: 15px;
+            background: rgba(0,0,0,0.3);
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+        
+        /* Visual Timeline */
+        .timeline-section {
+            margin-top: 50px;
+        }
+        
+        .timeline-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 25px;
+            color: var(--accent-purple);
+        }
+        
+        .timeline {
+            position: relative;
+            height: 120px;
+            background: var(--bg-card);
+            border-radius: 12px;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+        
+        .timeline-scale {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 30px;
+            display: flex;
+            border-top: 1px solid var(--border-primary);
+        }
+        
+        .scale-mark {
+            flex: 1;
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            padding-top: 8px;
+        }
+        
+        .timeline-bar {
+            position: absolute;
+            height: 35px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            padding-left: 10px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: white;
+        }
+        
+        .timeline-bar.cxl-bar {
+            top: 15px;
+            left: 0;
+            width: 1%;
+            min-width: 80px;
+            background: linear-gradient(90deg, #22c55e, #16a34a);
+        }
+        
+        .timeline-bar.pcie-bar {
+            top: 55px;
+            left: 0;
+            width: 24%;
+            background: linear-gradient(90deg, #ef4444, #dc2626);
+        }
+        
+        .key-insight {
+            background: linear-gradient(135deg, rgba(34,197,94,0.1), rgba(34,197,94,0.05));
+            border: 1px solid rgba(34,197,94,0.3);
+            border-radius: 16px;
+            padding: 25px 30px;
+            margin-top: 40px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .insight-icon {
+            font-size: 2.5rem;
+        }
+        
+        .insight-content h3 {
+            color: var(--accent-green);
+            font-size: 1.1rem;
+            margin-bottom: 8px;
+        }
+        
+        .insight-content p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        
+        .insight-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--accent-green);
+            margin-left: auto;
+        }
+    </style>
+</head>
+<body>
+<div role="note" style="position:sticky;top:0;z-index:9999;background:#f85149;color:#0a0e14;padding:0.85rem 1rem;font-family:'IBM Plex Sans',-apple-system,sans-serif;font-weight:700;font-size:0.95rem;line-height:1.45;border-bottom:3px solid #0a0e14;">
+SUPERSEDED — this figure illustrates a claim withdrawn in v5.0. It is retained only so the retraction remains checkable. Do not cite it. See RETRACTIONS.md and Appendix L (hardware measurements) and Appendix N (simulation) for what replaced it.
+</div>
+
+    <div class="container" role="main">
+        <p class="sr-only">Figure: a step-by-step comparison of two memory access paths for the same 4 KiB read. The PCIe DMA baseline takes 13.00 microseconds in seven steps — 4.00 µs driver call and doorbell, 2.50 µs DMA descriptor fetch, 1.50 µs software TLB and pinning, 0.70 µs PCIe Gen5 round trip, 0.10 µs host DRAM access, 0.20 µs payload transfer and 4.00 µs completion interrupt and resync. The CXL.mem direct path takes 200 nanoseconds in six steps — 15 ns request issue, 20 ns PCIe Gen5 x16 PHY, 25 ns switch traversal, 40 ns endpoint controller decode, 80 ns DDR5-5600 array access and 20 ns return path. The comparison bars below rank four latencies against the 25 microsecond NVMe reference: 177 ns effective at the 97 / 2.7 / 0.3 split, 200 ns CXL.mem DRAM, 13,000 ns PCIe DMA at 65× slower, and 25,000 ns endpoint NVMe at 125× slower. The point is that most of the PCIe cost is per-access CPU and driver work that a load/store path never performs. All values are an analytical model, not measured.</p>
+        <h1>Memory Access Path Comparison</h1>
+        <p class="subtitle">CXL.mem Direct Path vs CPU-Mediated PCIe Swap</p>
+        
+        <div class="paths-container">
+            <!-- PCIe Path -->
+            <div class="path-card">
+                <div class="path-header">
+                    <div class="path-title pcie">PCIe DMA Baseline Path</div>
+                    <div class="path-total pcie">13.00 µs</div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number pcie">1</div>
+                    <div class="step-content">
+                        <div class="step-name">Driver call + doorbell</div>
+                        <div class="step-detail">Ring the device doorbell from the driver</div>
+                    </div>
+                    <div class="step-latency pcie">4.00 µs</div>
+                </div>
+                <div class="step">
+                    <div class="step-number pcie">2</div>
+                    <div class="step-content">
+                        <div class="step-name">DMA descriptor fetch/setup</div>
+                        <div class="step-detail">Descriptor allocation and fetch</div>
+                    </div>
+                    <div class="step-latency pcie">2.50 µs</div>
+                </div>
+                <div class="step">
+                    <div class="step-number pcie">3</div>
+                    <div class="step-content">
+                        <div class="step-name">Software TLB + pinning management</div>
+                        <div class="step-detail">Page pinning, IOMMU mapping</div>
+                    </div>
+                    <div class="step-latency pcie">1.50 µs</div>
+                </div>
+                <div class="step">
+                    <div class="step-number pcie">4</div>
+                    <div class="step-content">
+                        <div class="step-name">PCIe Gen5 round trip</div>
+                        <div class="step-detail">SerDes + switch, both directions</div>
+                    </div>
+                    <div class="step-latency pcie">0.70 µs</div>
+                </div>
+                <div class="step">
+                    <div class="step-number pcie">5</div>
+                    <div class="step-content">
+                        <div class="step-name">Host DRAM access</div>
+                        <div class="step-detail">DDR5 array read on the host</div>
+                    </div>
+                    <div class="step-latency pcie">0.10 µs</div>
+                </div>
+                <div class="step">
+                    <div class="step-number pcie">6</div>
+                    <div class="step-content">
+                        <div class="step-name">4 KiB payload @ 32 GB/s</div>
+                        <div class="step-detail">4,096 B ÷ 32 GB/s = 128 ns, rounded up for framing</div>
+                    </div>
+                    <div class="step-latency pcie">0.20 µs</div>
+                </div>
+                <div class="step">
+                    <div class="step-number pcie">7</div>
+                    <div class="step-content">
+                        <div class="step-name">Completion interrupt + resync</div>
+                        <div class="step-detail">MSI-X, handler, GPU resync</div>
+                    </div>
+                    <div class="step-latency pcie">4.00 µs</div>
+                </div>
+                <p style="color:var(--text-secondary);font-size:0.8rem;margin-top:20px;padding-top:15px;border-top:1px solid var(--border-primary);">
+                    4.00 + 2.50 + 1.50 + 0.70 + 0.10 + 0.20 + 4.00 = <strong style="color:var(--accent-red);">13.00 µs</strong>
+                </p>
+            </div>
+            
+            <!-- CXL Path -->
+            <div class="path-card">
+                <div class="path-header">
+                    <div class="path-title cxl">CXL.mem Direct Path</div>
+                    <div class="path-total cxl">200 ns</div>
+                </div>
+                
+                <div class="step">
+                    <div class="step-number cxl">1</div>
+                    <div class="step-content">
+                        <div class="step-name">GPU/host request issue</div>
+                        <div class="step-detail">Load instruction issued, M2S MemRd formed</div>
+                    </div>
+                    <div class="step-latency cxl">15 ns</div>
+                </div>
+                <div class="step">
+                    <div class="step-number cxl">2</div>
+                    <div class="step-content">
+                        <div class="step-name">PCIe Gen5 ×16 PHY</div>
+                        <div class="step-detail">SerDes transit, outbound</div>
+                    </div>
+                    <div class="step-latency cxl">20 ns</div>
+                </div>
+                <div class="step">
+                    <div class="step-number cxl">3</div>
+                    <div class="step-content">
+                        <div class="step-name">CXL switch traversal</div>
+                        <div class="step-detail">Non-blocking CXL 3.0 switch</div>
+                    </div>
+                    <div class="step-latency cxl">25 ns</div>
+                </div>
+                <div class="step">
+                    <div class="step-number cxl">4</div>
+                    <div class="step-content">
+                        <div class="step-name">Endpoint CXL controller decode</div>
+                        <div class="step-detail">HDM decode, address translation</div>
+                    </div>
+                    <div class="step-latency cxl">40 ns</div>
+                </div>
+                <div class="step">
+                    <div class="step-number cxl">5</div>
+                    <div class="step-content">
+                        <div class="step-name">DDR5-5600 array access</div>
+                        <div class="step-detail">Endpoint DRAM read</div>
+                    </div>
+                    <div class="step-latency cxl">80 ns</div>
+                </div>
+                <div class="step">
+                    <div class="step-number cxl">6</div>
+                    <div class="step-content">
+                        <div class="step-name">Return path</div>
+                        <div class="step-detail">Response through switch and PHY, writeback</div>
+                    </div>
+                    <div class="step-latency cxl">20 ns</div>
+                </div>
+                <p style="color:var(--text-secondary);font-size:0.8rem;margin-top:20px;padding-top:15px;border-top:1px solid var(--border-primary);">
+                    15 + 20 + 25 + 40 + 80 + 20 = <strong style="color:var(--accent-green);">200 ns</strong>
+                </p>
+            </div>
+        </div>
+        
+        <div class="comparison-section">
+            <div class="comparison-title">Latency Comparison</div>
+            
+            <div class="comparison-bars">
+                <div class="comp-row">
+                    <div class="comp-label">Effective (97/2.7/0.3)</div>
+                    <div class="comp-bar-container">
+                        <div class="comp-bar cxl" style="width: 8%;" role="img" aria-label="Effective latency at the 97 / 2.7 / 0.3 split, 177 nanoseconds, blended">
+                            177 ns
+                            <span class="improvement-badge">Blended</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="comp-row">
+                    <div class="comp-label">CXL.mem DRAM (Tier 2)</div>
+                    <div class="comp-bar-container">
+                        <div class="comp-bar cxl" style="width: 9%;" role="img" aria-label="CXL.mem DRAM, Tier 2, 200 nanoseconds, the reference point">
+                            200 ns
+                            <span class="improvement-badge">Reference</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="comp-row">
+                    <div class="comp-label">PCIe DMA baseline</div>
+                    <div class="comp-bar-container">
+                        <div class="comp-bar pcie" style="width: 52%;" role="img" aria-label="PCIe DMA baseline, 13,000 nanoseconds, 65× slower">
+                            13,000 ns
+                            <span class="improvement-badge">65× slower</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="comp-row">
+                    <div class="comp-label">Endpoint NVMe (Tier 3)</div>
+                    <div class="comp-bar-container">
+                        <div class="comp-bar nvme" style="width: 100%;" role="img" aria-label="Endpoint NVMe, Tier 3, 25,000 nanoseconds, 125× slower">
+                            25,000 ns
+                            <span class="improvement-badge">125× slower</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <p style="color:var(--text-secondary);font-size:0.8rem;margin-top:25px;line-height:1.7;">
+                Bars are linear in ns against the 25 µs NVMe reference; the two sub-microsecond bars are
+                widened to stay legible. Effective access latency = 0.97 × 100 ns + 0.027 × 200 ns +
+                0.003 × 25 µs = 177.4 ns.
+            </p>
+        </div>
+        
+        <div class="key-insight">
+            <div class="insight-icon" aria-hidden="true">⚡</div>
+            <div class="insight-content">
+                <h3>Key Insight: CPU Elimination</h3>
+                <p>CXL.mem removes per-access CPU involvement in steady state: no interrupt, no context switch, no DMA setup. The GPU issues a load and receives data from endpoint DRAM through hardware-managed coherence. Control plane, mapping, faults, drivers and firmware still exist. Scope of the 65×: 13,000 ns ÷ 200 ns, one access, same boundary (kernel issue → data available), same 4 KiB payload.</p>
+            </div>
+            <div class="insight-value">65×</div>
+        </div>
+        <p style="text-align:center;color:var(--text-secondary);font-size:0.8rem;margin-top:40px;line-height:1.7;">
+            <em>Analytical model — every component latency here is modeled from vendor specifications and
+            protocol behaviour. No hardware benchmark was run.</em>
+        </p>
+    </div>
+</body>
+</html>

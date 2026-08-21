@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Figure 7.3 — GQA Structure</title>
+<script src="../../vendor/react.production.min.js"></script>
+<script src="../../vendor/react-dom.production.min.js"></script>
+<script src="../../vendor/babel.min.js"></script>
+<link rel="stylesheet" href="../../css/style.css">
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: var(--font-sans); background: linear-gradient(135deg, var(--bg-primary), var(--bg-card)); min-height: 100vh; color: var(--text-primary); }</style>
+</head>
+<body>
+<div id="root" role="main"></div>
+<script type="text/babel">
+const { useState } = React;
+function GQAStructure() {
+  const [mode, setMode] = useState('gqa');
+  const configs = {
+    mha: { name: 'MHA', qHeads: 8, kvHeads: 8, ratio: '1:1', savings: '0%', color: 'var(--accent-red)' },
+    gqa: { name: 'GQA', qHeads: 8, kvHeads: 2, ratio: '4:1', savings: '75%', color: 'var(--accent-green)' },
+    mqa: { name: 'MQA', qHeads: 8, kvHeads: 1, ratio: '8:1', savings: '87.5%', color: 'var(--accent-cyan)' }
+  };
+  const c = configs[mode];
+  const styles = {
+    container: { maxWidth: '800px', margin: '0 auto', padding: '2rem' },
+    header: { textAlign: 'center', marginBottom: '2rem' },
+    badge: { display: 'inline-block', padding: '0.25rem 0.75rem', background: 'rgba(16,185,129,0.2)', color: 'var(--accent-green)', fontSize: '0.75rem', fontFamily: 'var(--font-mono)', borderRadius: '20px', marginBottom: '0.5rem' },
+    tabs: { display: 'flex', justifyContent: 'center', gap: '0.5rem', marginBottom: '2rem' },
+    tab: (active, color) => ({ padding: '0.75rem 1.5rem', background: active ? color : 'var(--border-primary)', color: active ? 'var(--bg-primary)' : 'var(--text-primary)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }),
+    diagram: { background: 'var(--bg-card)', borderRadius: '16px', padding: '2rem', marginBottom: '1.5rem' },
+    row: { display: 'flex', justifyContent: 'center', gap: '0.5rem', marginBottom: '1rem' },
+    head: (color) => ({ width: 40, height: 40, borderRadius: 8, background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 600, color: 'var(--bg-primary)' }),
+    arrow: { textAlign: 'center', color: 'var(--text-secondary)', fontSize: '1.5rem', margin: '0.5rem 0' },
+    stats: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' },
+    stat: { background: 'var(--bg-primary)', borderRadius: '12px', padding: '1rem', textAlign: 'center' },
+    statVal: (color) => ({ fontSize: '1.5rem', fontWeight: 700, color }),
+    statLabel: { fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }
+  };
+  return (
+    <div style={styles.container}>
+      <p className="sr-only">Figure: Grouped Query Attention and how it shrinks the KV cache. Three configurations are compared over 8 query heads: MHA has 8 KV heads, a 1 to 1 ratio and 0 percent memory saving; GQA has 2 KV heads, a 4 to 1 ratio and 75 percent saving; MQA has 1 KV head, an 8 to 1 ratio and 87.5 percent saving. For the canonical model, Llama-2-70B with 80 layers, 64 query heads, 8 KV heads, d_head 128 and BF16, that 8 to 1 grouping costs 4 KB per layer per token under GQA against 32 KB under MHA and 512 B under MQA, giving 2 times 80 layers times 8 KV heads times 128 times 2 bytes equals 327,680 bytes, or 320 KiB per token, which is 43 GB at 128K context. All values are an analytical model, not measured.</p>
+      <div style={styles.header}>
+        <div style={styles.badge}>FIGURE 7.3</div>
+        <h1 style={{fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.5rem'}}>Grouped Query Attention</h1>
+        <p style={{color: 'var(--text-secondary)'}}>How GQA reduces KV-cache size — diagram is illustrative (8 Q heads shown)</p>
+      </div>
+      <div style={styles.tabs}>
+        {Object.entries(configs).map(([k, v]) => (
+          <button key={k} aria-label={`${v.name}: ${v.qHeads} query heads, ${v.kvHeads} KV heads, ratio ${v.ratio}, memory savings ${v.savings}`} style={styles.tab(mode === k, v.color)} onClick={() => setMode(k)}>{v.name}</button>
+        ))}
+      </div>
+      <div style={styles.diagram}>
+        <div style={{textAlign: 'center', color: 'var(--accent-cyan)', fontSize: '0.875rem', marginBottom: '1rem'}}>Query Heads ({c.qHeads})</div>
+        <div style={styles.row} role="img" aria-label={`A row of ${c.qHeads} query heads, Q0 to Q${c.qHeads - 1}`}>
+          {Array(c.qHeads).fill(0).map((_, i) => <div key={i} aria-hidden="true" style={styles.head('var(--accent-cyan)')}>Q{i}</div>)}
+        </div>
+        <div style={styles.arrow}><span aria-hidden="true">↓</span> attend to <span aria-hidden="true">↓</span></div>
+        <div style={styles.row} role="img" aria-label={`A row of ${c.kvHeads} KV heads shared by the ${c.qHeads} query heads above, a ${c.ratio} ratio`}>
+          {Array(c.kvHeads).fill(0).map((_, i) => <div key={i} aria-hidden="true" style={styles.head(c.color)}>KV{i}</div>)}
+        </div>
+        <div style={{textAlign: 'center', color: c.color, fontSize: '0.875rem', marginTop: '1rem'}}>KV Heads ({c.kvHeads})</div>
+      </div>
+      <div style={styles.stats}>
+        <div style={styles.stat} role="img" aria-label={`Query to KV head ratio, ${c.ratio}`}><div style={styles.statVal(c.color)}>{c.ratio}</div><div style={styles.statLabel}>Q:KV Ratio</div></div>
+        <div style={styles.stat} role="img" aria-label={`Memory savings, ${c.savings}`}><div style={styles.statVal(c.color)}>{c.savings}</div><div style={styles.statLabel}>Memory Savings</div></div>
+        <div style={styles.stat} role="img" aria-label={`KV heads, ${c.kvHeads}`}><div style={styles.statVal(c.color)}>{c.kvHeads}</div><div style={styles.statLabel}>KV Heads</div></div>
+      </div>
+
+      <div style={{background: 'var(--bg-card)', borderRadius: '12px', padding: '1.25rem', marginTop: '1.5rem'}}>
+        <div style={{fontWeight: 600, color: 'var(--accent-green)', marginBottom: '0.5rem'}}>The canonical model: Llama-2-70B</div>
+        <div style={{color: 'var(--text-secondary)', fontSize: '0.875rem', marginBottom: '0.75rem'}}>
+          80 layers, <strong>64 Q heads, 8 KV heads</strong>, d_head 128, BF16 — a 8:1 group ratio,
+          i.e. an <strong>8× KV-cache reduction</strong> versus MHA. The diagram above shrinks the head
+          count to 8 so the grouping is legible; the arithmetic below uses the real configuration.
+        </div>
+        <div style={styles.stats}>
+          <div style={styles.stat} role="img" aria-label="MHA with 64 KV heads, 32 KB per layer per token"><div style={styles.statVal('var(--accent-red)')}>32 KB</div><div style={styles.statLabel}>MHA (64 KV heads) per layer per token</div></div>
+          <div style={styles.stat} role="img" aria-label="GQA with 8 KV heads, 4 KB per layer per token"><div style={styles.statVal('var(--accent-green)')}>4 KB</div><div style={styles.statLabel}>GQA (8 KV heads) per layer per token</div></div>
+          <div style={styles.stat} role="img" aria-label="MQA with 1 KV head, 512 bytes per layer per token"><div style={styles.statVal('var(--accent-cyan)')}>512 B</div><div style={styles.statLabel}>MQA (1 KV head) per layer per token</div></div>
+        </div>
+        <div style={{color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '0.75rem', fontFamily: 'var(--font-mono)'}}>
+          2 × 80 layers × 8 KV heads × 128 × 2 B = 327,680 B = 320 KiB/token → 43 GB at 128K context
+        </div>
+      </div>
+
+      <div style={{textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '1.5rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-primary)'}}>
+        Analytical model — sizes derived from the model configuration, not measured. Canonical numbers v4.0.
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<GQAStructure />);
+</script>
+</body>
+</html>

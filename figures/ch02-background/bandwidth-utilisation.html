@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bandwidth Utilisation</title>
+<link rel="stylesheet" href="../../vendor/fonts.css">
+<link rel="stylesheet" href="../../css/style.css">
+<style>
+/* ---- figure shell: package tokens only, no external assets ---- */
+body{background:var(--bg-primary);color:var(--text-primary);font-family:var(--font-sans);
+     line-height:1.6;font-size:16px;}
+.vz{position:relative;z-index:1;max-width:1120px;margin:0 auto;padding:1.6rem 1.4rem 1.2rem;}
+.vz-eyebrow{font-family:var(--font-mono);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;
+     color:var(--accent-purple);margin:0 0 .4rem;}
+.vz h1{font-family:var(--font-sans);font-size:1.45rem;font-weight:600;line-height:1.25;
+     color:var(--text-primary);margin:0 0 .4rem;letter-spacing:-.01em;}
+.vz h2{font-family:var(--font-sans);font-size:1rem;font-weight:600;color:var(--text-primary);
+     margin:0 0 .5rem;padding:0;border:0;letter-spacing:0;}
+.vz-sub{color:var(--text-secondary);font-size:.94rem;max-width:78ch;margin:0 0 1.1rem;}
+.vz-card{background:var(--bg-card);border:1px solid var(--border-primary);border-radius:14px;
+     padding:1.15rem 1.2rem;}
+.vz-plot{display:block;width:100%;height:auto;overflow:visible;}
+.vz-scroll{overflow-x:auto;}
+.vz-caveat{display:flex;gap:.7rem;align-items:flex-start;background:rgba(210,153,34,.09);
+     border:1px solid rgba(210,153,34,.4);border-left:4px solid var(--accent-orange);
+     border-radius:0 10px 10px 0;padding:.7rem .9rem;margin:0 0 1.1rem;font-size:.85rem;
+     color:var(--text-secondary);}
+.vz-caveat strong{color:var(--accent-orange);}
+.vz-caveat-icon{font-size:1rem;line-height:1.3;flex:0 0 auto;}
+.vz-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:.75rem;margin:1.1rem 0 0;}
+.vz-tile{background:var(--bg-tertiary);border:1px solid var(--border-primary);border-radius:12px;padding:.8rem .9rem;}
+.vz-tile-v{font-family:var(--font-sans);font-size:1.55rem;font-weight:650;color:var(--text-primary);
+     line-height:1.15;letter-spacing:-.02em;}
+.vz-tile-l{font-size:.775rem;color:var(--text-secondary);margin-top:.28rem;line-height:1.45;}
+.vz-legend{display:flex;flex-wrap:wrap;gap:.4rem 1.4rem;margin:.9rem 0 0;font-size:.85rem;
+     color:var(--text-secondary);}
+.vz-legend-item{display:flex;align-items:center;gap:.5rem;}
+.vz-key{flex:0 0 auto;}
+.vz-legend b{color:var(--text-primary);font-weight:600;}
+.vz-legend .vz-eq{font-family:var(--font-mono);font-size:.8rem;color:var(--text-secondary);}
+.vz-note{font-size:.83rem;color:var(--text-secondary);margin:.9rem 0 0;max-width:82ch;}
+.vz-note b{color:var(--text-primary);}
+details.vz-table{margin:1.1rem 0 0;}
+details.vz-table>summary{cursor:pointer;font-size:.83rem;color:var(--accent-cyan);
+     font-family:var(--font-mono);list-style:none;display:inline-flex;align-items:center;gap:.4rem;
+     padding:.3rem .1rem;}
+details.vz-table>summary::-webkit-details-marker{display:none;}
+details.vz-table>summary::before{content:"\25B8";display:inline-block;transition:transform .15s ease;}
+details.vz-table[open]>summary::before{transform:rotate(90deg);}
+details.vz-table table{font-size:.85rem;}
+details.vz-table td,details.vz-table th{padding:.5rem .7rem;}
+details.vz-table td{font-family:var(--font-mono);color:var(--text-secondary);}
+details.vz-table td:first-child{font-family:var(--font-sans);color:var(--text-primary);}
+.vz-foot{margin:1.3rem 0 0;padding-top:.8rem;border-top:1px solid var(--border-secondary);
+     font-family:var(--font-mono);font-size:.74rem;color:var(--text-muted);letter-spacing:.01em;}
+.vz-grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;}
+@media (max-width:860px){.vz-grid2{grid-template-columns:1fr;}}
+/* axis + mark typography inside the SVGs */
+.ax{fill:var(--text-muted);font-family:var(--font-mono);font-size:11px;
+    font-variant-numeric:tabular-nums;}
+.ax-title{fill:var(--text-secondary);font-family:var(--font-sans);font-size:12px;font-weight:500;}
+.lbl{fill:var(--text-primary);font-family:var(--font-sans);font-size:12px;font-weight:600;}
+.lbl-2{fill:var(--text-secondary);font-family:var(--font-sans);font-size:11.5px;}
+.lbl-m{fill:var(--text-secondary);font-family:var(--font-mono);font-size:11px;
+    font-variant-numeric:tabular-nums;}
+.grid{stroke:var(--border-secondary);stroke-width:1;}
+.axis{stroke:var(--border-primary);stroke-width:1;}
+[data-tip]{cursor:default;}
+[data-tip]:focus-visible{outline:2px solid var(--accent-cyan);outline-offset:2px;}
+/* tooltip */
+#vz-tip{position:fixed;z-index:50;pointer-events:none;opacity:0;transition:opacity .1s ease;
+     background:var(--bg-code);border:1px solid var(--border-highlight);border-radius:8px;
+     padding:.45rem .6rem;font-size:.78rem;line-height:1.45;color:var(--text-primary);
+     box-shadow:var(--shadow-md);max-width:280px;}
+#vz-tip.on{opacity:1;}
+#vz-tip .t-h{font-weight:600;display:block;margin-bottom:.15rem;}
+#vz-tip .t-b{color:var(--text-secondary);font-family:var(--font-mono);font-size:.74rem;}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;}}
+</style>
+</head>
+<body>
+<main class="vz" role="main">
+<p class="sr-only">Figure: a bar chart of each read stream as a share of the 236.5 GB per second a DGX Spark GB10 actually achieves on a streaming copy kernel, which is itself 87 per cent of the 273 GB per second spec figure. The bars are: streaming copy 236.5 GB/s, 100 per cent, the reference; weight read under vLLM with FlashAttention-2, 205.7 GB/s, 87 per cent; weight read under HuggingFace with SDPA, 151.5 GB/s, 64 per cent; KV read under HuggingFace with SDPA, 65.7 GB/s, 28 per cent; and KV read under vLLM with FlashAttention-2, 61.1 GB/s, 26 per cent. Weights are read at roughly two thirds to seven eighths of achievable bandwidth and KV at roughly a quarter of it, whichever framework is used. Dividing the best weight read by the worst KV read, 205.7 over 61.1, gives 3.4: on this hardware a KV byte costs 3.4 times a weight byte.</p>
+<p class="vz-eyebrow">Figure 2.7 &middot; Measured</p>
+<h1>Weights are read near peak. KV is read at a quarter of it.</h1>
+<p class="vz-sub">A streaming copy kernel on this machine reaches <b style="color:var(--text-primary)">236.5&nbsp;GB/s,
+87% of the 273&nbsp;GB/s spec figure</b> &mdash; which retires the undefended ~50% "effective bandwidth"
+haircut earlier drafts applied. Measured against that achieved figure rather than against spec, the
+weight stream and the KV stream are not the same stream.</p>
+<div class="vz-card"><div class="vz-scroll"><svg class="vz-plot" viewBox="0 0 1060 356" role="group" aria-label="Each read stream as a percentage of the 236.5 GB per second this machine actually achieves"><g aria-hidden="true"><line class="grid" x1="268.0" y1="28" x2="268.0" y2="300"/><text class="ax" x="268.0" y="318" text-anchor="middle">0%</text><line class="grid" x1="376.0" y1="28" x2="376.0" y2="300"/><text class="ax" x="376.0" y="318" text-anchor="middle">25%</text><line class="grid" x1="484.0" y1="28" x2="484.0" y2="300"/><text class="ax" x="484.0" y="318" text-anchor="middle">50%</text><line class="grid" x1="592.0" y1="28" x2="592.0" y2="300"/><text class="ax" x="592.0" y="318" text-anchor="middle">75%</text><line class="grid" x1="700.0" y1="28" x2="700.0" y2="300"/><text class="ax" x="700.0" y="318" text-anchor="middle">100%</text><line class="axis" x1="268" y1="28" x2="268" y2="300"/><text class="ax-title" x="484" y="340" text-anchor="middle">Share of the 236.5 GB/s this machine actually achieves</text></g><text class="lbl" x="252" y="43" text-anchor="end">Streaming copy (read + write)</text><text class="lbl-2" x="252" y="58" text-anchor="end" fill="var(--text-muted)">achieved bandwidth</text><g role="img" tabindex="0" aria-label="Streaming copy (read + write), achieved bandwidth: 236.5 gigabytes per second, 100 per cent of the 236.5 achieved." data-tip="Streaming copy (read + write) &mdash; achieved bandwidth|236.5 GB/s|100% of the 236.5 GB/s achieved"><rect x="268" y="34" width="432.0" height="22" fill="#8b949e" rx="4" style="clip-path:inset(0 0 0 0)"/><rect x="268" y="34" width="6" height="22" fill="#8b949e"/></g><text class="lbl-m" x="712.0" y="49" fill="var(--text-primary)" style="font-weight:600">236.5 GB/s &middot; 100%</text><text class="lbl" x="252" y="99" text-anchor="end">Weight read</text><text class="lbl-2" x="252" y="114" text-anchor="end" fill="var(--text-muted)">vLLM + FlashAttention-2</text><g role="img" tabindex="0" aria-label="Weight read, vLLM + FlashAttention-2: 205.7 gigabytes per second, 87 per cent of the 236.5 achieved." data-tip="Weight read &mdash; vLLM + FlashAttention-2|205.7 GB/s|87% of the 236.5 GB/s achieved"><rect x="268" y="90" width="375.7" height="22" fill="#388bfd" rx="4" style="clip-path:inset(0 0 0 0)"/><rect x="268" y="90" width="6" height="22" fill="#388bfd"/></g><text class="lbl-m" x="655.7" y="105" fill="var(--text-primary)" style="font-weight:600">205.7 GB/s &middot; 87%</text><text class="lbl" x="252" y="155" text-anchor="end">Weight read</text><text class="lbl-2" x="252" y="170" text-anchor="end" fill="var(--text-muted)">HuggingFace + SDPA</text><g role="img" tabindex="0" aria-label="Weight read, HuggingFace + SDPA: 151.5 gigabytes per second, 64 per cent of the 236.5 achieved." data-tip="Weight read &mdash; HuggingFace + SDPA|151.5 GB/s|64% of the 236.5 GB/s achieved"><rect x="268" y="146" width="276.7" height="22" fill="#388bfd" rx="4" style="clip-path:inset(0 0 0 0)"/><rect x="268" y="146" width="6" height="22" fill="#388bfd"/></g><text class="lbl-m" x="556.7" y="161" fill="var(--text-primary)" style="font-weight:600">151.5 GB/s &middot; 64%</text><text class="lbl" x="252" y="211" text-anchor="end">KV read</text><text class="lbl-2" x="252" y="226" text-anchor="end" fill="var(--text-muted)">HuggingFace + SDPA</text><g role="img" tabindex="0" aria-label="KV read, HuggingFace + SDPA: 65.7 gigabytes per second, 28 per cent of the 236.5 achieved." data-tip="KV read &mdash; HuggingFace + SDPA|65.7 GB/s|28% of the 236.5 GB/s achieved"><rect x="268" y="202" width="120.0" height="22" fill="#d29922" rx="4" style="clip-path:inset(0 0 0 0)"/><rect x="268" y="202" width="6" height="22" fill="#d29922"/></g><text class="lbl-m" x="400.0" y="217" fill="var(--text-primary)" style="font-weight:600">65.7 GB/s &middot; 28%</text><text class="lbl" x="252" y="267" text-anchor="end">KV read</text><text class="lbl-2" x="252" y="282" text-anchor="end" fill="var(--text-muted)">vLLM + FlashAttention-2</text><g role="img" tabindex="0" aria-label="KV read, vLLM + FlashAttention-2: 61.1 gigabytes per second, 26 per cent of the 236.5 achieved." data-tip="KV read &mdash; vLLM + FlashAttention-2|61.1 GB/s|26% of the 236.5 GB/s achieved"><rect x="268" y="258" width="111.6" height="22" fill="#d29922" rx="4" style="clip-path:inset(0 0 0 0)"/><rect x="268" y="258" width="6" height="22" fill="#d29922"/></g><text class="lbl-m" x="391.6" y="273" fill="var(--text-primary)" style="font-weight:600">61.1 GB/s &middot; 26%</text><g aria-hidden="true"><path d="M 768 101 H 856 V 269 H 504" fill="none" stroke="var(--text-muted)" stroke-width="1"/><text class="lbl" x="868" y="175" style="font-size:15px">3.4&times;</text><text class="lbl-m" x="868" y="193">205.7 &divide; 61.1</text><text class="lbl-2" x="868" y="210" fill="var(--text-muted)">a KV byte costs</text><text class="lbl-2" x="868" y="224" fill="var(--text-muted)">3.4 weight bytes</text></g></svg></div>
+<div class="vz-legend">
+  <span class="vz-legend-item"><svg class="vz-key" width="16" height="12" aria-hidden="true"><rect x="0" y="1" width="16" height="10" rx="3" fill="#8b949e"/></svg><span><b>Achieved streaming bandwidth</b> &mdash; the reference, 236.5 GB/s</span></span>
+  <span class="vz-legend-item"><svg class="vz-key" width="16" height="12" aria-hidden="true"><rect x="0" y="1" width="16" height="10" rx="3" fill="#388bfd"/></svg><span><b>Weight read</b></span></span>
+  <span class="vz-legend-item"><svg class="vz-key" width="16" height="12" aria-hidden="true"><rect x="0" y="1" width="16" height="10" rx="3" fill="#d29922"/></svg><span><b>KV read</b></span></span>
+</div></div>
+<p class="vz-note">Both frameworks read KV at 26&ndash;28% of achievable bandwidth. Swapping SDPA with
+contiguous KV for FlashAttention-2 with paged KV lifts the <b>weight</b> read from 64% to 87% &mdash; a 34%
+improvement &mdash; and leaves the <b>KV</b> read at a quarter. That is the same result the fitted slopes give
+in the previous figure, read off the bandwidths instead of the fits.
+<b>Reducing KV bytes is therefore worth about 3.4&times; the naive byte-accounting estimate</b>, because the
+bytes removed are the expensive ones &mdash; and moving KV bytes between tiers does nothing for this wall,
+which is an HBM-side property.</p>
+<details class="vz-table"><summary>Show the data table</summary><div class="table-wrapper"><table><caption class='sr-only'>Achieved bandwidth per read stream, as measured and as a share of the achieved streaming figure.</caption><thead><tr><th scope="col">Stream</th><th scope="col">Framework</th><th scope="col">GB/s</th><th scope="col">% of 236.5 achieved</th></tr></thead><tbody><tr><td>Streaming copy</td><td>read + write, 4 GiB buffers</td><td>236.5</td><td>100%</td></tr><tr><td>Weight read</td><td>vLLM + FlashAttention-2</td><td>205.7</td><td>87%</td></tr><tr><td>Weight read</td><td>HuggingFace + SDPA</td><td>151.5</td><td>64%</td></tr><tr><td>KV read</td><td>HuggingFace + SDPA</td><td>65.7</td><td>28%</td></tr><tr><td>KV read</td><td>vLLM + FlashAttention-2</td><td>61.1</td><td>26%</td></tr></tbody></table></div></details>
+<p class="vz-foot">Measured &mdash; DGX Spark GB10, 19 Aug 2026, scripts/bw_wall.py</p>
+</main>
+<script>
+(function(){
+  var tip=document.createElement('div'); tip.id='vz-tip'; tip.setAttribute('role','status');
+  tip.setAttribute('aria-live','polite'); document.body.appendChild(tip);
+  function show(el){
+    var t=el.getAttribute('data-tip'); if(!t) return;
+    var p=t.split('|');
+    tip.innerHTML='<span class="t-h"></span><span class="t-b"></span>';
+    tip.firstChild.textContent=p[0]; tip.lastChild.textContent=p.slice(1).join(' · ');
+    var r=el.getBoundingClientRect();
+    tip.classList.add('on');
+    var tw=tip.offsetWidth, th=tip.offsetHeight;
+    var x=r.left+r.width/2-tw/2, y=r.top-th-10;
+    if(y<4){y=r.bottom+10;}
+    x=Math.max(6,Math.min(x,window.innerWidth-tw-6));
+    tip.style.left=x+'px'; tip.style.top=y+'px';
+  }
+  function hide(){tip.classList.remove('on');}
+  ['mouseover','focusin'].forEach(function(ev){
+    document.addEventListener(ev,function(e){
+      var el=e.target.closest?e.target.closest('[data-tip]'):null; if(el) show(el);
+    },true);
+  });
+  ['mouseout','focusout','scroll'].forEach(function(ev){
+    document.addEventListener(ev,hide,true);
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+})();
+</script>
+</body>
+</html>

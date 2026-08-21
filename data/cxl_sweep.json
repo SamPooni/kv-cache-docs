@@ -1,0 +1,162 @@
+{
+ "32|LRU": {
+  "policy": "lru",
+  "hbm_gib": 32,
+  "hit_rate": 57.814,
+  "cxl_rate": 11.659,
+  "cold_rate": 30.527,
+  "mean_turn_stall_ms": 3013.021
+ },
+ "32|LFU": {
+  "policy": "lfu",
+  "hbm_gib": 32,
+  "hit_rate": 58.264,
+  "cxl_rate": 11.112,
+  "cold_rate": 30.624,
+  "mean_turn_stall_ms": 3022.293
+ },
+ "32|EMA a=0.15": {
+  "policy": "ema",
+  "hbm_gib": 32,
+  "hit_rate": 50.896,
+  "cxl_rate": 15.309,
+  "cold_rate": 33.796,
+  "mean_turn_stall_ms": 3336.736
+ },
+ "32|EMA a=0.01": {
+  "policy": "ema",
+  "hbm_gib": 32,
+  "hit_rate": 57.401,
+  "cxl_rate": 11.149,
+  "cold_rate": 31.449,
+  "mean_turn_stall_ms": 3103.666
+ },
+ "64|LRU": {
+  "policy": "lru",
+  "hbm_gib": 32,
+  "hit_rate": 57.814,
+  "cxl_rate": 17.527,
+  "cold_rate": 24.659,
+  "mean_turn_stall_ms": 2437.481
+ },
+ "64|LFU": {
+  "policy": "lfu",
+  "hbm_gib": 32,
+  "hit_rate": 58.264,
+  "cxl_rate": 18.156,
+  "cold_rate": 23.58,
+  "mean_turn_stall_ms": 2331.528
+ },
+ "64|EMA a=0.15": {
+  "policy": "ema",
+  "hbm_gib": 32,
+  "hit_rate": 50.896,
+  "cxl_rate": 24.501,
+  "cold_rate": 24.603,
+  "mean_turn_stall_ms": 2435.165
+ },
+ "64|EMA a=0.01": {
+  "policy": "ema",
+  "hbm_gib": 32,
+  "hit_rate": 57.401,
+  "cxl_rate": 18.423,
+  "cold_rate": 24.176,
+  "mean_turn_stall_ms": 2390.312
+ },
+ "128|LRU": {
+  "policy": "lru",
+  "hbm_gib": 32,
+  "hit_rate": 57.814,
+  "cxl_rate": 25.082,
+  "cold_rate": 17.103,
+  "mean_turn_stall_ms": 1696.485
+ },
+ "128|LFU": {
+  "policy": "lfu",
+  "hbm_gib": 32,
+  "hit_rate": 58.264,
+  "cxl_rate": 26.219,
+  "cold_rate": 15.517,
+  "mean_turn_stall_ms": 1540.715
+ },
+ "128|EMA a=0.15": {
+  "policy": "ema",
+  "hbm_gib": 32,
+  "hit_rate": 50.896,
+  "cxl_rate": 33.226,
+  "cold_rate": 15.878,
+  "mean_turn_stall_ms": 1579.479
+ },
+ "128|EMA a=0.01": {
+  "policy": "ema",
+  "hbm_gib": 32,
+  "hit_rate": 57.401,
+  "cxl_rate": 26.872,
+  "cold_rate": 15.727,
+  "mean_turn_stall_ms": 1561.697
+ },
+ "256|LRU": {
+  "policy": "lru",
+  "hbm_gib": 32,
+  "hit_rate": 57.814,
+  "cxl_rate": 33.292,
+  "cold_rate": 8.894,
+  "mean_turn_stall_ms": 891.345
+ },
+ "256|LFU": {
+  "policy": "lfu",
+  "hbm_gib": 32,
+  "hit_rate": 58.264,
+  "cxl_rate": 33.871,
+  "cold_rate": 7.865,
+  "mean_turn_stall_ms": 790.216
+ },
+ "256|EMA a=0.15": {
+  "policy": "ema",
+  "hbm_gib": 32,
+  "hit_rate": 50.896,
+  "cxl_rate": 41.201,
+  "cold_rate": 7.903,
+  "mean_turn_stall_ms": 797.321
+ },
+ "256|EMA a=0.01": {
+  "policy": "ema",
+  "hbm_gib": 32,
+  "hit_rate": 57.401,
+  "cxl_rate": 34.651,
+  "cold_rate": 7.947,
+  "mean_turn_stall_ms": 798.704
+ },
+ "512|LRU": {
+  "policy": "lru",
+  "hbm_gib": 32,
+  "hit_rate": 57.814,
+  "cxl_rate": 36.298,
+  "cold_rate": 5.888,
+  "mean_turn_stall_ms": 596.522
+ },
+ "512|LFU": {
+  "policy": "lfu",
+  "hbm_gib": 32,
+  "hit_rate": 58.264,
+  "cxl_rate": 35.848,
+  "cold_rate": 5.888,
+  "mean_turn_stall_ms": 596.319
+ },
+ "512|EMA a=0.15": {
+  "policy": "ema",
+  "hbm_gib": 32,
+  "hit_rate": 50.896,
+  "cxl_rate": 43.217,
+  "cold_rate": 5.888,
+  "mean_turn_stall_ms": 599.65
+ },
+ "512|EMA a=0.01": {
+  "policy": "ema",
+  "hbm_gib": 32,
+  "hit_rate": 57.401,
+  "cxl_rate": 36.711,
+  "cold_rate": 5.888,
+  "mean_turn_stall_ms": 596.709
+ }
+}

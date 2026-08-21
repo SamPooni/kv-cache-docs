@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Figure 11.2 — Modeled System Comparison</title>
+<script src="../../vendor/react.production.min.js"></script>
+<script src="../../vendor/react-dom.production.min.js"></script>
+<script src="../../vendor/babel.min.js"></script>
+<link rel="stylesheet" href="../../css/style.css">
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: var(--font-sans); background: linear-gradient(135deg, var(--bg-primary), var(--bg-tertiary)); min-height: 100vh; color: var(--text-primary); }</style>
+</head>
+<body>
+<div role="note" style="position:sticky;top:0;z-index:9999;background:#f85149;color:#0a0e14;padding:0.85rem 1rem;font-family:'IBM Plex Sans',-apple-system,sans-serif;font-weight:700;font-size:0.95rem;line-height:1.45;border-bottom:3px solid #0a0e14;">
+SUPERSEDED — this figure illustrates a claim withdrawn in v5.0. It is retained only so the retraction remains checkable. Do not cite it. See RETRACTIONS.md and Appendix L (hardware measurements) and Appendix N (simulation) for what replaced it.
+</div>
+
+<div id="root" role="main"></div>
+<script type="text/babel">
+function PerformanceBenchmarks() {
+  const benchmarks = [
+    { metric: 'Memory Capacity', baseline: '192 GB (HBM)', ours: '1.2 TB (HBM+CXL)', improvement: '6×', color: 'var(--accent-green)' },
+    { metric: 'Max Users @ 128K', baseline: '1 user', ours: '16 users', improvement: '16×', color: 'var(--accent-blue)' },
+    { metric: 'HBM Hit Rate', baseline: '72% (LRU)', ours: '97% (EMA+RoPE)', improvement: '+25 pts', color: 'var(--accent-purple)' },
+    { metric: 'Effective Access Latency', baseline: '2,035 ns', ours: '177 ns', improvement: '11.5×', color: 'var(--accent-orange)' },
+    { metric: 'TTFT (128K cache resume)', baseline: '2,619 ms', ours: '168 ms', improvement: '15.6×', color: 'var(--accent-teal)' },
+    { metric: 'CapEx (16 users @ 128K)', baseline: '$160,000', ours: '$103,000', improvement: '−36%', color: 'var(--accent-cyan)' }
+  ];
+  const styles = {
+    container: { maxWidth: '800px', margin: '0 auto', padding: '2rem' },
+    header: { textAlign: 'center', marginBottom: '2rem' },
+    table: { background: 'var(--bg-card)', borderRadius: '16px', overflow: 'hidden' },
+    headerRow: { display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr', background: 'var(--bg-code)', padding: '1rem', fontWeight: 600 },
+    row: (color) => ({ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 1fr', padding: '1rem', borderTop: '1px solid var(--border-primary)', borderLeft: `3px solid ${color}` }),
+    improvement: (color) => ({ fontWeight: 700, color }),
+    hero: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginTop: '2rem' },
+    heroStat: { background: 'linear-gradient(135deg, var(--accent-green), #2d8c3c)', borderRadius: '16px', padding: '1.5rem', textAlign: 'center' },
+    heroVal: { fontSize: '2.5rem', fontWeight: 700, color: '#0a0e14' },
+    heroLabel: { color: 'rgba(10,14,20,0.85)', fontSize: '0.875rem' },
+    note: { marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border-primary)', color: 'var(--text-secondary)', fontSize: '0.75rem', lineHeight: 1.5 }
+  };
+  return (
+    <div style={styles.container}>
+      <p className="sr-only">Figure: a six-row comparison of the baseline system (3×B200 with host-DRAM offload) against the proposed system (1×B200 plus a CXL switch and four intelligent endpoints), both serving 16 users of Llama-2-70B at 128K context and at least 10 tokens per second. Memory capacity rises from 192 GB HBM to 1.2 TB of HBM plus CXL, 6 times; maximum users at 128K context rise from 1 to 16, 16 times; HBM hit rate rises from 72 percent under LRU to 97 percent with EMA and RoPE, up 25 points; effective access latency falls from 2,035 nanoseconds to 177 nanoseconds, 11.5 times faster; time to first token on a 128K cache resume falls from 2,619 milliseconds to 168 milliseconds, 15.6 times faster; and CapEx falls from $160,000 to $103,000, down 36 percent. All values are an analytical model, not measured.</p>
+      <div style={styles.header}>
+        <div style={{display: 'inline-block', padding: '0.25rem 0.75rem', background: 'rgba(63,185,80,0.18)', color: 'var(--accent-green)', fontSize: '0.75rem', fontFamily: 'var(--font-mono)', borderRadius: '20px', marginBottom: '0.5rem'}}>FIGURE 11.2</div>
+        <h1 style={{fontSize: '1.5rem', fontWeight: 700}}>Modeled System Comparison</h1>
+        <p style={{color: 'var(--text-secondary)', fontSize: '0.875rem'}}>Llama-2-70B @ 128K context, ≥10 tok/s per user. Baseline: 3×B200 with host-DRAM offload. Proposed: 1×B200 + CXL switch + 4 intelligent endpoints. Both serve 16 users.</p>
+      </div>
+      <div style={styles.table}>
+        <div style={styles.headerRow}>
+          <div>Metric</div><div>Baseline</div><div>Our System</div><div>Improvement</div>
+        </div>
+        {benchmarks.map((b, i) => (
+          <div key={i} role="img" aria-label={`${b.metric}: baseline ${b.baseline}, our system ${b.ours}, improvement ${b.improvement}`} style={styles.row(b.color)}>
+            <div>{b.metric}</div>
+            <div style={{color: 'var(--text-secondary)'}}>{b.baseline}</div>
+            <div style={{color: 'var(--accent-cyan)', fontWeight: 600}}>{b.ours}</div>
+            <div style={styles.improvement(b.color)}>{b.improvement}</div>
+          </div>
+        ))}
+      </div>
+      <div style={styles.hero}>
+        <div style={styles.heroStat} role="img" aria-label="Memory expansion, 6 times: 192 GB of HBM to 1.2 TB of HBM plus CXL"><div style={styles.heroVal}>6×</div><div style={styles.heroLabel}>Memory Expansion</div></div>
+        <div style={styles.heroStat} role="img" aria-label="User capacity, 16 times: 1 user to 16 users at 128K context"><div style={styles.heroVal}>16×</div><div style={styles.heroLabel}>User Capacity</div></div>
+        <div style={styles.heroStat} role="img" aria-label="CapEx reduction, 36 percent: $160,000 down to $103,000"><div style={styles.heroVal}>36%</div><div style={styles.heroLabel}>CapEx Reduction</div></div>
+      </div>
+      <div style={styles.note}>
+        <strong>Evidence label: analytical model.</strong> No hardware benchmark was run.
+        Derivations — capacity (192 + 1,024) ÷ 192 = 6.3×; users 47 GB KV budget ÷ 43 GB per user = 1 → 16 with a 37 GB hot set (2.31 GB/user);
+        hit rate 72 + 8 + 7 + 6 + 4 = 97 percentage points; effective latency 0.97×100 ns + 0.027×200 ns + 0.003×25 µs = 177 ns vs 0.85×100 ns + 0.15×13 µs = 2,035 ns;
+        TTFT 43 GB ÷ 16.4 GB/s = 2,619 ms vs 43 GB ÷ 256 GB/s = 168 ms; CapEx $160,000 → $103,000 = −35.6%.
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<PerformanceBenchmarks />);
+</script>
+</body>
+</html>

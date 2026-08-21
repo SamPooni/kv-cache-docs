@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../../vendor/fonts.css">
+<link rel="stylesheet" href="../../css/style.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  padding: 32px;
+  line-height: 1.4;
+}
+h1 { font-size: 1.875rem; font-weight: 700; text-align: center; margin-bottom: 8px; }
+.subtitle { color: var(--text-secondary); font-size: 1.125rem; text-align: center; margin-bottom: 32px; }
+.stack { display: flex; flex-direction: column; gap: 32px; }
+
+/* Cards */
+.card { border-radius: 16px; padding: 24px; box-shadow: var(--shadow-lg); }
+.card-title { color: var(--text-primary); font-weight: 700; font-size: 1.5rem; text-align: center; margin-bottom: 16px; }
+.card-subtitle { text-align: center; margin-bottom: 16px; font-family: var(--font-mono); color: var(--text-secondary); }
+
+/* B200 Card */
+.h100 { background: var(--bg-card); border: 1px solid var(--accent-green); }
+.h100-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.h100-stat { background: var(--bg-code); border-radius: 12px; padding: 16px; text-align: center; }
+.h100-stat-label { color: var(--accent-green); font-size: 0.875rem; font-weight: 600; }
+.h100-stat-value { color: var(--text-primary); font-size: 2.25rem; font-weight: 700; margin-top: 8px; }
+.h100-stat-unit { color: var(--text-secondary); font-size: 1.25rem; }
+.h100-footer { margin-top: 16px; background: var(--bg-code); border-radius: 8px; padding: 12px; text-align: center; }
+.h100-footer span { color: var(--text-secondary); font-size: 1.125rem; }
+.h100-footer strong { color: var(--text-primary); font-size: 1.5rem; font-weight: 700; }
+.h100-footer small { color: var(--text-secondary); font-size: 0.875rem; margin-left: 8px; }
+
+/* Problem Card */
+.problem { background: var(--bg-card); border: 1px solid var(--accent-red); }
+.problem-inner { background: var(--bg-code); border-radius: 12px; padding: 16px; text-align: center; }
+.problem-inner p { color: var(--text-secondary); font-size: 1.125rem; }
+.problem-inner strong { color: var(--accent-red); font-size: 1.25rem; display: block; margin-top: 8px; }
+
+/* KV Cache Card */
+.kv { background: var(--bg-card); border: 1px solid var(--accent-cyan); }
+.kv .card-subtitle { color: var(--text-secondary); }
+.kv-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+.kv-box { background: var(--bg-code); border-radius: 12px; padding: 16px; }
+.kv-box-title { color: var(--accent-cyan); font-size: 1.125rem; font-weight: 600; text-align: center; margin-bottom: 12px; }
+.kv-row { display: flex; justify-content: space-around; }
+.kv-item { text-align: center; }
+.kv-item-label { color: var(--text-secondary); font-size: 0.875rem; }
+.kv-item-value { color: var(--text-primary); font-size: 1.875rem; font-weight: 700; }
+
+/* Walls Grid */
+.walls-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+.wall { border-radius: 16px; padding: 24px; box-shadow: var(--shadow-lg); }
+.wall-title { color: var(--text-primary); font-weight: 700; font-size: 1.25rem; text-align: center; margin-bottom: 16px; }
+.wall-calc { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 16px; }
+.wall-calc-item { text-align: center; }
+.wall-calc-label { font-size: 0.875rem; }
+.wall-calc-value { color: var(--text-primary); font-size: 1.875rem; font-weight: 700; }
+.wall-calc-op { font-size: 2.25rem; font-weight: 700; }
+.wall-result { border-radius: 12px; padding: 16px; text-align: center; }
+.wall-result-label { font-size: 1rem; }
+.wall-result-value { color: var(--text-primary); font-size: 3rem; font-weight: 700; margin-top: 8px; }
+
+.capacity { background: var(--bg-card); border: 1px solid var(--accent-orange); }
+.capacity .wall-calc-label { color: var(--text-secondary); }
+.capacity .wall-calc-op { color: var(--accent-orange); }
+.capacity .wall-result { background: var(--bg-code); }
+.capacity .wall-result-label { color: var(--text-secondary); }
+
+.bandwidth { background: var(--bg-card); border: 1px solid var(--accent-purple); }
+.bandwidth .wall-calc-label { color: var(--text-secondary); }
+.bandwidth .wall-calc-op { color: var(--accent-purple); }
+.bandwidth .wall-result { background: var(--bg-code); }
+.bandwidth .wall-result-label { color: var(--text-secondary); }
+
+/* Latency Card */
+.latency { background: var(--bg-card); border: 1px solid var(--border-primary); }
+.latency-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+.latency-box { border-radius: 12px; padding: 20px; text-align: center; }
+.latency-box.good { background: var(--bg-code); border: 1px solid var(--accent-green); }
+.latency-box.bad { background: var(--bg-code); border: 1px solid var(--accent-red); }
+.latency-label { font-size: 1.125rem; font-weight: 600; }
+.latency-box.good .latency-label { color: var(--accent-green); }
+.latency-box.bad .latency-label { color: var(--accent-red); }
+.latency-value { color: var(--text-primary); font-size: 2.25rem; font-weight: 700; margin-top: 8px; }
+.latency-calc { font-size: 0.875rem; margin-top: 4px; }
+.latency-box.good .latency-calc { color: var(--text-secondary); }
+.latency-box.bad .latency-calc { color: var(--text-secondary); }
+.latency-footer { margin-top: 16px; background: var(--bg-code); border-radius: 8px; padding: 12px; text-align: center; }
+.latency-footer span { color: var(--text-secondary); font-size: 1.125rem; }
+.latency-footer strong { color: var(--accent-red); font-size: 1.5rem; font-weight: 700; }
+
+/* Bottom Line */
+.bottom { background: var(--bg-card); border: 4px solid var(--border-highlight); }
+.bottom-label { color: var(--text-secondary); font-size: 1.25rem; text-align: center; margin-bottom: 8px; }
+.bottom-title { color: var(--text-primary); font-size: 1.5rem; font-weight: 700; text-align: center; }
+.bottom-desc { color: var(--text-primary); font-size: 1.125rem; text-align: center; margin-top: 12px; }
+
+/* References */
+.refs { text-align: center; color: var(--text-secondary); font-size: 0.875rem; margin-top: 16px; }
+.refs strong { font-weight: 600; }
+</style>
+</head>
+<body role="main">
+<div role="note" style="position:sticky;top:0;z-index:9999;background:#f85149;color:#0a0e14;padding:0.85rem 1rem;font-family:'IBM Plex Sans',-apple-system,sans-serif;font-weight:700;font-size:0.95rem;line-height:1.45;border-bottom:3px solid #0a0e14;">
+SUPERSEDED — this figure illustrates a claim withdrawn in v5.0. It is retained only so the retraction remains checkable. Do not cite it. See RETRACTIONS.md and Appendix L (hardware measurements) and Appendix N (simulation) for what replaced it.
+</div>
+
+
+<p class="sr-only">Figure: the bandwidth-compute gap that starves modern AI infrastructure, in five stacked panels. An NVIDIA B200 supplies 2,250 TFLOPS of dense BF16 compute, 8 TB/s of HBM3e bandwidth and 192 GB of capacity, which means it needs an arithmetic intensity of 281 FLOPs per byte to stay busy — and transformer attention, dominated by KV-cache reads, delivers far fewer. Llama-70B costs 320 KiB per token, so a 128K context is 43 GB at batch 1 and 1.38 TB at batch 32, while a 4K context is 1.3 GB at batch 1 and 43 GB at batch 32. That opens two walls: a capacity wall of 1,376 GB divided by 192 GB, or 7.2×, and a bandwidth wall of 8,000 GB/s of HBM against 51 GB/s of link-level PCIe Gen5 by 16, or 157×. Reading one user's 43 GB cache therefore takes 5.4 milliseconds from HBM but 843 milliseconds over PCIe at that link-level rate, idling the GPU for 1,897 × 10 to the 12th wasted FLOPs. A closing note distinguishes the two PCIe figures used in this package: 51 GB per second is the link-level uncontended rate, a vendor specification, while 16.4 GB per second is the contended end-to-end rate the canonical time-to-first-token derivation assumes for the host-DRAM offload path, an analytical model. The second is about 32 percent of the first, and that ratio is the assumed contention factor. The point is that the GPU does not lack compute, it lacks data. All values are an analytical model, not measured.</p>
+
+<h1>The Bandwidth-Compute Gap</h1>
+<p class="subtitle">Why Modern AI Infrastructure Starves for Data</p>
+
+<div class="stack">
+
+  <!-- B200 Specs -->
+  <div class="card h100">
+    <div class="card-title">NVIDIA B200</div>
+    <div class="h100-grid">
+      <div class="h100-stat">
+        <div class="h100-stat-label">Compute (BF16/FP16 Dense)</div>
+        <div class="h100-stat-value">2,250</div>
+        <div class="h100-stat-unit">TFLOPS</div>
+      </div>
+      <div class="h100-stat">
+        <div class="h100-stat-label">HBM3e Bandwidth</div>
+        <div class="h100-stat-value">8</div>
+        <div class="h100-stat-unit">TB/s</div>
+      </div>
+      <div class="h100-stat">
+        <div class="h100-stat-label">HBM Capacity</div>
+        <div class="h100-stat-value">192</div>
+        <div class="h100-stat-unit">GB</div>
+      </div>
+    </div>
+    <div class="h100-footer">
+      <span>Arithmetic Intensity Required: </span>
+      <strong>281 FLOPs/byte</strong>
+      <small>(2,250,000 GFLOP/s ÷ 8,000 GB/s) — 4,500 TFLOPS is the 2:4-sparsity figure, not dense</small>
+    </div>
+  </div>
+
+  <!-- The Problem -->
+  <div class="card problem">
+    <div class="card-title">THE PROBLEM: Attention is Memory-Bound</div>
+    <div class="problem-inner">
+      <p>Transformer attention: dominated by KV-cache reads</p>
+      <strong>Few FLOPs per byte loaded → GPU waits for data</strong>
+    </div>
+  </div>
+
+  <!-- Llama-70B KV-Cache -->
+  <div class="card kv">
+    <div class="card-title">Llama-70B KV-Cache Size</div>
+    <div class="card-subtitle">2 (K,V) × 80 layers × 8 KV-heads × 128 dim × 2 B (BF16) = 320 KiB/token × seq_len × batch</div>
+    <div class="kv-grid">
+      <div class="kv-box">
+        <div class="kv-box-title">128K Context</div>
+        <div class="kv-row">
+          <div class="kv-item">
+            <div class="kv-item-label">Batch 1</div>
+            <div class="kv-item-value">43 GB</div>
+          </div>
+          <div class="kv-item">
+            <div class="kv-item-label">Batch 32</div>
+            <div class="kv-item-value">1.38 TB</div>
+          </div>
+        </div>
+      </div>
+      <div class="kv-box">
+        <div class="kv-box-title">4K Context</div>
+        <div class="kv-row">
+          <div class="kv-item">
+            <div class="kv-item-label">Batch 1</div>
+            <div class="kv-item-value">1.3 GB</div>
+          </div>
+          <div class="kv-item">
+            <div class="kv-item-label">Batch 32</div>
+            <div class="kv-item-value">43 GB</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- The Two Walls -->
+  <div class="walls-grid">
+    <div class="wall capacity">
+      <div class="wall-title">CAPACITY WALL</div>
+      <div class="wall-calc">
+        <div class="wall-calc-item">
+          <div class="wall-calc-label">KV-Cache (Batch 32 @128K)</div>
+          <div class="wall-calc-value">1,376 GB</div>
+        </div>
+        <div class="wall-calc-op">÷</div>
+        <div class="wall-calc-item">
+          <div class="wall-calc-label">B200 HBM3e Capacity</div>
+          <div class="wall-calc-value">192 GB</div>
+        </div>
+      </div>
+      <div class="wall-result">
+        <div class="wall-result-label">Working set exceeds on-chip memory by</div>
+        <div class="wall-result-value">7.2×</div>
+        <div class="wall-result-label" style="margin-top:8px;font-size:0.8rem">32 × 43 GB = 1,376 GB. This raw ratio is <em>not</em> the 16× user-capacity headline, which is derived from the 37 GB HBM hot set (37 ÷ 16 users = 2.31 GB/user).</div>
+      </div>
+    </div>
+    <div class="wall bandwidth">
+      <div class="wall-title">BANDWIDTH WALL</div>
+      <div class="wall-calc">
+        <div class="wall-calc-item">
+          <div class="wall-calc-label">B200 HBM3e Bandwidth</div>
+          <div class="wall-calc-value">8,000 GB/s</div>
+        </div>
+        <div class="wall-calc-op">÷</div>
+        <div class="wall-calc-item">
+          <div class="wall-calc-label">PCIe Gen5 ×16 link-level</div>
+          <div class="wall-calc-value">51 GB/s</div>
+        </div>
+      </div>
+      <div class="wall-result">
+        <div class="wall-result-label">Off-chip streaming-bandwidth penalty</div>
+        <div class="wall-result-value">157×</div>
+        <div class="wall-result-label" style="margin-top:8px;font-size:0.8rem">A bulk-bandwidth ratio. Distinct from the 65× access-latency headline (13.0 µs PCIe DMA ÷ 200 ns CXL.mem).</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Latency Impact -->
+  <div class="card latency">
+    <div class="card-title">LATENCY IMPACT: 43 GB KV-Cache Read (one user @128K)</div>
+    <div class="latency-grid">
+      <div class="latency-box good" role="img" aria-label="From HBM: 5.4 milliseconds, that is 43 GB divided by 8,000 GB per second">
+        <div class="latency-label">From HBM</div>
+        <div class="latency-value">5.4 ms</div>
+        <div class="latency-calc">43 GB ÷ 8,000 GB/s</div>
+      </div>
+      <div class="latency-box bad" role="img" aria-label="From PCIe at the link-level rate: 843 milliseconds, that is 43 GB divided by 51 GB per second. On the contended offload path at 16.4 GB per second the same read takes 2,619 milliseconds.">
+        <div class="latency-label">From PCIe</div>
+        <div class="latency-value">843 ms</div>
+        <div class="latency-calc">43 GB ÷ 51 GB/s (link-level, uncontended)</div>
+      </div>
+    </div>
+    <div class="latency-footer">
+      <span>GPU idle during PCIe swap: </span>
+      <strong>843 ms × 2,250 TFLOPS = 1,897 × 10¹² wasted FLOPs</strong>
+    </div>
+    <div class="callout note" style="margin-top:16px">
+      <div class="callout-title">Two PCIe numbers, two different things</div>
+      <p class="text-secondary" style="font-size:0.95rem">This page uses <strong>51 GB/s</strong>. The canonical
+      time-to-first-token derivation uses <strong>16.4 GB/s</strong>. They are not in conflict — they measure
+      different things, and both appear in this package on purpose:</p>
+      <ul class="text-secondary" style="font-size:0.95rem;margin:10px 0 10px 20px">
+        <li><strong>51 GB/s — link-level, uncontended</strong> <span class="text-muted">(Vendor specification)</span>.
+        What a PCIe Gen5 ×16 link delivers to a single clean bulk streaming transfer. The raw signalling rate is
+        32 GT/s × 16 lanes ≈ 63 GB/s per direction; ~51 GB/s is what survives 128b/130b encoding, TLP/DLLP headers
+        and flow-control credit turnaround when nothing else is using the link. This is the figure that makes the
+        157× bandwidth-wall ratio above an <em>optimistic</em> bound: the real gap is wider.</li>
+        <li><strong>16.4 GB/s — contended, end-to-end</strong> <span class="text-muted">(Analytical model)</span>.
+        What the modeled host-DRAM offload path is assumed to <em>sustain</em> in service, once protocol overhead
+        is charged and the link is shared with weight, activation and NIC traffic on a common root complex.
+        This is the baseline in the 15.6× TTFT derivation: 43 GB ÷ 16.4 GB/s = 2,619 ms.</li>
+      </ul>
+      <p class="text-secondary" style="font-size:0.95rem">The ratio between them is the assumed contention factor:
+      <span class="mono">16.4 ÷ 51 = 0.32</span> — the model gives the offload path <strong>~32% of link-level
+      bandwidth</strong>. That factor is an assumption, not a measurement, and it is the single number to argue with
+      if you think the baseline is unfair: a less contended host would raise 16.4 GB/s toward 51 GB/s and shrink the
+      TTFT speedup proportionally. See
+      <a href="../../appendix/k-methodology.html">Appendix K — Methodology</a> for the full TTFT derivation and
+      <a href="../../chapters/ch11-performance.html">Chapter 11</a> for its sensitivity to this assumption.</p>
+    </div>
+  </div>
+
+  <!-- Bottom Line -->
+  <div class="card bottom">
+    <div class="bottom-label">THE BOTTLENECK</div>
+    <div class="bottom-title">The GPU doesn't lack compute. It lacks data.</div>
+    <div class="bottom-desc">The capacity gap (7.2× at batch 32) forces off-chip storage. The bandwidth gap (157×) makes naive off-chip streaming catastrophic.</div>
+  </div>
+
+  <!-- References -->
+  <div class="refs">
+    <strong>Sources</strong><br>
+    B200 specs: NVIDIA Datasheet (vendor specification) | Llama-70B: NVIDIA NeMo / Meta<br>
+    PCIe Gen5 ×16 link-level 51 GB/s: PCI-SIG Base Specification 5.0 signalling rate less encoding and protocol overhead (vendor specification).<br>
+    Contended offload rate 16.4 GB/s and the 15.6× TTFT result: <a href="../../appendix/k-methodology.html">Appendix K — Methodology</a> (analytical model).<br>
+    <em>All derived quantities on this page are an analytical model, not measured results.</em>
+  </div>
+
+</div>
+</body>
+</html>

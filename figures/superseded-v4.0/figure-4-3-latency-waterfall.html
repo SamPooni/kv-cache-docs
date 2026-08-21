@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Figure 4.3 — Latency Waterfall</title>
+<script src="../../vendor/react.production.min.js"></script>
+<script src="../../vendor/react-dom.production.min.js"></script>
+<script src="../../vendor/babel.min.js"></script>
+<link rel="stylesheet" href="../../vendor/fonts.css">
+<link rel="stylesheet" href="../../css/style.css">
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: var(--font-sans); background: var(--bg-primary); min-height: 100vh; color: var(--text-primary); }</style>
+</head>
+<body>
+<div role="note" style="position:sticky;top:0;z-index:9999;background:#f85149;color:#0a0e14;padding:0.85rem 1rem;font-family:'IBM Plex Sans',-apple-system,sans-serif;font-weight:700;font-size:0.95rem;line-height:1.45;border-bottom:3px solid #0a0e14;">
+SUPERSEDED — this figure illustrates a claim withdrawn in v5.0. It is retained only so the retraction remains checkable. Do not cite it. See RETRACTIONS.md and Appendix L (hardware measurements) and Appendix N (simulation) for what replaced it.
+</div>
+
+<div id="root" role="main"></div>
+<script type="text/babel">
+function LatencyWaterfall() {
+  const cxlSteps = [
+    { name: 'GPU/host request issue', time: 15, color: 'var(--accent-green)' },
+    { name: 'PCIe Gen5 x16 PHY', time: 20, color: 'var(--accent-purple)' },
+    { name: 'CXL switch traversal', time: 25, color: 'var(--accent-blue)' },
+    { name: 'Endpoint CXL controller decode', time: 40, color: 'var(--accent-blue)' },
+    { name: 'DDR5-5600 array access', time: 80, color: 'var(--accent-green)' },
+    { name: 'Return path', time: 20, color: 'var(--accent-purple)' }
+  ];
+  const pcieSteps = [
+    { name: 'Driver call + doorbell', time: 4000, color: 'var(--accent-red)' },
+    { name: 'DMA descriptor fetch/setup', time: 2500, color: 'var(--accent-red)' },
+    { name: 'Software TLB + pinning management', time: 1500, color: 'var(--accent-red)' },
+    { name: 'PCIe Gen5 round trip', time: 700, color: 'var(--accent-purple)' },
+    { name: 'Host DRAM access', time: 100, color: 'var(--accent-blue)' },
+    { name: '4 KiB payload @ 32 GB/s', time: 200, color: 'var(--accent-blue)' },
+    { name: 'Completion interrupt + resync', time: 4000, color: 'var(--accent-red)' }
+  ];
+  const cxlTotal = cxlSteps.reduce((a, b) => a + b.time, 0);   // 200 ns
+  const pcieTotal = pcieSteps.reduce((a, b) => a + b.time, 0); // 13,000 ns = 13.00 us
+  const ratio = (pcieTotal / cxlTotal).toFixed(0);             // 65
+  const fmt = (ns) => ns >= 1000 ? (ns / 1000).toFixed(2) + ' µs' : ns + ' ns';
+  /* Step labels are wider than their bars and deliberately overflow onto the card,
+     so the bar cannot carry dark text. The fill is dropped to a low-alpha accent
+     tint over the dark card with a solid accent rule (drawn as an inset shadow so
+     it adds no width), and the label stays light. */
+  const tints = {
+    'var(--accent-green)': 'rgba(63, 185, 80, 0.22)',
+    'var(--accent-purple)': 'rgba(163, 113, 247, 0.22)',
+    'var(--accent-blue)': 'rgba(56, 139, 253, 0.22)',
+    'var(--accent-red)': 'rgba(248, 81, 73, 0.22)'
+  };
+  const styles = {
+    container: { maxWidth: '900px', margin: '0 auto', padding: '2rem' },
+    header: { textAlign: 'center', marginBottom: '2rem' },
+    grid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' },
+    card: (good) => ({ background: 'var(--bg-card)', borderRadius: '16px', padding: '1.5rem', border: `2px solid ${good ? 'var(--accent-green)' : 'var(--accent-red)'}` }),
+    title: (color) => ({ fontSize: '1.1rem', fontWeight: 700, color, marginBottom: '1rem', display: 'flex', justifyContent: 'space-between' }),
+    bar: (pct, color) => ({ height: 24, background: tints[color] || color, color: 'var(--text-primary)', boxShadow: `inset 0 0 0 1px ${color}`, borderRadius: 4, marginBottom: 4, width: `${Math.max(pct, 5)}%`, display: 'flex', alignItems: 'center', paddingLeft: 8, fontSize: '0.7rem', whiteSpace: 'nowrap' }),
+    legend: { fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.5rem' },
+    compare: { marginTop: '2rem', background: 'var(--bg-code)', borderRadius: '12px', padding: '1.5rem', textAlign: 'center' },
+    big: { fontSize: '3rem', fontWeight: 700, color: 'var(--accent-green)' }
+  };
+  return (
+    <div style={styles.container}>
+      <p className="sr-only">Figure 4.3: a latency waterfall comparing the CXL.mem path against the PCIe DMA path for one 4 KiB access, each broken into its component steps as proportional bars. The CXL.mem path totals 200 nanoseconds — 15 ns request issue, 20 ns PCIe Gen5 x16 PHY, 25 ns switch traversal, 40 ns endpoint controller decode, 80 ns DDR5-5600 array access and 20 ns return path. The PCIe DMA path totals 13.00 microseconds — 4.00 µs driver call and doorbell, 2.50 µs descriptor fetch, 1.50 µs TLB and pinning, 0.70 µs PCIe round trip, 0.10 µs host DRAM access, 0.20 µs payload transfer and 4.00 µs completion interrupt. The point is the 65× ratio, 13,000 ns divided by 200 ns, and that most of the PCIe cost is software overhead the load/store path never pays. All values are an analytical model, not measured.</p>
+      <div style={styles.header}>
+        <div style={{display: 'inline-block', padding: '0.25rem 0.75rem', background: 'rgba(59,130,246,0.2)', color: 'var(--accent-cyan)', fontSize: '0.75rem', fontFamily: 'var(--font-mono)', borderRadius: '20px', marginBottom: '0.5rem'}}>FIGURE 4.3</div>
+        <h1 style={{fontSize: '1.5rem', fontWeight: 700}}>Latency Waterfall: CXL vs PCIe</h1>
+      </div>
+      <div style={styles.grid}>
+        <div style={styles.card(true)}>
+          <div style={styles.title('var(--accent-green)')}><span>CXL.mem Path</span><span>{cxlTotal} ns</span></div>
+          {cxlSteps.map((s, i) => <div key={i} style={styles.bar((s.time / cxlTotal) * 100, s.color)} role="img" aria-label={`${s.name}, ${s.time} nanoseconds of the 200 nanosecond CXL.mem path`}>{s.name}: {s.time} ns</div>)}
+        </div>
+        <div style={styles.card(false)}>
+          <div style={styles.title('var(--accent-red)')}><span>PCIe DMA Path</span><span>{(pcieTotal/1000).toFixed(2)} µs</span></div>
+          {pcieSteps.map((s, i) => <div key={i} style={styles.bar((s.time / pcieTotal) * 100, s.color)} role="img" aria-label={`${s.name}, ${fmt(s.time)} of the 13.00 microsecond PCIe DMA path`}>{s.name}: {fmt(s.time)}</div>)}
+        </div>
+      </div>
+      <div style={styles.compare}>
+        <div style={styles.big}>{ratio}× faster</div>
+        <div style={{color: 'var(--text-secondary)'}}>13,000 ns ÷ 200 ns = 65×. CXL.mem is a load/store path; the PCIe baseline is driver-mediated DMA.</div>
+        <div style={{color: 'var(--text-secondary)', fontSize: '0.8rem', marginTop: '0.75rem', lineHeight: 1.6}}>
+          Scope: same boundary (kernel issue → data available) and the same 4 KiB payload on both paths.
+          Component tables sum exactly — 15+20+25+40+80+20 = 200 ns and 4.00+2.50+1.50+0.70+0.10+0.20+4.00 = 13.00 µs.
+          <br /><em>Analytical model — no hardware benchmark was run.</em>
+        </div>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<LatencyWaterfall />);
+</script>
+</body>
+</html>

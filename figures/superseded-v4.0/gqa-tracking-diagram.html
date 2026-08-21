@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GQA Per-Head Tracking</title>
+<link rel="stylesheet" href="../../css/style.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
+  min-height: 100vh;
+  color: var(--text-primary);
+  padding: 2rem;
+}
+.container { max-width: 1200px; margin: 0 auto; padding: 0; }
+h1 {
+  text-align: center;
+  font-size: 2.2rem;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+.subtitle {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 1.15rem;
+  margin-bottom: 2rem;
+}
+.section-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 2rem 0 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--border-primary);
+}
+.gqa-mapping {
+  background: var(--bg-card);
+  border-radius: 16px;
+  padding: 1.5rem;
+  border: 2px solid var(--border-primary);
+  margin-bottom: 1.5rem;
+}
+.mapping-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+.mapping-row:last-child { margin-bottom: 0; }
+.q-group {
+  display: flex;
+  gap: 4px;
+}
+.q-head {
+  width: 32px;
+  height: 32px;
+  background: var(--accent-cyan);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--bg-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.arrow-map {
+  font-size: 1.5rem;
+  color: var(--text-secondary);
+}
+.kv-head-box {
+  background: linear-gradient(135deg, var(--accent-green) 50%, var(--accent-purple) 50%);
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  color: var(--bg-primary);
+  font-weight: 700;
+  font-size: 1rem;
+}
+.track-indicator {
+  background: rgba(240, 194, 57, 0.12);
+  border: 2px dashed var(--accent-yellow);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  color: var(--accent-yellow);
+  font-weight: 600;
+}
+.layers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.layer-card {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 1.25rem;
+  border: 2px solid var(--border-primary);
+}
+.layer-header {
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+}
+.kv-heads-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.kv-mini {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, var(--accent-green) 50%, var(--accent-purple) 50%);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--bg-primary);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.queue-detail {
+  background: var(--bg-card);
+  border-radius: 16px;
+  padding: 1.5rem;
+  border: 2px solid var(--border-primary);
+  margin-bottom: 1.5rem;
+}
+.queue-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+.queue-label {
+  background: var(--bg-code);
+  color: var(--text-primary);
+  border: 1px solid var(--border-primary);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+.lru-visual {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+.lru-entry {
+  flex-shrink: 0;
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-primary);
+  border-radius: 10px;
+  padding: 0.75rem;
+  min-width: 110px;
+  text-align: center;
+}
+.lru-entry.hot {
+  border-color: var(--accent-red);
+  background: rgba(248, 81, 73, 0.12);
+}
+.lru-entry.warm {
+  border-color: var(--accent-yellow);
+  background: rgba(240, 194, 57, 0.12);
+}
+.lru-entry.cold {
+  border-color: var(--text-muted);
+  background: var(--bg-code);
+}
+.entry-pos {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+.entry-field {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 2px 0;
+}
+.entry-field span {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.lru-arrow {
+  font-size: 1.3rem;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+.evict-zone {
+  background: rgba(248, 81, 73, 0.12);
+  border: 2px dashed var(--accent-red);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  text-align: center;
+  color: var(--accent-red);
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.summary-box {
+  background: rgba(88, 166, 255, 0.10);
+  border: 2px solid var(--accent-cyan);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-top: 1.5rem;
+}
+.summary-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin-bottom: 0.75rem;
+  color: var(--accent-cyan);
+}
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+.summary-item {
+  font-size: 1.05rem;
+}
+.summary-item strong {
+  color: var(--accent-cyan);
+}
+.total-calc {
+  text-align: center;
+  font-size: 1.2rem;
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--bg-code);
+  border-radius: 8px;
+  font-family: var(--font-mono);
+}
+</style>
+</head>
+<body>
+<div role="note" style="position:sticky;top:0;z-index:9999;background:#f85149;color:#0a0e14;padding:0.85rem 1rem;font-family:'IBM Plex Sans',-apple-system,sans-serif;font-weight:700;font-size:0.95rem;line-height:1.45;border-bottom:3px solid #0a0e14;">
+SUPERSEDED — this figure illustrates a claim withdrawn in v5.0. It is retained only so the retraction remains checkable. Do not cite it. See RETRACTIONS.md and Appendix L (hardware measurements) and Appendix N (simulation) for what replaced it.
+</div>
+
+<div class="container" role="main">
+  <p class="sr-only">Figure: per-head tracking with GQA on Llama-70B, where 64 query heads grouped 8 to 1 give 8 KV heads, and 8 KV heads across 80 layers gives 640 independent LRU queues. Query heads Q0 to Q7 map to KV-head 0 and LRU queue [layer, 0]; Q8 to Q15 map to KV-head 1 and queue [layer, 1]; and so on to Q56 to Q63 mapping to KV-head 7 and queue [layer, 7]. Each queue orders its entries hot to cold — for example queue [layer 42, KV-head 3] holds position 127891 with 847 accesses and attention 0.92, position 0 with 512 accesses and 0.88, position 1024 with 234 accesses and 0.45, position 89012 with 89 accesses and 0.31, and position 45678 with 12 accesses and 0.08, which is the eviction candidate. Per-entry metadata is 8 bytes: position_id u32 4 bytes, access_count u16 2 bytes, attention_score fp16 2 bytes. So 640 queues x 131,072 positions x 8 bytes = 671,088,640 B = 640 MiB, or 671 MB decimal, which is about 1.5 percent of the 43 GB per-user KV cache and sits in the 10 GB pinned tier-0 HBM region. All values are an analytical model, not measured.</p>
+  <h1>Per-Head Tracking with GQA</h1>
+  <p class="subtitle">Llama-70B: 64 Query Heads → 8 KV-Heads × 80 Layers = 640 LRU Queues</p>
+
+  <div class="section-title">1. GQA Grouping Defines Tracking Unit</div>
+  <div class="gqa-mapping">
+    <div class="mapping-row">
+      <div class="q-group" role="img" aria-label="Query heads Q0 through Q7">
+        <div class="q-head">Q0</div>
+        <div class="q-head">Q1</div>
+        <div class="q-head">Q2</div>
+        <div class="q-head">Q3</div>
+        <div class="q-head">Q4</div>
+        <div class="q-head">Q5</div>
+        <div class="q-head">Q6</div>
+        <div class="q-head">Q7</div>
+      </div>
+      <div class="arrow-map" aria-hidden="true">→</div>
+      <div class="kv-head-box">KV-Head 0</div>
+      <div class="arrow-map" aria-hidden="true">→</div>
+      <div class="track-indicator">LRU Queue [layer, 0]</div>
+    </div>
+    <div class="mapping-row">
+      <div class="q-group" role="img" aria-label="Query heads Q8 through Q15">
+        <div class="q-head">Q8</div>
+        <div class="q-head">Q9</div>
+        <div class="q-head">Q10</div>
+        <div class="q-head">Q11</div>
+        <div class="q-head">Q12</div>
+        <div class="q-head">Q13</div>
+        <div class="q-head">Q14</div>
+        <div class="q-head">Q15</div>
+      </div>
+      <div class="arrow-map" aria-hidden="true">→</div>
+      <div class="kv-head-box">KV-Head 1</div>
+      <div class="arrow-map" aria-hidden="true">→</div>
+      <div class="track-indicator">LRU Queue [layer, 1]</div>
+    </div>
+    <div aria-hidden="true" style="text-align:center;color:var(--text-secondary);font-size:1.1rem;margin:0.5rem 0">⋮</div>
+    <div class="mapping-row">
+      <div class="q-group" role="img" aria-label="Query heads Q56 through Q63">
+        <div class="q-head">Q56</div>
+        <div class="q-head">Q57</div>
+        <div class="q-head">Q58</div>
+        <div class="q-head">Q59</div>
+        <div class="q-head">Q60</div>
+        <div class="q-head">Q61</div>
+        <div class="q-head">Q62</div>
+        <div class="q-head">Q63</div>
+      </div>
+      <div class="arrow-map" aria-hidden="true">→</div>
+      <div class="kv-head-box">KV-Head 7</div>
+      <div class="arrow-map" aria-hidden="true">→</div>
+      <div class="track-indicator">LRU Queue [layer, 7]</div>
+    </div>
+  </div>
+
+  <div class="section-title">2. 640 Independent LRU Queues</div>
+  <div class="layers-grid">
+    <div class="layer-card">
+      <div class="layer-header">Layer 0</div>
+      <div class="kv-heads-row" role="img" aria-label="Layer 0: KV heads 0 through 7, each with its own LRU queue">
+        <div class="kv-mini">0</div>
+        <div class="kv-mini">1</div>
+        <div class="kv-mini">2</div>
+        <div class="kv-mini">3</div>
+        <div class="kv-mini">4</div>
+        <div class="kv-mini">5</div>
+        <div class="kv-mini">6</div>
+        <div class="kv-mini">7</div>
+      </div>
+    </div>
+    <div class="layer-card">
+      <div class="layer-header">Layer 1</div>
+      <div class="kv-heads-row" role="img" aria-label="Layer 1: KV heads 0 through 7, each with its own LRU queue">
+        <div class="kv-mini">0</div>
+        <div class="kv-mini">1</div>
+        <div class="kv-mini">2</div>
+        <div class="kv-mini">3</div>
+        <div class="kv-mini">4</div>
+        <div class="kv-mini">5</div>
+        <div class="kv-mini">6</div>
+        <div class="kv-mini">7</div>
+      </div>
+    </div>
+    <div class="layer-card">
+      <div class="layer-header">Layer 2 ... 79</div>
+      <div class="kv-heads-row" role="img" aria-label="Layers 2 to 79: KV heads 0 through 7, each with its own LRU queue">
+        <div class="kv-mini">0</div>
+        <div class="kv-mini">1</div>
+        <div class="kv-mini">2</div>
+        <div class="kv-mini">3</div>
+        <div class="kv-mini">4</div>
+        <div class="kv-mini">5</div>
+        <div class="kv-mini">6</div>
+        <div class="kv-mini">7</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title">3. What Each Queue Tracks</div>
+  <div class="queue-detail">
+    <div class="queue-header">
+      <div class="queue-label">Queue [Layer 42, KV-Head 3]</div>
+      <span style="color:var(--text-secondary);font-size:1rem"><span aria-hidden="true">←</span> One of 640 queues</span>
+    </div>
+    <div class="lru-visual">
+      <div class="lru-entry hot" role="img" aria-label="LRU entry, position 127891, access count 847, attention 0.92, hottest, most recently used">
+        <div class="entry-pos">pos: 127891</div>
+        <div class="entry-field">access: <span>847</span></div>
+        <div class="entry-field">attn: <span>0.92</span></div>
+      </div>
+      <div class="lru-arrow" aria-hidden="true">→</div>
+      <div class="lru-entry hot" role="img" aria-label="LRU entry, position 0, access count 512, attention 0.88, hot">
+        <div class="entry-pos">pos: 0</div>
+        <div class="entry-field">access: <span>512</span></div>
+        <div class="entry-field">attn: <span>0.88</span></div>
+      </div>
+      <div class="lru-arrow" aria-hidden="true">→</div>
+      <div class="lru-entry warm" role="img" aria-label="LRU entry, position 1024, access count 234, attention 0.45, warm">
+        <div class="entry-pos">pos: 1024</div>
+        <div class="entry-field">access: <span>234</span></div>
+        <div class="entry-field">attn: <span>0.45</span></div>
+      </div>
+      <div class="lru-arrow" aria-hidden="true">→</div>
+      <div class="lru-entry warm" role="img" aria-label="LRU entry, position 89012, access count 89, attention 0.31, warm">
+        <div class="entry-pos">pos: 89012</div>
+        <div class="entry-field">access: <span>89</span></div>
+        <div class="entry-field">attn: <span>0.31</span></div>
+      </div>
+      <div class="lru-arrow" aria-hidden="true">→</div>
+      <div class="lru-entry cold" role="img" aria-label="LRU entry, position 45678, access count 12, attention 0.08, coldest, next to be evicted">
+        <div class="entry-pos">pos: 45678</div>
+        <div class="entry-field">access: <span>12</span></div>
+        <div class="entry-field">attn: <span>0.08</span></div>
+      </div>
+      <div class="lru-arrow" aria-hidden="true">→</div>
+      <div class="evict-zone">EVICT<br>CANDIDATES</div>
+    </div>
+  </div>
+
+  <div class="summary-box">
+    <div class="summary-title">Per-Entry Metadata (8 bytes)</div>
+    <div class="summary-grid">
+      <div class="summary-item"><strong>position_id</strong> — u32 (4B)</div>
+      <div class="summary-item"><strong>access_count</strong> — u16 (2B)</div>
+      <div class="summary-item"><strong>attention_score</strong> — fp16 (2B)</div>
+    </div>
+    <div class="total-calc">
+      640 queues × 131,072 positions × 8 bytes = 671,088,640 B = <strong>640 MiB</strong>
+      (671 MB decimal) &nbsp;→&nbsp; <strong>≈1.5% of the 43 GB per-user KV cache</strong>
+    </div>
+    <div class="summary-grid" style="margin-top:1rem">
+      <div class="summary-item">
+        <strong>Why 640 queues?</strong> Llama-2-70B has <strong>80 layers × 8 KV heads</strong>
+        (64 Q heads grouped 8:1 by GQA). The KV head is the smallest unit whose cache lines are
+        shared, so it is the natural tracking unit: 80 × 8 = <strong>640</strong>.
+      </div>
+      <div class="summary-item">
+        <strong>Why 131,072 entries each?</strong> The canonical scenario is a
+        <strong>128 K-token context = 2<sup>17</sup> = 131,072 positions</strong>. Each queue must be
+        able to hold one entry per position of the full context, so the queue is sized for the
+        worst case rather than the current occupancy.
+      </div>
+      <div class="summary-item">
+        <strong>Why it is affordable.</strong> 640 MiB of metadata against 43 GB of KV data is a
+        <strong>1.5% overhead</strong>, and it sits in the 10 GB pinned Tier-0 HBM region alongside
+        anchor tokens and staging buffers.
+      </div>
+    </div>
+  </div>
+
+  <p style="text-align:center;color:var(--text-secondary);font-size:0.8rem;margin-top:1.5rem;padding-top:0.75rem;border-top:1px solid var(--border-primary);">
+    Analytical model — queue counts and metadata sizes are derived from the model configuration;
+    the LRU contents shown are illustrative, not measured. Canonical numbers v4.0.
+  </p>
+</div>
+</body>
+</html>

@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Per-Head Tracking Rationale</title>
+<link rel="stylesheet" href="../../css/style.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
+  min-height: 100vh;
+  color: var(--text-primary);
+  padding: 2.5rem;
+}
+h1 {
+  text-align: center;
+  font-size: 2.4rem;
+  margin-bottom: 0.75rem;
+  color: var(--text-primary);
+  font-weight: 700;
+}
+.subtitle {
+  text-align: center;
+  color: var(--text-secondary);
+  margin-bottom: 2.5rem;
+  font-size: 1.2rem;
+}
+.container { max-width: 1200px; margin: 0 auto; padding: 0; }
+.tokens-row {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 2.5rem;
+  flex-wrap: wrap;
+}
+.token {
+  background: var(--bg-code);
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  border: 2px solid var(--border-primary);
+  color: var(--text-primary);
+  font-weight: 500;
+}
+.heads-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 2rem;
+}
+.head-card {
+  background: var(--bg-card);
+  border-radius: 16px;
+  padding: 1.75rem;
+  border: 2px solid var(--border-primary);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.head-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+.head-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+.head-name {
+  font-weight: 700;
+  font-size: 1.3rem;
+  color: var(--text-primary);
+}
+.head-tag {
+  font-size: 0.9rem;
+  padding: 0.4rem 0.9rem;
+  border-radius: 20px;
+  font-weight: 600;
+}
+.tag-position { background: rgba(63, 185, 80, 0.15); color: var(--accent-green); border: 1px solid var(--accent-green); }
+.tag-syntax { background: rgba(210, 153, 34, 0.15); color: var(--accent-orange); border: 1px solid var(--accent-orange); }
+.tag-semantic { background: rgba(88, 166, 255, 0.15); color: var(--accent-cyan); border: 1px solid var(--accent-cyan); }
+.tag-copy { background: rgba(163, 113, 247, 0.15); color: var(--accent-purple); border: 1px solid var(--accent-purple); }
+.rationale {
+  font-size: 1.05rem;
+  color: var(--text-primary);
+  margin-bottom: 1.5rem;
+  line-height: 1.6;
+}
+.attention-matrix {
+  display: grid;
+  gap: 4px;
+  font-size: 0.9rem;
+}
+.attn-row { display: flex; gap: 4px; align-items: center; }
+.attn-label {
+  width: 70px;
+  text-align: right;
+  padding-right: 10px;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+.attn-cell {
+  width: 52px;
+  height: 52px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  border: 1px solid rgba(230, 237, 243, 0.12);
+}
+.legend {
+  display: flex;
+  justify-content: center;
+  gap: 2.5rem;
+  margin-top: 2.5rem;
+  flex-wrap: wrap;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+.legend-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+}
+</style>
+</head>
+<body>
+<div role="note" style="position:sticky;top:0;z-index:9999;background:#f85149;color:#0a0e14;padding:0.85rem 1rem;font-family:'IBM Plex Sans',-apple-system,sans-serif;font-weight:700;font-size:0.95rem;line-height:1.45;border-bottom:3px solid #0a0e14;">
+SUPERSEDED — this figure illustrates a claim withdrawn in v5.0. It is retained only so the retraction remains checkable. Do not cite it. See RETRACTIONS.md and Appendix L (hardware measurements) and Appendix N (simulation) for what replaced it.
+</div>
+
+<div class="container" role="main">
+  <p class="sr-only">Figure: per-head tracking rationale, showing synthetic 5 by 5 attention matrices over the tokens "The model processes each token" for four assumed head types. Head 0.3 is a recency head, assumed about 40 percent of heads, attending to the last 50 to 200 positions and showing a strong diagonal. Head 1.7 is a syntactic head, about 20 percent, tracking grammatical dependencies so that "processes" attends strongly to its subject "model". Head 2.4 is an anchor head, about 15 percent, attending to the opening positions holding the system prompt regardless of how far generation has advanced. Head 3.11 is a retrieval head, about 25 percent, content-based rather than positional and spiking on whichever earlier tokens are relevant. The four-way taxonomy and the 40 / 15 / 25 / 20 share are a modeling assumption, not a head census, and the matrices are synthetic illustrations. Per-head tracking contributes plus 6 percentage points of hit rate, 87 percent to 93 percent cumulative. All values are an analytical model, not measured.</p>
+  <h1>Per-Head Tracking Rationale</h1>
+  <p class="subtitle">Visualizing what each attention head is assumed to track — Recency · Anchor · Retrieval · Syntactic</p>
+  
+  <div class="tokens-row" role="img" aria-label="The example sequence: The, model, processes, each, token">
+    <div class="token">The</div>
+    <div class="token">model</div>
+    <div class="token">processes</div>
+    <div class="token">each</div>
+    <div class="token">token</div>
+  </div>
+  
+  <div class="heads-grid" id="headsGrid"></div>
+  
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot" aria-hidden="true" style="background:var(--accent-green)"></div>Recency (~40%)</div>
+    <div class="legend-item"><div class="legend-dot" aria-hidden="true" style="background:var(--accent-cyan)"></div>Anchor (~15%)</div>
+    <div class="legend-item"><div class="legend-dot" aria-hidden="true" style="background:var(--accent-purple)"></div>Retrieval (~25%)</div>
+    <div class="legend-item"><div class="legend-dot" aria-hidden="true" style="background:var(--accent-orange)"></div>Syntactic (~20%)</div>
+  </div>
+
+  <p style="margin-top:1.25rem;padding:0.9rem 1.1rem;background:rgba(210,153,34,0.12);border:1px solid var(--accent-orange);border-left:3px solid var(--accent-orange);border-radius:10px;color:var(--text-primary);font-size:0.9rem;line-height:1.5;">
+    <strong>ASSUMPTION, not a measured result.</strong> The four-way taxonomy
+    (Recency / Anchor / Retrieval / Syntactic) and the <strong>40 / 15 / 25 / 20</strong> share
+    used throughout this package are a modeling assumption adopted to make per-head cache budgets
+    tractable. They are motivated by the induction-head and retrieval-head literature
+    (and by per-head budget work such as Ada-KV and HeadKV), but no head census was run on
+    Llama-2-70B for this work. The matrices below are synthetic illustrations, not model outputs.
+  </p>
+</div>
+
+<script>
+/* Head taxonomy: Recency / Anchor / Retrieval / Syntactic - matches figure-7-2-attention-locality
+   and chapter 7. Shares 40 / 15 / 25 / 20 are a modeling ASSUMPTION, not measured. */
+const tokens = ['The', 'model', 'proc.', 'each', 'token'];
+const heads = [
+  {
+    name: 'Head 0.3',
+    type: 'position',
+    tag: 'Recency',
+    tagClass: 'tag-position',
+    rationale: 'Recency head (assumed ~40% of heads). Attends to the last 50-200 positions. The strong diagonal is local context aggregation within a sliding window.',
+    pattern: (i, j) => Math.exp(-Math.abs(i - j) * 1.2)
+  },
+  {
+    name: 'Head 1.7',
+    type: 'syntax',
+    tag: 'Syntactic',
+    tagClass: 'tag-syntax',
+    rationale: 'Syntactic head (assumed ~20% of heads). Tracks grammatical structure and dependencies: "processes" attends strongly to "model" (its subject).',
+    pattern: (i, j) => {
+      const syntaxPairs = [[2,1], [4,3]];
+      for (let [a,b] of syntaxPairs) if (i===a && j===b) return 0.9;
+      return 0.1 + Math.random() * 0.15;
+    }
+  },
+  {
+    name: 'Head 2.4',
+    type: 'semantic',
+    tag: 'Anchor',
+    tagClass: 'tag-semantic',
+    rationale: 'Anchor head (assumed ~15% of heads). Attends to the opening positions of the sequence - system prompt and initial instructions - regardless of how far generation has advanced.',
+    pattern: (i, j) => {
+      if (j === 0) return 0.9;
+      if (i === j) return 0.3;
+      return 0.05 + Math.random() * 0.12;
+    }
+  },
+  {
+    name: 'Head 3.11',
+    type: 'copy',
+    tag: 'Retrieval',
+    tagClass: 'tag-copy',
+    rationale: 'Retrieval head (assumed ~25% of heads). Content-based rather than positional: it spikes on whichever earlier tokens are relevant, anywhere in the context. Related to the induction-head and retrieval-head literature.',
+    pattern: (i, j) => {
+      const hits = [[1,4], [4,1], [2,4], [4,2]];
+      for (let [a,b] of hits) if (i===a && j===b) return 0.85;
+      if (i === j) return 0.4;
+      return 0.08 + Math.random() * 0.15;
+    }
+  }
+];
+
+function getAlpha(val) {
+  /* The tint is capped at 0.5 so the cell composites to a DARK surface at every
+     value: an accent at more than half strength over the card lands in a mid-tone
+     band where neither light nor dark text reaches 4.5:1. */
+  return Math.min(0.5, 0.08 + val * 0.6);
+}
+
+function getColor(val, type) {
+  const colors = {
+    position: { r: 63, g: 185, b: 80 },
+    syntax: { r: 210, g: 153, b: 34 },
+    semantic: { r: 88, g: 166, b: 255 },
+    copy: { r: 163, g: 113, b: 247 }
+  };
+  const c = colors[type];
+  return `rgba(${c.r}, ${c.g}, ${c.b}, ${getAlpha(val)})`;
+}
+
+function getTextColor(val) {
+  /* A light fill needs a dark foreground; a low-alpha accent tint over the dark
+     card is still a dark fill, so it keeps light text. */
+  return getAlpha(val) > 0.5 ? 'var(--bg-primary)' : 'var(--text-primary)';
+}
+
+function renderHead(head) {
+  const card = document.createElement('div');
+  card.className = 'head-card';
+  
+  let matrixHTML = '';
+  for (let i = 0; i < tokens.length; i++) {
+    let row = `<div class="attn-row" role="img" aria-label="Attention row for query token &quot;${tokens[i]}&quot; in ${head.name}, the ${head.tag} head"><div class="attn-label">${tokens[i]}</div>`;
+    let rowSum = 0;
+    const vals = [];
+    for (let j = 0; j < tokens.length; j++) {
+      vals.push(head.pattern(i, j));
+      rowSum += vals[j];
+    }
+    for (let j = 0; j < tokens.length; j++) {
+      const norm = vals[j] / rowSum;
+      row += `<div class="attn-cell" aria-label="${tokens[i]} attends to ${tokens[j]}, weight ${norm.toFixed(2)}" style="background:${getColor(norm, head.type)}; color:${getTextColor(norm)}">${norm.toFixed(2)}</div>`;
+    }
+    row += '</div>';
+    matrixHTML += row;
+  }
+  
+  card.innerHTML = `
+    <div class="head-header">
+      <span class="head-name">${head.name}</span>
+      <span class="head-tag ${head.tagClass}">${head.tag}</span>
+    </div>
+    <p class="rationale">${head.rationale}</p>
+    <div class="attention-matrix">${matrixHTML}</div>
+  `;
+  return card;
+}
+
+const grid = document.getElementById('headsGrid');
+heads.forEach(h => grid.appendChild(renderHead(h)));
+</script>
+
+<p style="max-width:1100px;margin:1.5rem auto 0;text-align:center;color:var(--text-secondary);font-size:0.8rem;padding-top:0.75rem;border-top:1px solid var(--border-primary);">
+  Analytical model — head types, shares and attention matrices on this page are assumed and
+  synthetic, not measured. Per-head tracking contributes +6 percentage points of hit rate
+  (87% &rarr; 93% cumulative). Canonical numbers v4.0.
+</p>
+</body>
+</html>

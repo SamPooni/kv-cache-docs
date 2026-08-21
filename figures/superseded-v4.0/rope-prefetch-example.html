@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RoPE Prefetch - Worked Example</title>
+<link rel="stylesheet" href="../../css/style.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  padding: 2.5rem;
+  line-height: 1.5;
+}
+.container { max-width: 1000px; margin: 0 auto; padding: 0; }
+h1 {
+  font-size: 2.2rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+.subtitle {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 1.15rem;
+  margin-bottom: 2.5rem;
+}
+.section { margin-bottom: 2.5rem; }
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+.section-num {
+  width: 36px;
+  height: 36px;
+  background: var(--accent-purple);
+  color: var(--bg-primary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.section-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+.card {
+  background: var(--bg-card);
+  border: 2px solid var(--border-primary);
+  border-radius: 14px;
+  padding: 1.5rem;
+}
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.config-item {
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-primary);
+  border-radius: 10px;
+  padding: 1rem;
+  text-align: center;
+}
+.config-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.25rem;
+}
+.config-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--accent-purple);
+}
+.config-unit {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+.sequence-container {
+  overflow-x: auto;
+  padding: 1rem 0;
+}
+.token-sequence {
+  display: flex;
+  gap: 4px;
+  min-width: max-content;
+  justify-content: center;
+}
+.token {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  position: relative;
+}
+.token-pos {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  position: absolute;
+  top: -18px;
+}
+.token-id {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.token.storage { background: var(--bg-code); color: var(--text-secondary); border: 2px solid var(--border-primary); }
+.heatmap-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+.heatmap {
+  display: grid;
+  grid-template-columns: repeat(16, 1fr);
+  gap: 2px;
+  padding: 0.5rem;
+  background: var(--bg-code);
+  border-radius: 8px;
+  border: 2px solid var(--border-primary);
+}
+.heat-cell {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-family: var(--font-mono);
+  color: white;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+.legend-gradient {
+  width: 150px;
+  height: 16px;
+  border-radius: 4px;
+  background: linear-gradient(to right, #f0f0f0, #ffd700, #ff6b35, #dc3545);
+}
+.formula-box {
+  background: rgba(163, 113, 247, 0.10);
+  border: 2px solid var(--accent-purple);
+  border-radius: 10px;
+  padding: 1rem 1.5rem;
+  text-align: center;
+  margin: 1rem 0;
+}
+.formula-text {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  color: var(--text-primary);
+}
+.formula-text .highlight { color: var(--accent-purple); font-weight: 700; }
+.formula-text .red { color: var(--accent-red); font-weight: 700; }
+.timeline {
+  position: relative;
+  padding-left: 120px;
+}
+.timeline-step {
+  position: relative;
+  padding: 1.25rem;
+  padding-left: 2rem;
+  border-left: 3px solid var(--border-primary);
+}
+.timeline-step:last-child { border-left-color: transparent; }
+.timeline-step::before {
+  content: attr(data-time);
+  position: absolute;
+  left: -120px;
+  top: 1.25rem;
+  width: 100px;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--accent-purple);
+  font-weight: 600;
+}
+.timeline-dot {
+  position: absolute;
+  left: -10px;
+  top: 1.5rem;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent-purple);
+  border: 3px solid var(--bg-card);
+  box-shadow: 0 0 0 2px var(--accent-purple);
+}
+.timeline-dot.fetch { background: var(--accent-yellow); box-shadow: 0 0 0 2px var(--accent-yellow); }
+.timeline-dot.hit { background: var(--accent-green); box-shadow: 0 0 0 2px var(--accent-green); }
+.timeline-dot.miss { background: var(--accent-red); box-shadow: 0 0 0 2px var(--accent-red); }
+.step-title {
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-bottom: 0.5rem;
+}
+.step-detail {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.75rem;
+}
+.step-cache {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.mini-token {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+.mini-token.cached { background: rgba(63, 185, 80, 0.15); color: var(--accent-green); border: 1px solid var(--accent-green); }
+.mini-token.new { background: rgba(240, 194, 57, 0.15); color: var(--accent-yellow); border: 1px solid var(--accent-yellow); }
+.mini-token.evict { background: rgba(248, 81, 73, 0.15); color: var(--accent-red); border: 1px solid var(--accent-red); text-decoration: line-through; }
+.cache-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-right: 0.5rem;
+}
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin: 0;
+}
+.stat-card {
+  background: var(--bg-tertiary);
+  border-radius: 10px;
+  padding: 1.25rem;
+  text-align: center;
+  border: 2px solid var(--border-primary);
+}
+.stat-card.good { border-color: var(--accent-green); background: rgba(63, 185, 80, 0.10); }
+.stat-card.neutral { border-color: var(--accent-purple); background: rgba(163, 113, 247, 0.10); }
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: inherit;
+  font-family: var(--font-mono);
+}
+.stat-card.good .stat-value { color: var(--accent-green); }
+.stat-card.neutral .stat-value { color: var(--accent-purple); }
+.stat-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  text-transform: none;
+  letter-spacing: normal;
+  margin-top: 0.25rem;
+}
+.comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+.compare-card {
+  background: var(--bg-tertiary);
+  border-radius: 12px;
+  padding: 1.25rem;
+  border: 2px solid var(--border-primary);
+}
+.compare-card.winner {
+  border-color: var(--accent-green);
+  box-shadow: 0 4px 12px rgba(63,185,80,0.15);
+}
+.compare-title {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.compare-card.winner .compare-title { color: var(--accent-green); }
+.compare-stat {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border-secondary);
+  font-size: 0.95rem;
+}
+.compare-stat:last-child { border-bottom: none; }
+.compare-stat-value { font-weight: 600; font-family: var(--font-mono); }
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.badge.success { background: rgba(63, 185, 80, 0.18); color: var(--accent-green); border: 1px solid var(--accent-green); }
+</style>
+</head>
+<body>
+<div role="note" style="position:sticky;top:0;z-index:9999;background:#f85149;color:#0a0e14;padding:0.85rem 1rem;font-family:'IBM Plex Sans',-apple-system,sans-serif;font-weight:700;font-size:0.95rem;line-height:1.45;border-bottom:3px solid #0a0e14;">
+SUPERSEDED — this figure illustrates a claim withdrawn in v5.0. It is retained only so the retraction remains checkable. Do not cite it. See RETRACTIONS.md and Appendix L (hardware measurements) and Appendix N (simulation) for what replaced it.
+</div>
+
+<div class="container" role="main">
+  <p class="sr-only">Figure: a worked 16-token example of RoPE-aware prefetching. The scenario is a 16-token sequence, a GPU cache of 8 KV slots, a prefetch window of W = 3 meaning plus or minus 3 positions, and a tier-3 flash round-trip of 25 microseconds; candidates are ordered by priority(distance) = 1 divided by (1 plus distance over 100). Querying position 8, the token "dog", is assumed to draw about 72 percent of attention mass onto positions 5 to 11. The timeline runs: at 0 microseconds a cache miss on position 8 triggers the window [5, 11]; at 25 microseconds storage returns position 8 while positions 5, 6, 7, 9, 10 and 11 load asynchronously; at 26 microseconds position 7 hits; at 27 microseconds positions 6, 9 and 10 hit; at 50 microseconds the next query at position 12 opens window [9, 15], keeping 9, 10 and 11, evicting 5 to 8, and fetching only 12 to 15. Against a naive scheme of 16 serial round-trips at 25 microseconds, or 400 microseconds, prefetching moves 11 positions in 2 batched round-trips, or 50 microseconds — an 8.0 times reduction in this toy walkthrough. The model behind that comparison is stated in full on the page. Both paths service the same two queries, at positions 8 and 12, with every entry starting on tier 3 flash at 25 microseconds. The naive path has no prefetcher, so it discovers each position only when attention asks for it and cannot batch: 16 positions, 16 strictly serial round-trips, 16 times 25 equals 400 microseconds. The prefetcher knows the whole window from the query position, so the query at position 8 issues window 5 to 11, seven positions, as one batched round-trip completing at 25 microseconds, and the query at position 12 issues window 9 to 15, of which 9, 10 and 11 are already resident, so only 12 to 15 are fetched in a second batched round-trip completing at 50 microseconds: 2 times 25 equals 50 microseconds, and 400 divided by 50 is 8.0. The 8.0 times combines batching, which collapses 16 round-trips into 2, with selectivity, which never touches positions 0 to 4; only the batching effect generalises. The fully serial baseline is deliberately pessimistic, so 8.0 times is an upper bound on what prefetch buys in this toy configuration, not a system-level speedup. It is also not the plus 4 percentage point hit-rate contribution in a different unit, and not a latency figure for the proposed system, where steady-state accesses land in HBM at 100 nanoseconds or CXL DRAM at 200 nanoseconds and only the 0.3 percent miss tail reaches the 25 microsecond tier. The modeled full-stack HBM hit rate is 97 percent along the ladder 72 to 80 to 87 to 93 to 97, of which RoPE-aware prefetch alone contributes plus 4 percentage points, 93 to 97. All values are an analytical model, not measured.</p>
+  <h1>RoPE Prefetch: Worked Example</h1>
+  <p class="subtitle">Step-by-step walkthrough of locality-aware KV-cache prefetching</p>
+
+  <!-- Section 1: Setup -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">1</div>
+      <div class="section-title">Scenario Configuration</div>
+    </div>
+    <div class="card">
+      <div class="config-grid">
+        <div class="config-item">
+          <div class="config-label">Sequence Length</div>
+          <div class="config-value">16</div>
+          <div class="config-unit">tokens</div>
+        </div>
+        <div class="config-item">
+          <div class="config-label">GPU Cache Size</div>
+          <div class="config-value">8</div>
+          <div class="config-unit">KV slots</div>
+        </div>
+        <div class="config-item">
+          <div class="config-label">Prefetch Window</div>
+          <div class="config-value">W = 3</div>
+          <div class="config-unit">±3 positions</div>
+        </div>
+        <div class="config-item">
+          <div class="config-label">Storage Latency (Tier 3 flash)</div>
+          <div class="config-value">25</div>
+          <div class="config-unit">µs per round-trip</div>
+        </div>
+      </div>
+      
+      <div class="formula-box">
+        <div class="formula-text">
+          Query at position <span class="red">P</span> → Prefetch 
+          [<span class="highlight">P−3</span>, <span class="highlight">P+3</span>] into GPU cache
+        </div>
+        <div class="formula-text" style="margin-top:0.5rem;">
+          Candidates ordered by <span class="highlight">priority(distance) = 1 / (1 + distance / 100)</span>
+        </div>
+      </div>
+
+      <div class="sequence-container" style="margin-top:1.5rem;">
+        <div class="token-sequence">
+          <div class="token storage" role="img" aria-label="Position 0, token &quot;The&quot;, on storage"><span class="token-pos">0</span><span class="token-id">The</span></div>
+          <div class="token storage" role="img" aria-label="Position 1, token &quot;quick&quot;, on storage"><span class="token-pos">1</span><span class="token-id">quick</span></div>
+          <div class="token storage" role="img" aria-label="Position 2, token &quot;brown&quot;, on storage"><span class="token-pos">2</span><span class="token-id">brown</span></div>
+          <div class="token storage" role="img" aria-label="Position 3, token &quot;fox&quot;, on storage"><span class="token-pos">3</span><span class="token-id">fox</span></div>
+          <div class="token storage" role="img" aria-label="Position 4, token &quot;jumps&quot;, on storage"><span class="token-pos">4</span><span class="token-id">jumps</span></div>
+          <div class="token storage" role="img" aria-label="Position 5, token &quot;over&quot;, on storage"><span class="token-pos">5</span><span class="token-id">over</span></div>
+          <div class="token storage" role="img" aria-label="Position 6, token &quot;the&quot;, on storage"><span class="token-pos">6</span><span class="token-id">the</span></div>
+          <div class="token storage" role="img" aria-label="Position 7, token &quot;lazy&quot;, on storage"><span class="token-pos">7</span><span class="token-id">lazy</span></div>
+          <div class="token storage" role="img" aria-label="Position 8, token &quot;dog&quot;, on storage"><span class="token-pos">8</span><span class="token-id">dog</span></div>
+          <div class="token storage" role="img" aria-label="Position 9, token &quot;and&quot;, on storage"><span class="token-pos">9</span><span class="token-id">and</span></div>
+          <div class="token storage" role="img" aria-label="Position 10, token &quot;runs&quot;, on storage"><span class="token-pos">10</span><span class="token-id">runs</span></div>
+          <div class="token storage" role="img" aria-label="Position 11, token &quot;into&quot;, on storage"><span class="token-pos">11</span><span class="token-id">into</span></div>
+          <div class="token storage" role="img" aria-label="Position 12, token &quot;the&quot;, on storage"><span class="token-pos">12</span><span class="token-id">the</span></div>
+          <div class="token storage" role="img" aria-label="Position 13, token &quot;dark&quot;, on storage"><span class="token-pos">13</span><span class="token-id">dark</span></div>
+          <div class="token storage" role="img" aria-label="Position 14, token &quot;forest&quot;, on storage"><span class="token-pos">14</span><span class="token-id">forest</span></div>
+          <div class="token storage" role="img" aria-label="Position 15, token &quot;.&quot;, on storage"><span class="token-pos">15</span><span class="token-id">.</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: Attention Pattern -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">2</div>
+      <div class="section-title">Assumed Attention Distribution (Query @ P=8)</div>
+    </div>
+    <div class="card">
+      <div class="heatmap-container">
+        <div class="heatmap" role="img" aria-label="Assumed attention heatmap over the 16 positions for a query at position 8. Attention is strongest at the query itself and at its immediate neighbours 7, 9, 6 and 10, tapering through 5 and 11 to near zero at positions 0 and 15. Positions 5 to 11, within plus or minus 3 of the query, are assumed to carry about 72 percent of the attention mass.">
+          <div class="heat-cell" style="background:#e8e8e8;color:#333" aria-hidden="true">0</div>
+          <div class="heat-cell" style="background:#f5e6c8;color:#333" aria-hidden="true">1</div>
+          <div class="heat-cell" style="background:#f0d090;color:#333" aria-hidden="true">2</div>
+          <div class="heat-cell" style="background:#e8b860;color:#333" aria-hidden="true">3</div>
+          <div class="heat-cell" style="background:#e09830;color:#fff" aria-hidden="true">4</div>
+          <div class="heat-cell" style="background:#e87830;color:#fff" aria-hidden="true">5</div>
+          <div class="heat-cell" style="background:#f04020;color:#fff" aria-hidden="true">6</div>
+          <div class="heat-cell" style="background:#e81818;color:#fff" aria-hidden="true">7</div>
+          <div class="heat-cell" style="background:#dc3545;color:#fff;box-shadow:0 0 8px #dc3545" aria-hidden="true">Q</div>
+          <div class="heat-cell" style="background:#e82020;color:#fff" aria-hidden="true">9</div>
+          <div class="heat-cell" style="background:#f04828;color:#0a0e14" aria-hidden="true">10</div>
+          <div class="heat-cell" style="background:#e88038;color:#0a0e14" aria-hidden="true">11</div>
+          <div class="heat-cell" style="background:#e0a040;color:#333" aria-hidden="true">12</div>
+          <div class="heat-cell" style="background:#e8c068;color:#333" aria-hidden="true">13</div>
+          <div class="heat-cell" style="background:#f0d898;color:#333" aria-hidden="true">14</div>
+          <div class="heat-cell" style="background:#ece0c0;color:#333" aria-hidden="true">15</div>
+        </div>
+        <div class="heatmap-legend">
+          <span>Low attention</span>
+          <div class="legend-gradient" aria-hidden="true"></div>
+          <span>High attention</span>
+        </div>
+        <p style="color:var(--text-secondary); font-size:0.9rem; max-width:640px; text-align:center;">
+          <strong>Assumption, not measurement.</strong> This walkthrough assumes attention concentrates
+          around the query position, so that positions 5–11 (within ±3 of query P=8) capture
+          <strong>~72%</strong> of total attention mass. The concentration is
+          model-, layer-, head- and workload-dependent and is an input to the model, not a result of it.
+          What RoPE itself provides is an upper-bound envelope on the inner-product magnitude,
+          <code>|⟨q_m, k_n⟩| ≤ B(|m − n|)</code> with B non-increasing — the inner product is a sum over
+          d/2 frequency pairs and does not decay monotonically.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 3: Timeline -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">3</div>
+      <div class="section-title">Prefetch Execution Timeline</div>
+    </div>
+    <div class="card">
+      <div class="timeline">
+        <div class="timeline-step" data-time="t = 0 µs">
+          <div class="timeline-dot miss" aria-hidden="true"></div>
+          <div class="step-title"><span aria-hidden="true">🔴</span> Cache Miss: Query P=8 ("dog")</div>
+          <div class="step-detail">
+            GPU requests KV for position 8. Not in cache → fetch from storage.
+            <br>Trigger prefetch for window [5, 11].
+          </div>
+          <div class="step-cache">
+            <span class="cache-label">Cache:</span>
+            <span style="color:var(--text-secondary); font-style:italic;">empty</span>
+          </div>
+        </div>
+
+        <div class="timeline-step" data-time="t = 25 µs">
+          <div class="timeline-dot fetch" aria-hidden="true"></div>
+          <div class="step-title"><span aria-hidden="true">⏳</span> Fetching P=8 + Prefetch [5,11]</div>
+          <div class="step-detail">
+            Storage returns position 8. Async prefetch loads positions 5,6,7,9,10,11.
+          </div>
+          <div class="step-cache">
+            <span class="cache-label">Cache:</span>
+            <div class="mini-token new" role="img" aria-label="Position 5, newly fetched into cache">5</div>
+            <div class="mini-token new" role="img" aria-label="Position 6, newly fetched into cache">6</div>
+            <div class="mini-token new" role="img" aria-label="Position 7, newly fetched into cache">7</div>
+            <div class="mini-token cached" style="box-shadow:0 0 6px var(--accent-green)" role="img" aria-label="Position 8, already cached">8</div>
+            <div class="mini-token new" role="img" aria-label="Position 9, newly fetched into cache">9</div>
+            <div class="mini-token new" role="img" aria-label="Position 10, newly fetched into cache">10</div>
+            <div class="mini-token new" role="img" aria-label="Position 11, newly fetched into cache">11</div>
+          </div>
+        </div>
+
+        <div class="timeline-step" data-time="t = 26 µs">
+          <div class="timeline-dot hit" aria-hidden="true"></div>
+          <div class="step-title"><span aria-hidden="true">🟢</span> Cache Hit: Attention needs P=7 ("lazy")</div>
+          <div class="step-detail">
+            High attention weight to position 7 → already prefetched!
+          </div>
+        </div>
+
+        <div class="timeline-step" data-time="t = 27 µs">
+          <div class="timeline-dot hit" aria-hidden="true"></div>
+          <div class="step-title"><span aria-hidden="true">🟢</span> Cache Hits: P=6, P=9, P=10</div>
+          <div class="step-detail">
+            Remaining high-attention positions all hit in prefetch window.
+          </div>
+        </div>
+
+        <div class="timeline-step" data-time="t = 50 µs">
+          <div class="timeline-dot" aria-hidden="true"></div>
+          <div class="step-title"><span aria-hidden="true">➡</span> Next Query: P=12 ("the")</div>
+          <div class="step-detail">
+            Autoregressive decode moves to next token. New window [9, 15].
+            <br>Positions 9,10,11 already cached → only fetch 12,13,14,15.
+          </div>
+          <div class="step-cache">
+            <span class="cache-label">Evict:</span>
+            <div class="mini-token evict" role="img" aria-label="Position 5, evicted from cache">5</div>
+            <div class="mini-token evict" role="img" aria-label="Position 6, evicted from cache">6</div>
+            <div class="mini-token evict" role="img" aria-label="Position 7, evicted from cache">7</div>
+            <div class="mini-token evict" role="img" aria-label="Position 8, evicted from cache">8</div>
+            <span class="cache-label" style="margin-left:1rem;">Keep:</span>
+            <div class="mini-token cached" role="img" aria-label="Position 9, already cached">9</div>
+            <div class="mini-token cached" role="img" aria-label="Position 10, already cached">10</div>
+            <div class="mini-token cached" role="img" aria-label="Position 11, already cached">11</div>
+            <span class="cache-label" style="margin-left:1rem;">New:</span>
+            <div class="mini-token new" role="img" aria-label="Position 12, newly fetched into cache">12</div>
+            <div class="mini-token new" role="img" aria-label="Position 13, newly fetched into cache">13</div>
+            <div class="mini-token new" role="img" aria-label="Position 14, newly fetched into cache">14</div>
+            <div class="mini-token new" role="img" aria-label="Position 15, newly fetched into cache">15</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 4: Results -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">4</div>
+      <div class="section-title">Performance Results</div>
+    </div>
+    <div class="card">
+      <div class="stats-grid">
+        <div class="stat-card good">
+          <div class="stat-value">97%</div>
+          <div class="stat-label">Modeled HBM hit rate, full stack (72 LRU → 80 → 87 → 93 → 97)</div>
+        </div>
+        <div class="stat-card neutral">
+          <div class="stat-value">+4 pts</div>
+          <div class="stat-label">Contribution of RoPE-aware prefetch alone (93% → 97%)</div>
+        </div>
+        <div class="stat-card good">
+          <div class="stat-value">8.0×</div>
+          <div class="stat-label">Latency reduction in this toy walkthrough (400 µs → 50 µs) — stated model, derived below</div>
+        </div>
+        <div class="stat-card neutral">
+          <div class="stat-value">72%</div>
+          <div class="stat-label">Attention mass inside the window (assumed)</div>
+        </div>
+      </div>
+
+      <div class="comparison" style="margin-top:1.5rem;">
+        <div class="compare-card">
+          <div class="compare-title"><span aria-hidden="true">❌</span> Naive (No Prefetch)</div>
+          <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.5rem;">16 serial round-trips × 25 µs</div>
+          <div class="compare-stat">
+            <span>Positions fetched</span>
+            <span class="compare-stat-value">16</span>
+          </div>
+          <div class="compare-stat">
+            <span>Storage round-trips</span>
+            <span class="compare-stat-value">16 (serial)</span>
+          </div>
+          <div class="compare-stat">
+            <span>Serial latency</span>
+            <span class="compare-stat-value">400 µs</span>
+          </div>
+        </div>
+        <div class="compare-card winner">
+          <div class="compare-title"><span aria-hidden="true">✅</span> RoPE Prefetch (W=3) <span class="badge success">Winner</span></div>
+          <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.5rem;">2 batched round-trips × 25 µs</div>
+          <div class="compare-stat">
+            <span>Positions fetched</span>
+            <span class="compare-stat-value">11 (7 + 4)</span>
+          </div>
+          <div class="compare-stat">
+            <span>Storage round-trips</span>
+            <span class="compare-stat-value">2 (batched)</span>
+          </div>
+          <div class="compare-stat">
+            <span>Serial latency</span>
+            <span class="compare-stat-value">50 µs</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout note">
+        <div class="callout-title">The model behind 400 µs → 50 µs, stated in full</div>
+        <p>This comparison is a stated model, not a measurement. Both columns service the same two queries
+        in the timeline above — P = 8, then P = 12 — over the same 16-token sequence, with every entry
+        starting on Tier 3 flash at the canonical <strong>25 µs</strong> round-trip latency. Nothing else in
+        the two paths differs.</p>
+        <p><strong>Why 16 round-trips.</strong> The naive path has no prefetcher, so it discovers each
+        position it needs only at the moment attention asks for it. Each discovery is a separate demand miss,
+        and the next request is not issued until the previous one returns — there is nothing to batch,
+        because the requesting code does not yet know what it will want next. Sixteen positions, sixteen
+        strictly serial round-trips:
+        <span class="mono">16 × 25 µs = 400 µs</span>.</p>
+        <p><strong>Why 2 batches.</strong> The prefetcher knows the whole window from the query position
+        alone, so all of it can be issued at once and the round-trips overlap. The query at P = 8 opens
+        <span class="mono">[5, 11]</span> — 7 positions — issued as <em>one</em> batched round-trip that
+        completes at t = 25 µs. The query at P = 12 opens <span class="mono">[9, 15]</span>; positions 9, 10
+        and 11 are already resident from the first batch, so only 12–15 are fetched — a <em>second</em>
+        batched round-trip completing at t = 50 µs. Eleven positions, two round-trips:
+        <span class="mono">2 × 25 µs = 50 µs</span>. Ratio
+        <span class="mono">400 ÷ 50 = 8.0×</span>.</p>
+        <p><strong>What the 8.0× is really made of, and why it is generous.</strong> Two effects are combined
+        here, and they should be read separately. <em>Batching</em> collapses 16 round-trips into 2 by issuing
+        a window at once instead of an entry at a time. <em>Selectivity</em> means the windows never touch
+        positions 0–4 at all, so 11 positions move rather than 16. Batching does the bulk of the work; only
+        the batching effect generalises to the full system, because at 128 K context a real query's window is
+        a vanishing fraction of the sequence either way. The baseline is also deliberately pessimistic:
+        fully serial demand misses are the worst case, and a real serving stack would overlap some of them
+        even without a prefetcher. Read 8.0× as an upper bound on what prefetch buys in this toy
+        configuration, not as a system-level speedup.</p>
+        <p><strong>What this figure does not claim.</strong> It is <em>not</em> the +4-percentage-point
+        hit-rate contribution of RoPE-aware prefetch (93% → 97%) in a different unit — that figure comes from
+        the modeled hit-rate ladder in Chapter 7 §7.7 and is arrived at by a different route entirely. It is
+        also not a latency figure for the proposed system: steady-state accesses in the proposed design land
+        in HBM at 100 ns or CXL DRAM at 200 ns, and only the 0.3% miss tail reaches the 25 µs tier this
+        walkthrough uses throughout. <span class="mono">[Analytical model]</span>
+        See <a href="../../chapters/ch07-kv-cache.html">Chapter 7 §7.6</a>, which is the authority for the
+        prefetch mechanism and its priority function.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 5: Key Insight -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">5</div>
+      <div class="section-title">Key Insight</div>
+    </div>
+    <div class="card" style="background:linear-gradient(135deg, rgba(163,113,247,0.12) 0%, rgba(63,185,80,0.10) 100%);">
+      <div style="display:flex; gap:1.5rem; align-items:center; flex-wrap:wrap;">
+        <div style="flex:1; min-width:280px;">
+          <h3 style="font-size:1.2rem; margin-bottom:0.75rem; color:var(--text-primary);">
+            RoPE locality = predictable access patterns
+          </h3>
+          <p style="color:var(--text-secondary); font-size:0.95rem; line-height:1.6;">
+            <em>If</em> attention concentrates near the query position — the assumption this design rests on —
+            we can <strong>predict</strong> which KV pairs will be needed and fetch them <strong>before</strong>
+            the GPU stalls, turning random storage access into batched prefetch streams.
+            RoPE supplies only a non-increasing upper bound on the inner-product magnitude with distance;
+            the concentration itself is assumed, not proven.
+          </p>
+        </div>
+        <div style="background:var(--bg-card); border-radius:12px; padding:1.25rem; border:2px solid var(--accent-purple); text-align:center;">
+          <div style="font-size:0.9rem; color:var(--accent-purple); font-weight:600; margin-bottom:0.5rem;">Storage Round-Trips</div>
+          <div style="font-size:2.5rem; font-weight:700; color:var(--accent-green);">16 → 2</div>
+          <div style="font-size:0.85rem; color:var(--text-secondary);">400 µs → 50 µs at 25 µs/round-trip</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p style="text-align:center;color:var(--text-secondary);font-size:0.8rem;margin-top:1.5rem;padding-top:0.75rem;border-top:1px solid var(--border-primary);">
+    Analytical model — this is a 16-token illustrative walkthrough, not a benchmark. The attention
+    concentration is an assumption; the hit-rate ladder (72 → 80 → 87 → 93 → 97) is modeled.
+    Canonical numbers v4.0.
+  </p>
+</div>
+</body>
+</html>

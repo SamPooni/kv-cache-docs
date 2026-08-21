@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Two-Term Decode Model</title>
+<link rel="stylesheet" href="../../vendor/fonts.css">
+<link rel="stylesheet" href="../../css/style.css">
+<style>
+/* ---- figure shell: package tokens only, no external assets ---- */
+body{background:var(--bg-primary);color:var(--text-primary);font-family:var(--font-sans);
+     line-height:1.6;font-size:16px;}
+.vz{position:relative;z-index:1;max-width:1120px;margin:0 auto;padding:1.6rem 1.4rem 1.2rem;}
+.vz-eyebrow{font-family:var(--font-mono);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;
+     color:var(--accent-purple);margin:0 0 .4rem;}
+.vz h1{font-family:var(--font-sans);font-size:1.45rem;font-weight:600;line-height:1.25;
+     color:var(--text-primary);margin:0 0 .4rem;letter-spacing:-.01em;}
+.vz h2{font-family:var(--font-sans);font-size:1rem;font-weight:600;color:var(--text-primary);
+     margin:0 0 .5rem;padding:0;border:0;letter-spacing:0;}
+.vz-sub{color:var(--text-secondary);font-size:.94rem;max-width:78ch;margin:0 0 1.1rem;}
+.vz-card{background:var(--bg-card);border:1px solid var(--border-primary);border-radius:14px;
+     padding:1.15rem 1.2rem;}
+.vz-plot{display:block;width:100%;height:auto;overflow:visible;}
+.vz-scroll{overflow-x:auto;}
+.vz-caveat{display:flex;gap:.7rem;align-items:flex-start;background:rgba(210,153,34,.09);
+     border:1px solid rgba(210,153,34,.4);border-left:4px solid var(--accent-orange);
+     border-radius:0 10px 10px 0;padding:.7rem .9rem;margin:0 0 1.1rem;font-size:.85rem;
+     color:var(--text-secondary);}
+.vz-caveat strong{color:var(--accent-orange);}
+.vz-caveat-icon{font-size:1rem;line-height:1.3;flex:0 0 auto;}
+.vz-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:.75rem;margin:1.1rem 0 0;}
+.vz-tile{background:var(--bg-tertiary);border:1px solid var(--border-primary);border-radius:12px;padding:.8rem .9rem;}
+.vz-tile-v{font-family:var(--font-sans);font-size:1.55rem;font-weight:650;color:var(--text-primary);
+     line-height:1.15;letter-spacing:-.02em;}
+.vz-tile-l{font-size:.775rem;color:var(--text-secondary);margin-top:.28rem;line-height:1.45;}
+.vz-legend{display:flex;flex-wrap:wrap;gap:.4rem 1.4rem;margin:.9rem 0 0;font-size:.85rem;
+     color:var(--text-secondary);}
+.vz-legend-item{display:flex;align-items:center;gap:.5rem;}
+.vz-key{flex:0 0 auto;}
+.vz-legend b{color:var(--text-primary);font-weight:600;}
+.vz-legend .vz-eq{font-family:var(--font-mono);font-size:.8rem;color:var(--text-secondary);}
+.vz-note{font-size:.83rem;color:var(--text-secondary);margin:.9rem 0 0;max-width:82ch;}
+.vz-note b{color:var(--text-primary);}
+details.vz-table{margin:1.1rem 0 0;}
+details.vz-table>summary{cursor:pointer;font-size:.83rem;color:var(--accent-cyan);
+     font-family:var(--font-mono);list-style:none;display:inline-flex;align-items:center;gap:.4rem;
+     padding:.3rem .1rem;}
+details.vz-table>summary::-webkit-details-marker{display:none;}
+details.vz-table>summary::before{content:"\25B8";display:inline-block;transition:transform .15s ease;}
+details.vz-table[open]>summary::before{transform:rotate(90deg);}
+details.vz-table table{font-size:.85rem;}
+details.vz-table td,details.vz-table th{padding:.5rem .7rem;}
+details.vz-table td{font-family:var(--font-mono);color:var(--text-secondary);}
+details.vz-table td:first-child{font-family:var(--font-sans);color:var(--text-primary);}
+.vz-foot{margin:1.3rem 0 0;padding-top:.8rem;border-top:1px solid var(--border-secondary);
+     font-family:var(--font-mono);font-size:.74rem;color:var(--text-muted);letter-spacing:.01em;}
+.vz-grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;}
+@media (max-width:860px){.vz-grid2{grid-template-columns:1fr;}}
+/* axis + mark typography inside the SVGs */
+.ax{fill:var(--text-muted);font-family:var(--font-mono);font-size:11px;
+    font-variant-numeric:tabular-nums;}
+.ax-title{fill:var(--text-secondary);font-family:var(--font-sans);font-size:12px;font-weight:500;}
+.lbl{fill:var(--text-primary);font-family:var(--font-sans);font-size:12px;font-weight:600;}
+.lbl-2{fill:var(--text-secondary);font-family:var(--font-sans);font-size:11.5px;}
+.lbl-m{fill:var(--text-secondary);font-family:var(--font-mono);font-size:11px;
+    font-variant-numeric:tabular-nums;}
+.grid{stroke:var(--border-secondary);stroke-width:1;}
+.axis{stroke:var(--border-primary);stroke-width:1;}
+[data-tip]{cursor:default;}
+[data-tip]:focus-visible{outline:2px solid var(--accent-cyan);outline-offset:2px;}
+/* tooltip */
+#vz-tip{position:fixed;z-index:50;pointer-events:none;opacity:0;transition:opacity .1s ease;
+     background:var(--bg-code);border:1px solid var(--border-highlight);border-radius:8px;
+     padding:.45rem .6rem;font-size:.78rem;line-height:1.45;color:var(--text-primary);
+     box-shadow:var(--shadow-md);max-width:280px;}
+#vz-tip.on{opacity:1;}
+#vz-tip .t-h{font-weight:600;display:block;margin-bottom:.15rem;}
+#vz-tip .t-b{color:var(--text-secondary);font-family:var(--font-mono);font-size:.74rem;}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;}}
+</style>
+</head>
+<body>
+<main class="vz" role="main">
+<p class="sr-only">Figure: measured decode step time against resident KV volume on a DGX Spark GB10, for two inference frameworks. HuggingFace with SDPA and unpaged KV fits t = 100.3 + 16.34 times KV_GiB milliseconds over 7 points, R squared 0.991; its measured points are 0.22 GiB at 104.6 ms, 0.88 at 113.9, 1.75 at 128.5, 0.88 at 111.8, 3.50 at 155.4, 7.00 at 212.4 and 3.50 at 165.1. vLLM 0.20.1 with FlashAttention-2 and paged KV fits t = 73.9 + 17.58 times KV_GiB over 9 points, R squared 0.945; its measured points are 0.22 GiB at 95.1 ms, 0.88 at 101.5, 1.71 at 107.8, 0.88 at 99.9, 3.50 at 117.4, 6.84 at 162.2, 3.50 at 127.5, 14.00 at 345.9 and 7.00 at 185.0. The two fitted lines are nearly parallel: the slopes, which are the KV term, differ by 8 per cent (16.34 against 17.58 ms per GiB), while the intercepts, which are the weight term, differ by 26 per cent (100.3 against 73.9 ms). Over the same change of framework the weight read improves 34 per cent, from 151.5 to 205.7 GB/s, while the KV read stays at 65.7 against 61.1 GB/s. A KV byte therefore costs 3.4 times a weight byte on this hardware. Changing the attention kernel moves the intercept and leaves the slope where it was: the kernel is not the lever. The vLLM batch 16 by 16384 point sits 26 ms above its fit and needs a repeat. A faint third line shows the HuggingFace fit translated down by the 26.4 ms intercept difference; it is a construction rather than data, and it tracks the vLLM fit to within 17 ms over the whole range.</p>
+<p class="vz-eyebrow">Figure 2.6 &middot; Measured</p>
+<h1>The decode model is two-term, and the second term is the KV</h1>
+<p class="vz-sub">Decode step time against resident KV volume, swept over a batch &times; context grid on a
+DGX Spark (GB10 Grace Blackwell, 128 GiB unified LPDDR5X, 273 GB/s spec) running Qwen2.5-7B-Instruct
+in fp16. Two frameworks with different attention implementations and different KV layouts &mdash; paged
+against contiguous. <b style="color:var(--text-primary)">The lines are nearly parallel.</b> Swapping the
+kernel moves the intercept down 26% and leaves the slope within 8% of where it was.</p>
+<div class="vz-card"><div class="vz-scroll"><svg class="vz-plot" viewBox="0 0 940 500" role="group" aria-label="Decode step time against resident KV volume, with the two fitted lines"><g aria-hidden="true"><line class="grid" x1="84" y1="410.0" x2="862" y2="410.0"/><text class="ax" x="74" y="414.0" text-anchor="end">0</text><line class="grid" x1="84" y1="347.3" x2="862" y2="347.3"/><text class="ax" x="74" y="351.3" text-anchor="end">60</text><line class="grid" x1="84" y1="284.7" x2="862" y2="284.7"/><text class="ax" x="74" y="288.7" text-anchor="end">120</text><line class="grid" x1="84" y1="222.0" x2="862" y2="222.0"/><text class="ax" x="74" y="226.0" text-anchor="end">180</text><line class="grid" x1="84" y1="159.3" x2="862" y2="159.3"/><text class="ax" x="74" y="163.3" text-anchor="end">240</text><line class="grid" x1="84" y1="96.7" x2="862" y2="96.7"/><text class="ax" x="74" y="100.7" text-anchor="end">300</text><line class="grid" x1="84" y1="34.0" x2="862" y2="34.0"/><text class="ax" x="74" y="38.0" text-anchor="end">360</text><line class="grid" x1="84.0" y1="34" x2="84.0" y2="410"/><text class="ax" x="84.0" y="430" text-anchor="middle">0</text><line class="grid" x1="187.7" y1="34" x2="187.7" y2="410"/><text class="ax" x="187.7" y="430" text-anchor="middle">2</text><line class="grid" x1="291.5" y1="34" x2="291.5" y2="410"/><text class="ax" x="291.5" y="430" text-anchor="middle">4</text><line class="grid" x1="395.2" y1="34" x2="395.2" y2="410"/><text class="ax" x="395.2" y="430" text-anchor="middle">6</text><line class="grid" x1="498.9" y1="34" x2="498.9" y2="410"/><text class="ax" x="498.9" y="430" text-anchor="middle">8</text><line class="grid" x1="602.7" y1="34" x2="602.7" y2="410"/><text class="ax" x="602.7" y="430" text-anchor="middle">10</text><line class="grid" x1="706.4" y1="34" x2="706.4" y2="410"/><text class="ax" x="706.4" y="430" text-anchor="middle">12</text><line class="grid" x1="810.1" y1="34" x2="810.1" y2="410"/><text class="ax" x="810.1" y="430" text-anchor="middle">14</text><line class="axis" x1="84" y1="410" x2="862" y2="410"/><line class="axis" x1="84" y1="34" x2="84" y2="410"/><text class="ax-title" x="473" y="456" text-anchor="middle">Resident KV volume (GiB)</text><text class="ax-title" x="-222" y="22" text-anchor="middle" transform="rotate(-90)">Decode step time (ms)</text></g><g role="img" aria-label="Fitted line, HuggingFace plus SDPA: t equals 100.3 plus 16.34 times KV in GiB. Fitted over 7 points from 0.22 to 7.00 GiB, R squared 0.991."><line x1="84.0" y1="305.2" x2="447.1" y2="185.8" stroke="#d29922" stroke-width="2" stroke-linecap="round"/></g><g role="img" aria-label="Fitted line, vLLM plus FlashAttention-2: t equals 73.9 plus 17.58 times KV in GiB. Fitted over 9 points from 0.22 to 14.00 GiB, R squared 0.945."><line x1="84.0" y1="332.8" x2="810.1" y2="75.8" stroke="#388bfd" stroke-width="2" stroke-linecap="round"/></g><g role="img" aria-label="Construction, not data: the HuggingFace fit translated down by 26.4 milliseconds, the difference between the two intercepts. It lands within 17 milliseconds of the vLLM fit across the whole measured range, which is what nearly parallel means here."><line x1="84.0" y1="332.8" x2="810.1" y2="93.9" stroke="#d29922" stroke-width="2" stroke-opacity="0.4" stroke-linecap="round"/></g><g aria-hidden="true"><line x1="481.3" y1="259.6" x2="503.3" y2="259.6" stroke="#d29922" stroke-width="2" stroke-opacity="0.4" stroke-linecap="round"/><text class="lbl-2" x="509.3" y="263.8" fill="var(--text-secondary)">HF fit translated down 26.4 ms &mdash; a construction, not data</text><text class="lbl-2" x="509.3" y="278.4" fill="var(--text-muted)">it tracks the vLLM fit to within 17 ms across the range</text></g><g aria-hidden="true"><line x1="54.0" y1="305.2" x2="54.0" y2="332.8" stroke="var(--text-muted)" stroke-width="1"/><line x1="50.0" y1="305.2" x2="58.0" y2="305.2" stroke="var(--text-muted)" stroke-width="1"/><line x1="54.0" y1="305.2" x2="84.0" y2="305.2" stroke="var(--text-muted)" stroke-width="1" stroke-dasharray="0"/><line x1="50.0" y1="332.8" x2="58.0" y2="332.8" stroke="var(--text-muted)" stroke-width="1"/><line x1="54.0" y1="332.8" x2="84.0" y2="332.8" stroke="var(--text-muted)" stroke-width="1" stroke-dasharray="0"/></g><g role="img" tabindex="0" aria-label="Intercept of the HuggingFace + SDPA fit at zero resident KV: 100.3 milliseconds — the weight term." data-tip="Intercept &mdash; weight term|HuggingFace + SDPA|100.3 ms at KV = 0 GiB"><circle cx="84.0" cy="305.2" r="6" fill="#1a2230"/><circle cx="84.0" cy="305.2" r="4.5" fill="none" stroke="#d29922" stroke-width="2.5"/></g><g role="img" tabindex="0" aria-label="Intercept of the vLLM + FlashAttention-2 fit at zero resident KV: 73.9 milliseconds — the weight term." data-tip="Intercept &mdash; weight term|vLLM + FlashAttention-2|73.9 ms at KV = 0 GiB"><circle cx="84.0" cy="332.8" r="6" fill="#1a2230"/><circle cx="84.0" cy="332.8" r="4.5" fill="none" stroke="#388bfd" stroke-width="2.5"/></g><g aria-hidden="true"><text class="lbl" x="98.0" y="366.8">Intercept = the weight term</text><text class="lbl-m" x="98.0" y="382.8">100.3 ms (HF) vs 73.9 ms (vLLM) &mdash; 26% lower</text></g><g role="group" aria-label="HuggingFace + SDPA, unpaged measured points, n=7"><g role="img" tabindex="0" aria-label="HuggingFace plus SDPA, batch 1 by 4096 context: 0.22 GiB resident KV, 104.6 milliseconds per decode step." data-tip="HuggingFace + SDPA, unpaged|batch 1 &times; 4096 ctx|0.22 GiB KV &rarr; 104.6 ms/step"><circle cx="95.4" cy="300.8" r="7.5" fill="#1a2230"/><circle cx="95.4" cy="300.8" r="5" fill="#d29922"/></g><g role="img" tabindex="0" aria-label="HuggingFace plus SDPA, batch 1 by 16384 context: 0.88 GiB resident KV, 113.9 milliseconds per decode step." data-tip="HuggingFace + SDPA, unpaged|batch 1 &times; 16384 ctx|0.88 GiB KV &rarr; 113.9 ms/step"><circle cx="129.6" cy="291.0" r="7.5" fill="#1a2230"/><circle cx="129.6" cy="291.0" r="5" fill="#d29922"/></g><g role="img" tabindex="0" aria-label="HuggingFace plus SDPA, batch 1 by 32768 context: 1.75 GiB resident KV, 128.5 milliseconds per decode step." data-tip="HuggingFace + SDPA, unpaged|batch 1 &times; 32768 ctx|1.75 GiB KV &rarr; 128.5 ms/step"><circle cx="174.8" cy="275.8" r="7.5" fill="#1a2230"/><circle cx="174.8" cy="275.8" r="5" fill="#d29922"/></g><g role="img" tabindex="0" aria-label="HuggingFace plus SDPA, batch 4 by 4096 context: 0.88 GiB resident KV, 111.8 milliseconds per decode step." data-tip="HuggingFace + SDPA, unpaged|batch 4 &times; 4096 ctx|0.88 GiB KV &rarr; 111.8 ms/step"><circle cx="129.6" cy="293.2" r="7.5" fill="#1a2230"/><circle cx="129.6" cy="293.2" r="5" fill="#d29922"/></g><g role="img" tabindex="0" aria-label="HuggingFace plus SDPA, batch 4 by 16384 context: 3.5 GiB resident KV, 155.4 milliseconds per decode step." data-tip="HuggingFace + SDPA, unpaged|batch 4 &times; 16384 ctx|3.5 GiB KV &rarr; 155.4 ms/step"><circle cx="265.5" cy="247.7" r="7.5" fill="#1a2230"/><circle cx="265.5" cy="247.7" r="5" fill="#d29922"/></g><g role="img" tabindex="0" aria-label="HuggingFace plus SDPA, batch 4 by 32768 context: 7.0 GiB resident KV, 212.4 milliseconds per decode step." data-tip="HuggingFace + SDPA, unpaged|batch 4 &times; 32768 ctx|7.0 GiB KV &rarr; 212.4 ms/step"><circle cx="447.1" cy="188.2" r="7.5" fill="#1a2230"/><circle cx="447.1" cy="188.2" r="5" fill="#d29922"/></g><g role="img" tabindex="0" aria-label="HuggingFace plus SDPA, batch 16 by 4096 context: 3.5 GiB resident KV, 165.1 milliseconds per decode step." data-tip="HuggingFace + SDPA, unpaged|batch 16 &times; 4096 ctx|3.5 GiB KV &rarr; 165.1 ms/step"><circle cx="265.5" cy="237.6" r="7.5" fill="#1a2230"/><circle cx="265.5" cy="237.6" r="5" fill="#d29922"/></g></g><g role="group" aria-label="vLLM 0.20.1 + FlashAttention-2, paged measured points, n=9"><g role="img" tabindex="0" aria-label="vLLM plus FlashAttention-2, batch 1 by 4096 context: 0.22 GiB resident KV, 95.1 milliseconds per decode step." data-tip="vLLM 0.20.1 + FlashAttention-2, paged|batch 1 &times; 4096 ctx|0.22 GiB KV &rarr; 95.1 ms/step"><circle cx="95.4" cy="310.7" r="7.5" fill="#1a2230"/><circle cx="95.4" cy="310.7" r="5" fill="#388bfd"/></g><g role="img" tabindex="0" aria-label="vLLM plus FlashAttention-2, batch 1 by 16384 context: 0.88 GiB resident KV, 101.5 milliseconds per decode step." data-tip="vLLM 0.20.1 + FlashAttention-2, paged|batch 1 &times; 16384 ctx|0.88 GiB KV &rarr; 101.5 ms/step"><circle cx="129.6" cy="304.0" r="7.5" fill="#1a2230"/><circle cx="129.6" cy="304.0" r="5" fill="#388bfd"/></g><g role="img" tabindex="0" aria-label="vLLM plus FlashAttention-2, batch 1 by 32000 context: 1.71 GiB resident KV, 107.8 milliseconds per decode step." data-tip="vLLM 0.20.1 + FlashAttention-2, paged|batch 1 &times; 32000 ctx|1.71 GiB KV &rarr; 107.8 ms/step"><circle cx="172.7" cy="297.4" r="7.5" fill="#1a2230"/><circle cx="172.7" cy="297.4" r="5" fill="#388bfd"/></g><g role="img" tabindex="0" aria-label="vLLM plus FlashAttention-2, batch 4 by 4096 context: 0.88 GiB resident KV, 99.9 milliseconds per decode step." data-tip="vLLM 0.20.1 + FlashAttention-2, paged|batch 4 &times; 4096 ctx|0.88 GiB KV &rarr; 99.9 ms/step"><circle cx="129.6" cy="305.7" r="7.5" fill="#1a2230"/><circle cx="129.6" cy="305.7" r="5" fill="#388bfd"/></g><g role="img" tabindex="0" aria-label="vLLM plus FlashAttention-2, batch 4 by 16384 context: 3.5 GiB resident KV, 117.4 milliseconds per decode step." data-tip="vLLM 0.20.1 + FlashAttention-2, paged|batch 4 &times; 16384 ctx|3.5 GiB KV &rarr; 117.4 ms/step"><circle cx="265.5" cy="287.4" r="7.5" fill="#1a2230"/><circle cx="265.5" cy="287.4" r="5" fill="#388bfd"/></g><g role="img" tabindex="0" aria-label="vLLM plus FlashAttention-2, batch 4 by 32000 context: 6.84 GiB resident KV, 162.2 milliseconds per decode step." data-tip="vLLM 0.20.1 + FlashAttention-2, paged|batch 4 &times; 32000 ctx|6.84 GiB KV &rarr; 162.2 ms/step"><circle cx="438.8" cy="240.6" r="7.5" fill="#1a2230"/><circle cx="438.8" cy="240.6" r="5" fill="#388bfd"/></g><g role="img" tabindex="0" aria-label="vLLM plus FlashAttention-2, batch 16 by 4096 context: 3.5 GiB resident KV, 127.5 milliseconds per decode step." data-tip="vLLM 0.20.1 + FlashAttention-2, paged|batch 16 &times; 4096 ctx|3.5 GiB KV &rarr; 127.5 ms/step"><circle cx="265.5" cy="276.8" r="7.5" fill="#1a2230"/><circle cx="265.5" cy="276.8" r="5" fill="#388bfd"/></g><g role="img" tabindex="0" aria-label="vLLM plus FlashAttention-2, batch 16 by 16384 context: 14.0 GiB resident KV, 345.9 milliseconds per decode step." data-tip="vLLM 0.20.1 + FlashAttention-2, paged|batch 16 &times; 16384 ctx|14.0 GiB KV &rarr; 345.9 ms/step"><circle cx="810.1" cy="48.7" r="7.5" fill="#1a2230"/><circle cx="810.1" cy="48.7" r="5" fill="#388bfd"/></g><g role="img" tabindex="0" aria-label="vLLM plus FlashAttention-2, batch 32 by 4096 context: 7.0 GiB resident KV, 185.0 milliseconds per decode step." data-tip="vLLM 0.20.1 + FlashAttention-2, paged|batch 32 &times; 4096 ctx|7.0 GiB KV &rarr; 185.0 ms/step"><circle cx="447.1" cy="216.8" r="7.5" fill="#1a2230"/><circle cx="447.1" cy="216.8" r="5" fill="#388bfd"/></g></g><g aria-hidden="true"><text class="lbl-m" x="327.8" y="209.0" fill="#d29922" text-anchor="end" style="font-weight:600">slope 16.34 ms/GiB</text><text class="lbl-m" x="685.7" y="145.8" fill="#388bfd" text-anchor="start" style="font-weight:600">slope 17.58 ms/GiB</text><text class="lbl" x="530.1" y="336.9">Slope = the KV term</text><text class="lbl-m" x="530.1" y="352.9">within 8% of each other &mdash; the kernel is not the lever</text></g><g aria-hidden="true"><line x1="802.1" y1="50.7" x2="623.4" y2="65.3" stroke="var(--text-muted)" stroke-width="1"/><text class="lbl-2" x="613.0" y="69.3" text-anchor="end">batch 16 &times; 16K sits 26 ms above the fit</text><text class="lbl-2" x="613.0" y="84.3" text-anchor="end" fill="var(--text-muted)">&mdash; needs a repeat before it is relied on</text></g></svg></div>
+<div class="vz-legend">
+  <span class="vz-legend-item"><svg class="vz-key" width="30" height="12" aria-hidden="true"><line x1="1" y1="6" x2="29" y2="6" stroke="#d29922" stroke-width="2" stroke-linecap="round"/><circle cx="15" cy="6" r="4.5" fill="#d29922"/></svg>
+    <span><b>HuggingFace + SDPA, unpaged</b> &nbsp;<span class="vz-eq">t = 100.3 + 16.34&middot;KV_GiB</span> &nbsp;n&nbsp;=&nbsp;7 &nbsp;R&sup2;&nbsp;=&nbsp;0.991</span></span>
+  <span class="vz-legend-item"><svg class="vz-key" width="30" height="12" aria-hidden="true"><line x1="1" y1="6" x2="29" y2="6" stroke="#388bfd" stroke-width="2" stroke-linecap="round"/><circle cx="15" cy="6" r="4.5" fill="#388bfd"/></svg>
+    <span><b>vLLM 0.20.1 + FlashAttention-2, paged</b> &nbsp;<span class="vz-eq">t = 73.9 + 17.58&middot;KV_GiB</span> &nbsp;n&nbsp;=&nbsp;9 &nbsp;R&sup2;&nbsp;=&nbsp;0.945</span></span>
+</div></div>
+
+<div class="vz-tiles">
+  <div class="vz-tile"><div class="vz-tile-v">8%</div><div class="vz-tile-l">Spread between the two KV slopes &mdash; 16.34 vs 17.58 ms/GiB</div></div>
+  <div class="vz-tile"><div class="vz-tile-v">26%</div><div class="vz-tile-l">Lower intercept for vLLM &mdash; 73.9 vs 100.3 ms</div></div>
+  <div class="vz-tile"><div class="vz-tile-v">34%</div><div class="vz-tile-l">Improvement in the weight read over the same change &mdash; 151.5 &rarr; 205.7 GB/s</div></div>
+  <div class="vz-tile"><div class="vz-tile-v">3.4&times;</div><div class="vz-tile-l">Cost of a KV byte against a weight byte &mdash; 205.7 &divide; 61.1</div></div>
+</div>
+<p class="vz-note">The intercept is the <b>weight term</b>: the fixed cost of streaming 14.16 GiB of
+weights once per decode step, independent of how much KV is resident. The slope is the <b>KV term</b>:
+the marginal cost of each additional GiB of resident KV that attention must re-read every step.
+vLLM extracts near-peak bandwidth on the weights (205.7 GB/s, 87% of the 236.5 GB/s this machine
+actually achieves) and about a quarter of it on the KV (61.1 GB/s, 26%). HuggingFace reads weights at
+151.5 GB/s (64%) and KV at 65.7 GB/s (28%). <b>A better attention kernel fixes the weight path and
+leaves the KV path where it was.</b> Each fitted line is drawn only across the KV range its own data
+covers, extended to KV = 0 to show the intercept.</p>
+<details class="vz-table"><summary>Show the data table</summary><div class="table-wrapper"><table><caption class='sr-only'>Measured decode step time against resident KV volume for both frameworks.</caption><thead><tr><th scope="col">Framework</th><th scope="col">batch &times; context</th><th scope="col">Resident KV (GiB)</th><th scope="col">ms / decode step</th></tr></thead><tbody><tr><td>HuggingFace + SDPA</td><td>1 &times; 4096</td><td>0.22</td><td>104.6</td></tr><tr><td>HuggingFace + SDPA</td><td>1 &times; 16384</td><td>0.88</td><td>113.9</td></tr><tr><td>HuggingFace + SDPA</td><td>1 &times; 32768</td><td>1.75</td><td>128.5</td></tr><tr><td>HuggingFace + SDPA</td><td>4 &times; 4096</td><td>0.88</td><td>111.8</td></tr><tr><td>HuggingFace + SDPA</td><td>4 &times; 16384</td><td>3.50</td><td>155.4</td></tr><tr><td>HuggingFace + SDPA</td><td>4 &times; 32768</td><td>7.00</td><td>212.4</td></tr><tr><td>HuggingFace + SDPA</td><td>16 &times; 4096</td><td>3.50</td><td>165.1</td></tr><tr><td>vLLM + FlashAttention-2</td><td>1 &times; 4096</td><td>0.22</td><td>95.1</td></tr><tr><td>vLLM + FlashAttention-2</td><td>1 &times; 16384</td><td>0.88</td><td>101.5</td></tr><tr><td>vLLM + FlashAttention-2</td><td>1 &times; 32000</td><td>1.71</td><td>107.8</td></tr><tr><td>vLLM + FlashAttention-2</td><td>4 &times; 4096</td><td>0.88</td><td>99.9</td></tr><tr><td>vLLM + FlashAttention-2</td><td>4 &times; 16384</td><td>3.50</td><td>117.4</td></tr><tr><td>vLLM + FlashAttention-2</td><td>4 &times; 32000</td><td>6.84</td><td>162.2</td></tr><tr><td>vLLM + FlashAttention-2</td><td>16 &times; 4096</td><td>3.50</td><td>127.5</td></tr><tr><td>vLLM + FlashAttention-2</td><td>16 &times; 16384</td><td>14.00</td><td>345.9</td></tr><tr><td>vLLM + FlashAttention-2</td><td>32 &times; 4096</td><td>7.00</td><td>185.0</td></tr></tbody></table></div></details>
+<p class="vz-foot">Measured &mdash; DGX Spark GB10, 19 Aug 2026, scripts/bw_wall.py</p>
+</main>
+<script>
+(function(){
+  var tip=document.createElement('div'); tip.id='vz-tip'; tip.setAttribute('role','status');
+  tip.setAttribute('aria-live','polite'); document.body.appendChild(tip);
+  function show(el){
+    var t=el.getAttribute('data-tip'); if(!t) return;
+    var p=t.split('|');
+    tip.innerHTML='<span class="t-h"></span><span class="t-b"></span>';
+    tip.firstChild.textContent=p[0]; tip.lastChild.textContent=p.slice(1).join(' · ');
+    var r=el.getBoundingClientRect();
+    tip.classList.add('on');
+    var tw=tip.offsetWidth, th=tip.offsetHeight;
+    var x=r.left+r.width/2-tw/2, y=r.top-th-10;
+    if(y<4){y=r.bottom+10;}
+    x=Math.max(6,Math.min(x,window.innerWidth-tw-6));
+    tip.style.left=x+'px'; tip.style.top=y+'px';
+  }
+  function hide(){tip.classList.remove('on');}
+  ['mouseover','focusin'].forEach(function(ev){
+    document.addEventListener(ev,function(e){
+      var el=e.target.closest?e.target.closest('[data-tip]'):null; if(el) show(el);
+    },true);
+  });
+  ['mouseout','focusout','scroll'].forEach(function(ev){
+    document.addEventListener(ev,hide,true);
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')hide();});
+})();
+</script>
+</body>
+</html>

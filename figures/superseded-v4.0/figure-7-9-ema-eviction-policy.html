@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Figure 7.9 — EMA Eviction Policy</title>
+<script src="../../vendor/react.production.min.js"></script>
+<script src="../../vendor/react-dom.production.min.js"></script>
+<script src="../../vendor/babel.min.js"></script>
+<link rel="stylesheet" href="../../css/style.css">
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: var(--font-sans); background: linear-gradient(135deg, var(--bg-primary), var(--bg-card)); min-height: 100vh; color: var(--text-primary); }</style>
+</head>
+<body>
+<div role="note" style="position:sticky;top:0;z-index:9999;background:#f85149;color:#0a0e14;padding:0.85rem 1rem;font-family:'IBM Plex Sans',-apple-system,sans-serif;font-weight:700;font-size:0.95rem;line-height:1.45;border-bottom:3px solid #0a0e14;">
+SUPERSEDED — this figure illustrates a claim withdrawn in v5.0. It is retained only so the retraction remains checkable. Do not cite it. See RETRACTIONS.md and Appendix L (hardware measurements) and Appendix N (simulation) for what replaced it.
+</div>
+
+<div id="root" role="main"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+function EMAEviction() {
+  const [step, setStep] = useState(0);
+  const [scores, setScores] = useState([0.8, 0.3, 0.6, 0.1, 0.5, 0.2, 0.9, 0.4]);
+  const alpha = 0.2;
+  
+  useEffect(() => {
+    if (step > 0 && step <= 5) {
+      const timer = setTimeout(() => {
+        setScores(s => s.map((v, i) => {
+          const attn = Math.random() * 0.5;
+          return alpha * attn + (1 - alpha) * v;
+        }));
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [step]);
+
+  const styles = {
+    container: { maxWidth: '800px', margin: '0 auto', padding: '2rem' },
+    header: { textAlign: 'center', marginBottom: '2rem' },
+    badge: { display: 'inline-block', padding: '0.25rem 0.75rem', background: 'rgba(245,158,11,0.2)', color: 'var(--accent-yellow)', fontSize: '0.75rem', fontFamily: 'var(--font-mono)', borderRadius: '20px', marginBottom: '0.5rem' },
+    formula: { background: 'var(--bg-primary)', borderRadius: '12px', padding: '1rem', textAlign: 'center', marginBottom: '2rem', fontFamily: 'var(--font-mono)', color: 'var(--accent-cyan)' },
+    grid: { display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '0.5rem', marginBottom: '2rem' },
+    token: (score) => ({ background: 'var(--bg-card)', borderRadius: '8px', padding: '1rem', textAlign: 'center', border: `2px solid ${score < 0.25 ? 'var(--accent-red)' : score > 0.6 ? 'var(--accent-green)' : 'var(--border-primary)'}` }),
+    bar: (score) => ({ height: 60, background: 'var(--bg-primary)', borderRadius: '4px', overflow: 'hidden', position: 'relative' }),
+    fill: (score) => ({ position: 'absolute', bottom: 0, width: '100%', height: `${score * 100}%`, background: score < 0.25 ? 'var(--accent-red)' : score > 0.6 ? 'var(--accent-green)' : 'var(--accent-orange)', transition: 'all 0.3s' }),
+    btns: { display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '1rem' },
+    btn: { padding: '0.5rem 1rem', background: 'var(--accent-cyan)', color: 'var(--bg-primary)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }
+  };
+
+  return (
+    <div style={styles.container}>
+      <p className="sr-only">Figure: EMA-based eviction of KV-cache entries. Each token's attention score is smoothed with score_t = 0.2 times attention_t plus 0.8 times score_t-1, that is alpha = 0.2, the implementation default, giving a half-life of ln0.5 over ln0.8 = 3.1 decode steps. Eight tokens T0 to T7 start at scores 0.80, 0.30, 0.60, 0.10, 0.50, 0.20, 0.90 and 0.40; stepping forward applies the update above to each. A token scoring above 0.6 is kept, below 0.25 is evicted, and in between is warm — so on the opening state T0 at 0.80 and T6 at 0.90 are keeps while T3 at 0.10 and T5 at 0.20 are evictions. Those 0.6 and 0.25 cut points are demo thresholds chosen to suit the synthetic score spread of this animation, not the design's thresholds; they are uncalibrated illustrative values. The design's keep, demote and evict thresholds are 0.10 and 0.02, an order of magnitude lower, because a real EMA at alpha = 0.2 lags its input and saturates far below the raw attention mass — a token drawing a steady 4 percent of attention converges near 0.04, not 0.4. The two sets are not in contradiction, and both are uncalibrated. Appendix K section K.7 lists them with the package's other uncalibrated parameters. EMA in isolation contributes plus 7 percentage points of hit rate, 87 percent cumulative. All values are an analytical model, not measured.</p>
+      <div style={styles.header}>
+        <div style={styles.badge}>FIGURE 7.9</div>
+        <h1 style={{fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.5rem'}}>EMA-Based Eviction</h1>
+        <p style={{color: 'var(--text-secondary)'}}>Exponential Moving Average smooths attention scores</p>
+        <p style={{color: 'var(--text-secondary)', fontSize: '0.8rem'}}>α = 0.2 (implementation default) → half-life ln0.5/ln0.8 = 3.1 decode steps</p>
+      </div>
+      <div style={styles.formula}>
+        score_t = 0.2 × attention_t + 0.8 × score_{'{t-1}'} &nbsp;&nbsp; (α = {alpha}, half-life 3.1 steps)
+      </div>
+      <div style={styles.btns}>
+        <button style={styles.btn} onClick={() => setStep(s => s + 1)}>Step Forward</button>
+        <button style={{...styles.btn, background: 'var(--border-primary)', color: 'var(--text-primary)'}} onClick={() => { setStep(0); setScores([0.8, 0.3, 0.6, 0.1, 0.5, 0.2, 0.9, 0.4]); }}>Reset</button>
+      </div>
+      <div style={styles.grid}>
+        {scores.map((score, i) => (
+          <div key={i} role="img" aria-label={`Token T${i}, EMA score ${score.toFixed(2)}, ${score < 0.25 ? 'evict' : score > 0.6 ? 'keep' : 'warm'}`} style={styles.token(score)}>
+            <div style={styles.bar(score)} aria-hidden="true"><div style={styles.fill(score)}></div></div>
+            <div style={{fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.5rem'}}>T{i}</div>
+            <div style={{fontSize: '0.8rem', fontFamily: 'var(--font-mono)', color: score < 0.25 ? 'var(--accent-red)' : 'var(--text-secondary)'}}>{score.toFixed(2)}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{display: 'flex', justifyContent: 'center', gap: '2rem', fontSize: '0.875rem'}}>
+        <span><span aria-hidden="true" style={{color: 'var(--accent-green)'}}>■</span> Keep (score &gt; 0.6)</span>
+        <span><span aria-hidden="true" style={{color: 'var(--accent-orange)'}}>■</span> Warm</span>
+        <span><span aria-hidden="true" style={{color: 'var(--accent-red)'}}>■</span> Evict (score &lt; 0.25)</span>
+      </div>
+      <div style={{textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '1.5rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-primary)'}}>
+        Analytical model — illustrative animation with synthetic attention values, not measured data.
+        EMA in isolation contributes +7 percentage points of hit rate (87% cumulative). Canonical numbers v4.0.
+      </div>
+      <div className="callout warning" style={{marginTop: '1rem'}}>
+        <div className="callout-title">The 0.6 / 0.25 cut points here are demo thresholds, not the design's thresholds</div>
+        <p style={{marginBottom: '0.5rem'}}>This animation seeds eight tokens with synthetic scores spread
+        evenly across 0.1–0.9 so that the keep / warm / evict bands are all visibly populated as you step.
+        The 0.6 and 0.25 cut points are chosen to suit that synthetic spread and nothing else — they are
+        <strong> uncalibrated illustrative values</strong>.</p>
+        <p style={{marginBottom: '0.5rem'}}>They are deliberately not the same numbers as the design's
+        keep / demote / evict thresholds of <strong>0.10 / 0.02</strong> (Figure 7.7), and the difference is
+        not a contradiction. A real EMA at α = 0.2 lags its input and saturates far below the raw attention
+        mass: a token drawing a steady 4% of attention converges to a score near 0.04, not 0.4. Real scores
+        therefore live near the bottom of the 0–1 range, which is why the design's thresholds are an order of
+        magnitude lower than the ones used here to make a demo legible.</p>
+        <p style={{marginBottom: 0}}>Both sets are uncalibrated and both need tuning against real attention
+        traces. See <a href="../../appendix/k-methodology.html">Appendix K §K.7 — Uncalibrated
+        parameters</a>.</p>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<EMAEviction />);
+</script>
+</body>
+</html>

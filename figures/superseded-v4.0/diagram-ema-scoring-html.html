@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EMA Attention Scoring</title>
+    <link rel="stylesheet" href="../../css/style.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: var(--font-sans);
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            padding: 40px 20px;
+        }
+        
+        .container { max-width: 1100px; margin: 0 auto; padding: 0; }
+        
+        h1 {
+            font-size: 1.8rem;
+            text-align: center;
+            margin-bottom: 8px;
+            background: linear-gradient(90deg, #22c55e, #3b82f6, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-bottom: 40px;
+        }
+        
+        .section {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--accent-green);
+            margin-bottom: 20px;
+        }
+        
+        /* Formula display */
+        .formula-box {
+            background: rgba(0,0,0,0.4);
+            border-radius: 12px;
+            padding: 20px 25px;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 30px;
+        }
+        
+        .formula {
+            font-family: var(--font-mono);
+            font-size: 1.1rem;
+            color: var(--accent-green);
+        }
+        
+        .formula-explanation {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            flex: 1;
+        }
+        
+        /* Comparison chart */
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin: 25px 0;
+        }
+        
+        .token-card {
+            background: rgba(0,0,0,0.3);
+            border-radius: 16px;
+            padding: 20px;
+            border: 2px solid transparent;
+        }
+        
+        .token-card.important {
+            border-color: rgba(34, 197, 94, 0.4);
+        }
+        
+        .token-card.unimportant {
+            border-color: rgba(239, 68, 68, 0.3);
+        }
+        
+        .token-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .token-name {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        
+        .token-card.important .token-name { color: var(--accent-green); }
+        .token-card.unimportant .token-name { color: var(--accent-red); }
+        
+        .token-pos {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        
+        .score-timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .score-step {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.8rem;
+        }
+        
+        .step-label {
+            width: 60px;
+            color: var(--text-secondary);
+        }
+        
+        .step-calc {
+            flex: 1;
+            font-family: var(--font-mono);
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        
+        .step-result {
+            width: 80px;
+            text-align: right;
+            font-weight: 600;
+            font-family: var(--font-mono);
+        }
+        
+        .token-card.important .step-result { color: var(--accent-green); }
+        .token-card.unimportant .step-result { color: var(--accent-red); }
+        
+        /* Score bar visualization */
+        .score-bar-container {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .score-bar-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+        
+        .score-bar-bg {
+            height: 24px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        
+        .score-bar {
+            height: 100%;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            padding-left: 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: white;
+        }
+        
+        /* Decision section */
+        .decision-section {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 25px;
+        }
+        
+        .decision-card {
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        
+        .decision-card.keep {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+        
+        .decision-card.demote {
+            background: rgba(251, 146, 60, 0.1);
+            border: 1px solid rgba(251, 146, 60, 0.3);
+        }
+        
+        .decision-card.evict {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        
+        .decision-threshold {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .decision-card.keep .decision-threshold { color: var(--accent-green); }
+        .decision-card.demote .decision-threshold { color: var(--accent-orange); }
+        .decision-card.evict .decision-threshold { color: var(--accent-red); }
+        
+        .decision-action {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .decision-card.keep .decision-action { color: var(--accent-green); }
+        .decision-card.demote .decision-action { color: var(--accent-orange); }
+        .decision-card.evict .decision-action { color: var(--accent-red); }
+        
+        .decision-location {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        
+        /* Half-life explanation */
+        .halflife-box {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .halflife-title {
+            color: var(--accent-cyan);
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+        }
+        
+        .halflife-content {
+            display: flex;
+            gap: 30px;
+            align-items: center;
+        }
+        
+        .halflife-calc {
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            color: var(--accent-cyan);
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 8px;
+        }
+        
+        .halflife-meaning {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            flex: 1;
+        }
+        
+        .highlight {
+            color: var(--accent-yellow);
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+<div role="note" style="position:sticky;top:0;z-index:9999;background:#f85149;color:#0a0e14;padding:0.85rem 1rem;font-family:'IBM Plex Sans',-apple-system,sans-serif;font-weight:700;font-size:0.95rem;line-height:1.45;border-bottom:3px solid #0a0e14;">
+SUPERSEDED — this figure illustrates a claim withdrawn in v5.0. It is retained only so the retraction remains checkable. Do not cite it. See RETRACTIONS.md and Appendix L (hardware measurements) and Appendix N (simulation) for what replaced it.
+</div>
+
+    <div class="container" role="main">
+        <p class="sr-only">Figure: EMA-based attention scoring, comparing how an important and an unimportant token score over 100 decode steps under score_new = 0.2 x attention + 0.8 x score_old, that is alpha = 0.2. The instruction token "helpful" at position 45 runs 0.008, 0.016, 0.040, 0.096 and 0.122 at steps 1, 2, 10, 50 and 100, ending at 0.122 and kept; the filler token "the" at position 5,432 runs 0.0004, 0.0005, 0.0008, 0.0005 and 0.0005 over the same steps, ending at 0.0005 and evicted. The half-life is (1 - alpha)^n = 0.5, so 0.8^n = 0.5 and n = log 0.5 over log 0.8 = 3.1 steps, which at the canonical 10 tokens per second per user is 310 milliseconds. Scores above 0.10 are kept in fast HBM, 0.02 to 0.10 are demoted to CXL DRAM, and below 0.02 are evicted to Flash or discarded. Those two thresholds are uncalibrated design parameters, not derived or measured values: the keep threshold sets the size of the HBM-resident hot set and the evict threshold sets the floor below which a token is pushed to flash. Raising the keep threshold frees HBM sooner and admits more users at the cost of hit rate; raising the evict threshold reclaims CXL DRAM faster at the cost of more 25 microsecond flash reads. Both need tuning against real attention traces, and their absolute scale is tied to alpha = 0.2. Appendix K section K.7 lists them with the package's other uncalibrated parameters. EMA scoring contributes plus 7 percentage points of hit rate, 80 percent to 87 percent cumulative. All values are an analytical model, not measured.</p>
+        <h1>EMA-Based Attention Scoring</h1>
+        <p class="subtitle">How we track which tokens are actually important (not just recent)</p>
+        
+        <div class="section">
+            <div class="section-title">The EMA Update Rule</div>
+            
+            <div class="formula-box">
+                <div class="formula">score_new = 0.2 × attention + 0.8 × score_old</div>
+                <div class="formula-explanation">
+                    Each decode step, we update the score using <strong>exponential moving average</strong>.<br>
+                    Tokens that consistently receive attention accumulate high scores.<br>
+                    Tokens that are ignored see their scores decay toward zero.
+                </div>
+            </div>
+            
+            <div class="comparison">
+                <div class="token-card important">
+                    <div class="token-header">
+                        <div class="token-name">Token: "helpful" (instruction)</div>
+                        <div class="token-pos">Position 45</div>
+                    </div>
+                    <div class="score-timeline">
+                        <div class="score-step">
+                            <div class="step-label">Step 1</div>
+                            <div class="step-calc">0.2 × 0.04 + 0.8 × 0</div>
+                            <div class="step-result">0.008</div>
+                        </div>
+                        <div class="score-step">
+                            <div class="step-label">Step 2</div>
+                            <div class="step-calc">0.2 × 0.05 + 0.8 × 0.008</div>
+                            <div class="step-result">0.016</div>
+                        </div>
+                        <div class="score-step">
+                            <div class="step-label">Step 10</div>
+                            <div class="step-calc">0.2 × 0.03 + 0.8 × 0.042</div>
+                            <div class="step-result">0.040</div>
+                        </div>
+                        <div class="score-step">
+                            <div class="step-label">Step 50</div>
+                            <div class="step-calc">0.2 × 0.04 + 0.8 × 0.11</div>
+                            <div class="step-result">0.096</div>
+                        </div>
+                        <div class="score-step">
+                            <div class="step-label">Step 100</div>
+                            <div class="step-calc">0.2 × 0.05 + 0.8 × 0.14</div>
+                            <div class="step-result">0.122</div>
+                        </div>
+                    </div>
+                    <div class="score-bar-container">
+                        <div class="score-bar-label">Final Score after 100 steps</div>
+                        <div class="score-bar-bg">
+                            <div class="score-bar" role="img" aria-label="Final EMA score after 100 steps for the token &quot;helpful&quot;, 0.122, decision keep" style="width: 61%; background: linear-gradient(90deg, #22c55e, #16a34a);">
+                                0.122 → KEEP
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="token-card unimportant">
+                    <div class="token-header">
+                        <div class="token-name">Token: "the" (filler word)</div>
+                        <div class="token-pos">Position 5,432</div>
+                    </div>
+                    <div class="score-timeline">
+                        <div class="score-step">
+                            <div class="step-label">Step 1</div>
+                            <div class="step-calc">0.2 × 0.002 + 0.8 × 0</div>
+                            <div class="step-result">0.0004</div>
+                        </div>
+                        <div class="score-step">
+                            <div class="step-label">Step 2</div>
+                            <div class="step-calc">0.2 × 0.001 + 0.8 × 0.0004</div>
+                            <div class="step-result">0.0005</div>
+                        </div>
+                        <div class="score-step">
+                            <div class="step-label">Step 10</div>
+                            <div class="step-calc">0.2 × 0.001 + 0.8 × 0.0008</div>
+                            <div class="step-result">0.0008</div>
+                        </div>
+                        <div class="score-step">
+                            <div class="step-label">Step 50</div>
+                            <div class="step-calc">0.2 × 0.000 + 0.8 × 0.0006</div>
+                            <div class="step-result">0.0005</div>
+                        </div>
+                        <div class="score-step">
+                            <div class="step-label">Step 100</div>
+                            <div class="step-calc">0.2 × 0.001 + 0.8 × 0.0004</div>
+                            <div class="step-result">0.0005</div>
+                        </div>
+                    </div>
+                    <div class="score-bar-container">
+                        <div class="score-bar-label">Final Score after 100 steps</div>
+                        <div class="score-bar-bg">
+                            <div class="score-bar" role="img" aria-label="Final EMA score after 100 steps for the token &quot;the&quot;, 0.0005, decision evict" style="width: 2.5%; background: linear-gradient(90deg, #ef4444, #dc2626);">
+                            </div>
+                        </div>
+                        <div style="font-size: 0.75rem; color: var(--accent-red); margin-top: 5px;">0.0005 → EVICT</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="halflife-box">
+                <div class="halflife-title">Why α = 0.2? The Half-Life Calculation</div>
+                <div class="halflife-content">
+                    <div class="halflife-calc">
+                        (1 - α)^n = 0.5<br>
+                        0.8^n = 0.5<br>
+                        n = log(0.5) / log(0.8)<br>
+                        n = 3.1 steps
+                    </div>
+                    <div class="halflife-meaning">
+                        At the canonical target of <span class="highlight">10 tokens/second per user</span>, the half-life is <span class="highlight">310 milliseconds</span>.<br><br>
+                        This means: if a token doesn't receive attention for 310 ms, its score drops by 50%. 
+                        Tokens that are consistently important maintain high scores; tokens that were briefly accessed but then ignored see their scores decay quickly.
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <div class="section-title">Eviction Decision Thresholds</div>
+            
+            <div class="decision-section">
+                <div class="decision-card keep" role="img" aria-label="Score above 0.10: keep, store in fast HBM">
+                    <div class="decision-threshold">> 0.10</div>
+                    <div class="decision-action">KEEP</div>
+                    <div class="decision-location">Store in fast HBM</div>
+                </div>
+                <div class="decision-card demote" role="img" aria-label="Score 0.02 to 0.10: demote, move to CXL DRAM">
+                    <div class="decision-threshold">0.02 - 0.10</div>
+                    <div class="decision-action">DEMOTE</div>
+                    <div class="decision-location">Move to CXL DRAM</div>
+                </div>
+                <div class="decision-card evict" role="img" aria-label="Score below 0.02: evict, move to Flash or discard">
+                    <div class="decision-threshold">< 0.02</div>
+                    <div class="decision-action">EVICT</div>
+                    <div class="decision-location">Move to Flash or discard</div>
+                </div>
+            </div>
+
+            <div class="callout warning">
+                <div class="callout-title">0.10 and 0.02 are uncalibrated design parameters</div>
+                <p>Neither threshold is derived, measured or fitted. They are placeholders chosen to make the
+                three-tier decision legible, and they are stated here as assumptions so that a reader can argue
+                with them rather than inherit them.</p>
+                <p><strong>What they control.</strong> The <em>keep</em> threshold (0.10) sets the size of the
+                HBM-resident hot set: it is the score a token must hold to occupy Tier 0/1. The <em>evict</em>
+                threshold (0.02) sets the floor below which a token is pushed out of CXL DRAM to flash. The band
+                between them is the demote zone, and its width sets how much traffic the CXL tier absorbs.</p>
+                <p><strong>Which way they push.</strong> Raising the keep threshold frees HBM sooner and admits
+                more users, at the cost of hit rate — more accesses fall through to the 200 ns CXL tier, pulling
+                the effective-latency figure up from 177 ns. Lowering it holds more tokens in HBM and raises hit
+                rate, but shrinks the number of concurrent users the 37 GB evictable budget can serve. Raising the
+                evict threshold reclaims CXL DRAM faster and shortens metadata queues, at the cost of more 25 µs
+                flash reads on the miss tail; lowering it keeps more of the context warm and moves capacity
+                pressure back onto the 1 TB CXL tier. Widening the demote band trades HBM pressure for CXL
+                pressure; narrowing it makes the policy behave more like a two-tier keep/evict decision.</p>
+                <p><strong>How they would be calibrated.</strong> Only against real attention traces. Replay
+                per-head attention distributions from a production 128 K workload, sweep the pair, and pick the
+                point that meets the 97% hit-rate SLO at the smallest hot set. The correct values almost certainly
+                differ per head type and per model. Note also that the absolute scale of these thresholds is tied
+                to α = 0.2: an EMA lags its input and saturates well below the raw attention mass, so a threshold
+                of 0.10 is not "10% of attention". Changing α changes what these numbers mean.
+                See <a href="../../appendix/k-methodology.html">Appendix K, section K.7 — Uncalibrated
+                parameters</a> for the consolidated table.</p>
+            </div>
+        </div>
+
+        <p style="text-align:center;color:var(--text-secondary);font-size:0.8rem;margin-top:1.5rem;padding-top:0.75rem;border-top:1px solid rgba(148,163,184,0.25);">
+            Analytical model — worked scores are illustrative, not measured. α = 0.2, half-life ln0.5/ln0.8 = 3.1 decode steps.
+            EMA scoring contributes +7 percentage points of hit rate (80% → 87% cumulative). Canonical numbers v4.0.
+        </p>
+    </div>
+</body>
+</html>
