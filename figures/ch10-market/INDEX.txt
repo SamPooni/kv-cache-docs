@@ -10,4 +10,4 @@ KEY SELLING POINTS (competitive-landscape.html):
 - Software Frameworks: vLLM/LMCache, Mooncake, FlexGen
 - Academic Papers: PNM-KV, CXL-SpecKV, TraCT
 - The Gap: Per-KV-head tracking, EMA eviction, RoPE prefetch, CXL controller intelligence
-- Our Solution: First complete CXL-native KV-cache with all four innovations
+- v5 position: measured GB10 observation + corrected simulator + KV-state control-plane design; no first/only claim

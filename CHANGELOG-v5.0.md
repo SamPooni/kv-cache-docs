@@ -1,5 +1,24 @@
 # Changelog — v5.0 (August 2026)
 
+
+## v5.0.2 — Full-package reconciliation
+
+- Reconciled every live publication surface against the v5 evidence taxonomy.
+- Rebuilt stale figure pages that still embedded retracted v4 hit-rate, concurrency, latency, TCO, RoPE-prefetch or CXL-performance claims.
+- Replaced first/only/competitor-superiority marketing language with an evidence-first capability landscape.
+- Fixed broken relative paths in simulation/audit scripts and normalized generated data paths under `data/`.
+- Validated script syntax, Revision-2 summary reproduction, JSON parsing, and local HTML links.
+- See `UPDATE-NOTES-v5.0.2.md` for the full reconciliation list.
+
+## v5.0.1 scientific-language tightening
+
+- Reclassified the ~3.4× KV/fixed-path ratio as **model-derived from measured data**, not a direct per-byte hardware measurement.
+- Narrowed “the kernel is not the lever” to the tested result: **kernel substitution between the two measured stacks did not eliminate the KV slope**.
+- Replaced “compression dominates placement” with the supported conclusion that **reducing KV traffic is a first-order opportunity**; compression, sparse/hierarchical selection, and placement address different terms and require separate validation.
+- Refreshed package inventory (Appendix A–N; current figure-source count) and removed the stale 93%+ pitch claim.
+- Explicitly freezes hierarchical relevance filtering / candidate selection for the next architecture revision rather than retrofitting it into the v5 empirical record.
+
+
 v5.0 is not a revision of v4.0. It is the first version of this package built on
 **measurement**, and the measurement contradicted v4.0's central claims. Those claims are
 withdrawn. `RETRACTIONS.md` is the complete record; this file is what changed in the package.
@@ -15,8 +34,8 @@ on 19 August 2026 with Qwen2.5-7B-Instruct in fp16. Three results carry the new 
 - **The decode model is two-term, not one-term.** Fitting step time against resident KV volume
   gives `100.3 + 16.34·KV_GiB` (HuggingFace + SDPA, R² 0.991) and `73.9 + 17.58·KV_GiB`
   (vLLM + FlashAttention-2, R² 0.945). Weights are read at 64–87% of achievable bandwidth,
-  **KV at 26–28%**. A KV byte costs **3.4×** a weight byte.
-- **The kernel is not the lever.** Two frameworks with different attention implementations and
+  **KV at 26–28%**. Under the two-term fit, the inferred effective KV path has a **~3.4×** higher per-byte cost than the fixed path on this GB10 configuration.
+- **Kernel substitution alone did not eliminate the measured KV slope.** Two tested frameworks with different attention implementations and
   different KV layouts land within **8%** of each other on the KV slope, while the weight read
   improves 34% between them.
 
@@ -81,8 +100,7 @@ study's conclusions once.
 - **`CANONICAL-NUMBERS.md` rewritten.** Seven evidence classes, with **`Measured` present for
   the first time**. §7 is the retraction list.
 - **All fourteen chapters retitled and rewritten** around the four-constraint argument.
-  Chapter 6 became *Quantisation and KV Reduction* — the measurement makes compression the
-  first-order lever, since the bytes removed from KV are the expensive ones. Chapter 7 became
+  Chapter 6 became *Quantisation and KV Reduction* — the measurement identifies **KV traffic reduction** as a first-order opportunity. Quantisation reduces bytes per KV element; sparse or hierarchical selection reduces the number of KV elements consumed. Their relative end-to-end benefit is not established by the GB10 measurement. Chapter 7 became
   *Block-Granular KV State Management*: the cache object is a **(sequence, token block)**, not
   a head, and the lossless/lossy boundary is now stated formally as `x_b(t) = 1 ∀ b ∈ Read(t)`
   — which is what resolves v4.0's conflation of cache hit rate with attention sparsity.

@@ -1,467 +1,325 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>The Innovation Gap — KV-Cache Offloading Architecture</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css">
-  <style>
-    .pitch-hero {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 3rem 2rem;
-      border-radius: 16px;
-      margin-bottom: 2rem;
-      text-align: center;
-    }
-    .pitch-hero h1 {
-      font-size: 2.5rem;
-      font-weight: 800;
-      margin-bottom: 1rem;
-    }
-    .pitch-hero p {
-      font-size: 1.25rem;
-      opacity: 0.95;
-      max-width: 700px;
-      margin: 0 auto;
-    }
-    .pitch-tagline {
-      background: rgba(255,255,255,0.15);
-      padding: 1.5rem;
-      border-radius: 12px;
-      margin-top: 1.5rem;
-      font-size: 1.1rem;
-      font-weight: 600;
-    }
-    .gap-section {
-      background: #fef2f2;
-      border: 2px solid #fecaca;
-      border-radius: 12px;
-      padding: 1.5rem;
-      margin: 1.5rem 0;
-    }
-    .gap-section h3 {
-      color: #991b1b;
-      margin-bottom: 1rem;
-    }
-    .solution-section {
-      background: #eff6ff;
-      border: 2px solid #93c5fd;
-      border-radius: 12px;
-      padding: 1.5rem;
-      margin: 1.5rem 0;
-    }
-    .solution-section h3 {
-      color: #1e40af;
-      margin-bottom: 1rem;
-    }
-    .competitor-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 1rem 0;
-    }
-    .competitor-table th, .competitor-table td {
-      padding: 0.75rem 1rem;
-      text-align: left;
-      border-bottom: 1px solid #e2e8f0;
-    }
-    .competitor-table th {
-      background: #f8fafc;
-      font-weight: 600;
-      color: #475569;
-    }
-    .competitor-table .gap-cell {
-      background: #fef2f2;
-      color: #991b1b;
-      font-size: 0.9rem;
-    }
-    .results-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1rem;
-      margin: 1.5rem 0;
-    }
-    @media (max-width: 768px) {
-      .results-grid { grid-template-columns: repeat(2, 1fr); }
-    }
-    .result-card {
-      background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-      border: 2px solid #86efac;
-      border-radius: 12px;
-      padding: 1.25rem;
-      text-align: center;
-    }
-    .result-card .value {
-      font-size: 2rem;
-      font-weight: 800;
-      color: #166534;
-    }
-    .result-card .label {
-      font-size: 0.85rem;
-      color: #15803d;
-      margin-top: 0.25rem;
-    }
-    .innovation-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 1rem;
-      margin: 1.5rem 0;
-    }
-    @media (max-width: 600px) {
-      .innovation-grid { grid-template-columns: 1fr; }
-    }
-    .innovation-card {
-      background: white;
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 1.25rem;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-    }
-    .innovation-card .num {
-      width: 28px;
-      height: 28px;
-      background: #7c3aed;
-      color: white;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-weight: 700;
-      font-size: 0.85rem;
-      margin-bottom: 0.75rem;
-    }
-    .innovation-card h4 {
-      color: #1e293b;
-      margin-bottom: 0.5rem;
-    }
-    .innovation-card p {
-      color: #64748b;
-      font-size: 0.9rem;
-      line-height: 1.5;
-    }
-    .pnm-comparison {
-      background: #fffbeb;
-      border: 2px solid #fcd34d;
-      border-radius: 12px;
-      padding: 1.5rem;
-      margin: 1.5rem 0;
-    }
-    .pnm-comparison h3 {
-      color: #92400e;
-      margin-bottom: 1rem;
-    }
-    .timeline-mini {
-      display: flex;
-      justify-content: space-between;
-      margin: 1.5rem 0;
-      padding: 1rem;
-      background: #f8fafc;
-      border-radius: 8px;
-      overflow-x: auto;
-    }
-    .timeline-item {
-      text-align: center;
-      padding: 0 1rem;
-    }
-    .timeline-item .year {
-      font-weight: 700;
-      color: #7c3aed;
-      font-size: 1.1rem;
-    }
-    .timeline-item .event {
-      font-size: 0.75rem;
-      color: #64748b;
-      margin-top: 0.25rem;
-    }
-    .cta-box {
-      background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
-      color: white;
-      padding: 2rem;
-      border-radius: 12px;
-      text-align: center;
-      margin: 2rem 0;
-    }
-    .cta-box h3 {
-      font-size: 1.5rem;
-      margin-bottom: 0.75rem;
-    }
-    .cta-box p {
-      opacity: 0.9;
-      margin-bottom: 1rem;
-    }
-    .cta-box a {
-      display: inline-block;
-      background: #7c3aed;
-      color: white;
-      padding: 0.75rem 1.5rem;
-      border-radius: 8px;
-      text-decoration: none;
-      font-weight: 600;
-      transition: background 0.2s;
-    }
-    .cta-box a:hover {
-      background: #6d28d9;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KV-Cache Offloading over CXL — Technical Package Pitch</title>
+<style>
+  :root {
+    --bg: #0b0e14;
+    --bg-panel: #12161f;
+    --bg-card: #161b26;
+    --border: #262d3d;
+    --text: #e6e9f0;
+    --text-dim: #9aa4b8;
+    --text-faint: #6b7488;
+    --accent: #5fb4ff;
+    --warn: #e8b84b;
+    --measured: #4caf7d;
+    --sim: #e8b84b;
+    --analytic: #6f9fe8;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+  }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 56px 24px 100px; }
+  header.hero { text-align: left; margin-bottom: 48px; }
+  .kicker {
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 0.75rem;
+    color: var(--accent);
+    font-weight: 600;
+    margin-bottom: 14px;
+  }
+  h1 { font-size: 2.4rem; line-height: 1.15; margin: 0 0 16px; font-weight: 700; }
+  .byline { color: var(--text-dim); font-size: 0.95rem; margin-bottom: 28px; }
+  .lede { font-size: 1.15rem; color: var(--text-dim); max-width: 720px; }
+
+  section { margin: 56px 0; }
+  h2 {
+    font-size: 1.4rem;
+    margin-bottom: 8px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-note { color: var(--text-faint); font-size: 0.92rem; margin-bottom: 24px; }
+
+  .results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 16px;
+    margin-top: 24px;
+  }
+  .result-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    position: relative;
+  }
+  .result-card .stat {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .result-card .label {
+    color: var(--text-dim);
+    font-size: 0.88rem;
+    margin-bottom: 14px;
+  }
+  .tag {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    padding: 4px 9px;
+    border-radius: 999px;
+  }
+  .tag.measured { background: rgba(76,175,125,0.15); color: var(--measured); border: 1px solid rgba(76,175,125,0.35); }
+  .tag.sim { background: rgba(232,184,75,0.15); color: var(--sim); border: 1px solid rgba(232,184,75,0.35); }
+  .tag.analytic { background: rgba(111,159,232,0.15); color: var(--analytic); border: 1px solid rgba(111,159,232,0.35); }
+
+  .claim-box {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 22px 24px;
+    margin: 20px 0;
+  }
+  .claim-box h3 { margin: 0 0 10px; font-size: 1.05rem; color: var(--accent); }
+  .claim-box p { margin: 0; color: var(--text-dim); }
+
+  .not-list {
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 4px 24px;
+  }
+  .not-list li { margin: 16px 0; color: var(--text-dim); }
+  .not-list strong { color: var(--text); }
+
+  table.pnm-comparison {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    font-size: 0.9rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .pnm-comparison th, .pnm-comparison td {
+    padding: 12px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .pnm-comparison th {
+    background: var(--bg-panel);
+    color: var(--text-dim);
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .pnm-comparison tr:last-child td { border-bottom: none; }
+  .pnm-comparison tr.this-package td { background: rgba(95,180,255,0.08); }
+  .pnm-comparison tr.this-package td:first-child { font-weight: 700; color: var(--accent); }
+  .table-scroll { overflow-x: auto; }
+
+  .vendor-flag {
+    display: inline-block;
+    font-size: 0.68rem;
+    color: var(--warn);
+    border: 1px solid rgba(232,184,75,0.4);
+    background: rgba(232,184,75,0.1);
+    border-radius: 4px;
+    padding: 1px 6px;
+    margin-left: 6px;
+  }
+
+  .cta {
+    text-align: center;
+    margin-top: 64px;
+    padding: 40px 24px;
+    background: var(--bg-panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+  }
+  .cta p { color: var(--text-dim); margin-bottom: 20px; }
+  .cta a.button {
+    display: inline-block;
+    background: var(--accent);
+    color: #0b0e14;
+    font-weight: 700;
+    padding: 12px 28px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 1rem;
+  }
+  .cta a.button:hover { opacity: 0.9; }
+
+  footer {
+    margin-top: 60px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    color: var(--text-faint);
+    font-size: 0.82rem;
+  }
+  a { color: var(--accent); }
+  code { background: var(--bg-card); padding: 1px 5px; border-radius: 4px; font-size: 0.9em; }
+</style>
 </head>
 <body>
-  <div class="watermark">© 2025 Subramaniyam (Sam) Pooni<br>All Rights Reserved<br>Proprietary & Confidential</div>
+<div class="wrap">
 
-  <nav class="nav">
-    <div class="nav-inner">
-      <a href="index.html" class="nav-brand"><span class="nav-brand-icon">⚡</span> KV-Cache Architecture</a>
-      <div class="nav-links">
-        <a href="chapters/ch00-executive-summary.html" class="nav-link"><span class="nav-chapter-num">0</span> Summary</a>
-        <a href="pitch.html" class="nav-link active">💡 The Pitch</a>
-        <a href="chapters/ch10-market.html" class="nav-link"><span class="nav-chapter-num">10</span> Market</a>
-        <a href="figures/index.html" class="nav-link">📊 Figures</a>
+  <header class="hero">
+    <div class="kicker">Technical Documentation Package</div>
+    <h1>KV-Cache Offloading for LLM Inference over CXL Memory</h1>
+    <div class="byline">Sam Pooni</div>
+    <p class="lede">
+      A narrow, evidence-tagged claim: identity-keyed eviction-policy metadata should
+      persist across tier eviction rather than reset. Backed by a hardware-measured
+      bandwidth decomposition on real silicon and a simulated policy comparison —
+      not by a new eviction algorithm, a validated CXL system, or a cost model.
+    </p>
+  </header>
+
+  <section>
+    <h2>Headline results</h2>
+    <p class="section-note">Every number below carries its evidence class on the tile. None of these are cost, TCO, or end-to-end throughput claims.</p>
+    <div class="results-grid">
+      <div class="result-card">
+        <div class="stat">3.4×</div>
+        <div class="label">KV-cache byte cost vs. fixed-path (weights) byte cost, decode step — DGX Spark GB10</div>
+        <span class="tag measured">Measured (model-derived)</span>
+      </div>
+      <div class="result-card">
+        <div class="stat">87%</div>
+        <div class="label">Achieved streaming bandwidth vs. spec — 236.5 of 273 GB/s</div>
+        <span class="tag measured">Measured</span>
+      </div>
+      <div class="result-card">
+        <div class="stat">+34.15 pts</div>
+        <div class="label">Eviction-metadata hit-rate gain from persistence, LFU policy, 32 GiB HBM budget</div>
+        <span class="tag sim">Simulated, provisional</span>
+      </div>
+      <div class="result-card">
+        <div class="stat">6×</div>
+        <div class="label">Effective memory expansion from CXL pooling — capacity arithmetic only</div>
+        <span class="tag analytic">Analytical</span>
       </div>
     </div>
-  </nav>
+  </section>
 
-  <div class="page-wrapper">
-    <div class="container">
-
-      <div class="pitch-hero">
-        <h1>The Innovation Gap in KV-Cache Offloading</h1>
-        <p>The industry is investing billions in CXL memory expansion—but nobody has solved intelligent cache management.</p>
-        <div class="pitch-tagline">
-          "The First Complete CXL-Native KV-Cache Solution"
-        </div>
-      </div>
-
-      <h2>The Problem Everyone Sees</h2>
-      <p>Long-context LLM inference requires <strong>41 GB of KV-cache per user</strong> at 128K tokens. Scale to 8 users and you need 468 GB—far exceeding any GPU's HBM capacity.</p>
-
-      <h2>What Exists Today</h2>
-
-      <h3>Commercial Hardware</h3>
-      <table class="competitor-table">
-        <tr>
-          <th>Product</th>
-          <th>Vendor</th>
-          <th>Capability</th>
-          <th>The Gap</th>
-        </tr>
-        <tr>
-          <td><strong>CMM-D / CMM-B</strong></td>
-          <td>Samsung</td>
-          <td>512GB–2TB, 60 GB/s, ~600ns</td>
-          <td class="gap-cell">Passive DRAM—host manages all eviction</td>
-        </tr>
-        <tr>
-          <td><strong>Apollo CXL Switch</strong></td>
-          <td>XConn + MemVerge</td>
-          <td>100 TiB pools, CXL 3.1</td>
-          <td class="gap-cell">No per-head tracking, no attention-aware eviction</td>
-        </tr>
-        <tr>
-          <td><strong>Niagara 2.0</strong></td>
-          <td>Astera Labs</td>
-          <td>CXL Type-3, 640ns</td>
-          <td class="gap-cell">Basic memory tier—no intelligent prefetch</td>
-        </tr>
-      </table>
-
-      <h3>Software Frameworks</h3>
-      <table class="competitor-table">
-        <tr>
-          <th>Framework</th>
-          <th>Origin</th>
-          <th>Capability</th>
-          <th>The Gap</th>
-        </tr>
-        <tr>
-          <td><strong>vLLM + LMCache</strong></td>
-          <td>UC Berkeley</td>
-          <td>PagedAttention, CPU offload</td>
-          <td class="gap-cell">Coarse-grained, no per-head policies</td>
-        </tr>
-        <tr>
-          <td><strong>Mooncake</strong></td>
-          <td>Moonshot AI</td>
-          <td>Distributed KV store</td>
-          <td class="gap-cell">Network-based, not CXL-native</td>
-        </tr>
-        <tr>
-          <td><strong>FlexGen</strong></td>
-          <td>Stanford</td>
-          <td>GPU/CPU/SSD offload</td>
-          <td class="gap-cell">Not attention-aware, slow PCIe</td>
-        </tr>
-      </table>
-
-      <h3>Academic Research (2024–2025)</h3>
-      <table class="competitor-table">
-        <tr>
-          <th>Paper</th>
-          <th>Innovation</th>
-          <th>The Gap</th>
-        </tr>
-        <tr>
-          <td><strong>PNM-KV</strong> (Oct 2025)</td>
-          <td>Processing-near-memory, 21.9× throughput</td>
-          <td class="gap-cell">Custom silicon, token-level only</td>
-        </tr>
-        <tr>
-          <td><strong>CXL-SpecKV</strong></td>
-          <td>FPGA speculative prefetch</td>
-          <td class="gap-cell">Speculative (not attention-aware)</td>
-        </tr>
-        <tr>
-          <td><strong>TraCT</strong> (Dec 2025)</td>
-          <td>CXL shared memory, rack-scale</td>
-          <td class="gap-cell">Focus on sharing, not eviction</td>
-        </tr>
-      </table>
-
-      <div class="gap-section">
-        <h3>🚨 The Innovation Gap: What Nobody Has Yet</h3>
-        <div class="innovation-grid">
-          <div class="innovation-card">
-            <div class="num">1</div>
-            <h4>Per-KV-Head Tracking</h4>
-            <p>All existing work treats KV-cache uniformly. None tracks 640 independent queues respecting GQA's 8 heads × 80 layers structure.</p>
-          </div>
-          <div class="innovation-card">
-            <div class="num">2</div>
-            <h4>Attention-Aware EMA Eviction</h4>
-            <p>No system uses smoothed attention scores for eviction priority. Current approaches: LRU, random, or static policies.</p>
-          </div>
-          <div class="innovation-card">
-            <div class="num">3</div>
-            <h4>RoPE-Aware Prefetch</h4>
-            <p>Speculative prefetch exists, but none exploits RoPE's locality bias for predictive loading in the [P-W, P+W] window.</p>
-          </div>
-          <div class="innovation-card">
-            <div class="num">4</div>
-            <h4>CXL Controller Intelligence</h4>
-            <p>All CXL products are passive memory. No commercial device has on-controller cache management logic.</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="solution-section">
-        <h3>✅ My Research Contribution: The Complete Solution</h3>
-        <table class="competitor-table">
-          <tr>
-            <th>Innovation</th>
-            <th>Implementation</th>
-            <th>Impact</th>
-          </tr>
-          <tr>
-            <td><strong>GQA-Aware Architecture</strong></td>
-            <td>640 queues matching Llama-70B structure</td>
-            <td>Respects model topology</td>
-          </tr>
-          <tr>
-            <td><strong>EMA Score Tracking</strong></td>
-            <td>score[t] = 0.2 × attention[t] + 0.8 × score[t-1]</td>
-            <td>Stable eviction signals</td>
-          </tr>
-          <tr>
-            <td><strong>RoPE Prefetch Window</strong></td>
-            <td>Locality-aware [P-W, P+W] prefetch</td>
-            <td>93%+ hit rate</td>
-          </tr>
-          <tr>
-            <td><strong>CXL Controller Placement</strong></td>
-            <td>Cache logic in endpoint firmware</td>
-            <td>Offloads GPU/CPU</td>
-          </tr>
-        </table>
-      </div>
-
-      <h2>Results</h2>
-      <div class="results-grid">
-        <div class="result-card">
-          <div class="value">6×</div>
-          <div class="label">Memory Expansion<br>192 GB → 1.2 TB</div>
-        </div>
-        <div class="result-card">
-          <div class="value">16×</div>
-          <div class="label">User Capacity<br>2 → 32+ users</div>
-        </div>
-        <div class="result-card">
-          <div class="value">97%</div>
-          <div class="label">Hit Rate<br>vs 70% baseline</div>
-        </div>
-        <div class="result-card">
-          <div class="value">-36%</div>
-          <div class="label">Cost Reduction<br>$70K → $45K</div>
-        </div>
-      </div>
-
-      <div class="pnm-comparison">
-        <h3>⚡ The Closest Competitor: PNM-KV</h3>
-        <p>PNM-KV achieves impressive 21.9× throughput with processing-near-memory. But there's a critical difference:</p>
-        <table class="competitor-table">
-          <tr>
-            <th>Aspect</th>
-            <th>PNM-KV</th>
-            <th>Our Approach</th>
-          </tr>
-          <tr>
-            <td>Granularity</td>
-            <td>Token-level selection</td>
-            <td><strong>Per-KV-head eviction</strong></td>
-          </tr>
-          <tr>
-            <td>Eviction Signal</td>
-            <td>Steady-token heuristic</td>
-            <td><strong>Attention score EMA</strong></td>
-          </tr>
-          <tr>
-            <td>Hardware</td>
-            <td>Custom PNM accelerator</td>
-            <td><strong>Standard CXL controller</strong></td>
-          </tr>
-          <tr>
-            <td>Model Awareness</td>
-            <td>Token statistics only</td>
-            <td><strong>GQA structure + RoPE locality</strong></td>
-          </tr>
-        </table>
-        <p style="margin-top: 1rem; font-weight: 600; color: #92400e;">Our approach is more fine-grained and model-architecture-aware—without custom silicon.</p>
-      </div>
-
-      <h2>Why Now: The Timing Is Perfect</h2>
-      <div class="timeline-mini">
-        <div class="timeline-item">
-          <div class="year">2022</div>
-          <div class="event">Samsung CMM-D<br>CXL 2.0 ratified</div>
-        </div>
-        <div class="timeline-item">
-          <div class="year">2023</div>
-          <div class="event">vLLM PagedAttention<br>Intel Sapphire Rapids</div>
-        </div>
-        <div class="timeline-item">
-          <div class="year">2024</div>
-          <div class="event">Samsung CMM-B 16TB<br>CXL 3.1 announced</div>
-        </div>
-        <div class="timeline-item">
-          <div class="year">2025</div>
-          <div class="event">XConn 100TiB<br>PNM-KV, TraCT</div>
-        </div>
-      </div>
-      <p>CXL hardware is shipping. Software frameworks exist. The missing piece is <strong>intelligent cache management that understands transformer architecture</strong>.</p>
-
-      <div class="cta-box">
-        <h3>The First Complete CXL-Native KV-Cache Solution</h3>
-        <p>Per-head granularity • Attention-weighted eviction • RoPE-aware prefetch • Controller-resident logic</p>
-        <a href="https://lnkd.in/g9eMHinw" target="_blank">View Full Documentation on GitHub →</a>
-      </div>
-
-      <div class="chapter-nav">
-        <a href="index.html" class="chapter-nav-btn prev"><span class="chapter-nav-label">← Back to</span><span class="chapter-nav-title">Home</span></a>
-        <a href="chapters/ch10-market.html" class="chapter-nav-btn next"><span class="chapter-nav-label">Full Analysis →</span><span class="chapter-nav-title">Chapter 10: Market</span></a>
-      </div>
+  <section>
+    <h2>The actual claim</h2>
+    <div class="claim-box">
+      <h3>Metadata persistence, not policy choice, is the lever</h3>
+      <p>
+        When eviction-policy metadata (recency/frequency counters keyed to KV-block identity)
+        is allowed to persist across a tier eviction and reload — instead of resetting to cold
+        state — hit rate improves substantially more than switching between eviction policies
+        does. On DGX Spark GB10, hardware measurement shows KV-cache traffic costs roughly
+        3.4× the bytes of the fixed weight path per decode step at the tested configuration,
+        and streaming reads sustained 87% of the platform's advertised bandwidth. Simulation
+        (not hardware) shows that persisting LFU metadata across eviction, under a 32 GiB HBM
+        budget, lifts hit rate by 34.15 percentage points versus resetting it — a larger effect
+        than swapping LFU for another policy. The scoring approach itself is not new: it follows
+        LRFU (Lee et al., SIGMETRICS 1999). What's being argued is where the metadata should live
+        relative to the eviction boundary.
+      </p>
     </div>
-    <footer class="footer">
-      <p style="font-size: 0.8rem; color: var(--text-muted);">© 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.</p>
-    </footer>
-  </div>
+  </section>
+
+  <section>
+    <h2>What this package is not</h2>
+    <ul class="not-list">
+      <li><strong>Not a new eviction-scoring algorithm.</strong> The scoring function is LRFU (Lee et al., SIGMETRICS 1999), used as-is. The contribution is architectural — persistence of metadata across eviction — not a novel score.</li>
+      <li><strong>Not a validated CXL hardware system.</strong> No CXL device, switch, or pooled-memory fabric was tested. The 6× expansion figure is arithmetic on published capacity numbers, not a measurement of any running system.</li>
+      <li><strong>Not a cost or TCO claim.</strong> No cost model, pricing data, or total-cost-of-ownership analysis is included or implied anywhere in this package.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Landscape</h2>
+    <p class="section-note">
+      The field has specialized, not stalled. Each system below optimizes a different decision;
+      they are complementary, not competing claims to the same prize. Vendor-published figures are
+      flagged explicitly.
+    </p>
+    <div class="table-scroll">
+    <table class="pnm-comparison">
+      <thead>
+        <tr>
+          <th>System</th>
+          <th>Primary decision/problem it optimizes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>vLLM</td>
+          <td>GPU KV allocation / paging — the baseline serving-framework capability every offload layer sits on top of.</td>
+        </tr>
+        <tr>
+          <td>LMCache</td>
+          <td>KV persistence, reuse and movement across tiers and engines. Now a first-class multi-tier KV layer — GPU/CPU/storage/network, pinning, lookup, cleanup, movement, compression, cross-engine transfer, and prefill/decode disaggregation. "Block-level, offloads to CPU/SSD" understates what it does today.</td>
+        </tr>
+        <tr>
+          <td>TraCT</td>
+          <td>Rack-scale KV sharing and transfer over CXL. Implemented on NVIDIA Dynamo with direct GPU↔CXL operations behind a rack-wide, prefix-aware cache — already a CXL-native KV-cache system, not a gap waiting to be filled.</td>
+        </tr>
+        <tr>
+          <td>PNM-KV (arXiv:2511.00321)</td>
+          <td>Selects which KV/token pages are needed near CXL memory before paying the movement cost — selection before movement. Reports up to 21.9× throughput <span class="vendor-flag">their reported figure</span>.</td>
+        </tr>
+        <tr>
+          <td>Tutti (arXiv:2605.03375)</td>
+          <td>GPU-centric KV movement: removes the CPU from the critical I/O path via GPU-direct object I/O (GPU io_uring) and slack-aware scheduling. Vs. GDS-enabled SSD-backed LMCache: 78.3% TTFT reduction, 2× request rate, 27% lower cost.</td>
+        </tr>
+        <tr>
+          <td>CacheWise</td>
+          <td>Predicts future KV reuse from tool-call metadata for agent workloads. Reports 2–2.6× fewer evictions and up to 3.5× better agent-session completion time.</td>
+        </tr>
+        <tr class="this-package">
+          <td>This package's direction</td>
+          <td>
+            An open design question, not a shipped system: whether relevance estimation, reuse
+            prediction, and residency/movement decisions should be unified by one control plane.
+            The evidence here — persistent identity-keyed metadata surviving tier eviction,
+            +34.15 pts, simulated/provisional — speaks to one piece of that picture (residency:
+            does policy state survive tier movement), not to the whole. It does not beat or
+            subsume the six systems above.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    </div>
+    <p class="section-note" style="margin-top:16px;">
+      The honest read: this field specialized into distinct, non-trivial pieces rather than
+      leaving an obvious gap. The open question is whether a higher-level KV-state control plane
+      should unify relevance estimation, reuse prediction, and residency/movement decisions across
+      those pieces. This package's evidence currently speaks only to the residency piece.
+    </p>
+  </section>
+
+  <section class="cta">
+    <p>Full methodology, hardware setup, simulation parameters, and caveats are in the package itself.</p>
+    <a class="button" href="index.html">Read the full technical package →</a>
+  </section>
+
+  <footer>
+    Sam Pooni · KV-cache offloading for LLM inference over CXL memory · all figures dated and evidence-tagged in the source package
+  </footer>
+
+</div>
 </body>
 </html>

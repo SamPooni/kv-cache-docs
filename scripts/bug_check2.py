@@ -1,6 +1,7 @@
 """Re-audit victim selection against brute-force argmin, on the v2 Tier."""
+from pathlib import Path
 import importlib.util
-spec=importlib.util.spec_from_file_location("m2","kv_tiering_sim_v2.py")
+spec=importlib.util.spec_from_file_location("m2", Path(__file__).with_name("kv_tiering_sim_v2.py"))
 m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
 
 class Audited(m.Tier):

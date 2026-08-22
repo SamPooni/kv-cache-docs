@@ -66,19 +66,16 @@ spec), sweeping resident KV volume and fitting decode step time against it:
 Achieved streaming bandwidth on the same machine is **236.5 GB/s (87% of spec)**. So weights
 are read at 64–87% of achievable bandwidth and **KV at 26–28%**.
 
-Two consequences, both measured rather than argued:
+Two consequences supported by the measured fits:
 
 - **The single-bandwidth roofline is wrong.** Decode time is two-term:
   `t = W/B_weight + KV/B_kv`, with `B_kv ≈ 3.4× lower` than `B_weight` on this hardware.
-- **The kernel is not the lever.** Two frameworks with different attention implementations and
+- **Kernel substitution alone did not eliminate the measured KV slope.** Two tested frameworks with different attention implementations and
   different KV layouts give KV slopes within **8%** of each other, while the weight read
-  improves 34% between them. Swapping kernels fixes the weight path and leaves the KV path
-  where it was.
+  improves 34% between them. In these two tested stacks, the fixed-path term improves while the KV slope remains similar.
 
 This is the strongest available evidence for the row above: adding capacity behind HBM cannot
-touch a constraint that binds on the HBM side, and neither can a better attention kernel. Only
-reducing KV bytes read per step does — which is why quantisation, not placement, is the
-first-order lever against this particular wall.
+touch a constraint that binds on the HBM side, and placement alone cannot reduce dense-attention traffic once KV is presented to the GPU. The supported conclusion is that reducing KV traffic is a first-order opportunity: quantisation/compression reduces bytes per element, while sparse or hierarchical selection can reduce the number of elements consumed. Their relative benefit remains to be measured.
 
 That is a real win, because capacity is a hard limit and data movement is a scheduling problem.
 But it is a *different* problem, and the rest of this section is about solving that one.
@@ -524,7 +521,7 @@ Two inputs to the §4.6 economics are chosen, not measured. Stated explicitly, w
 | Input | Value | Basis | Sensitivity |
 |---|---|---|---|
 | Device memory bandwidth (GB10) | **236.5 GB/s measured** | Streaming copy kernel, 4 GiB buffers, median of 20. 87% of the 273 GB/s spec. Supersedes the previous ~50% haircut assumption, which was too pessimistic. | — |
-| KV read bandwidth (GB10) | **61.1–65.7 GB/s measured** | Slope of decode step time against resident KV volume, two frameworks (§0.1). | Sets the 3.4× KV-byte penalty |
+| KV read bandwidth (GB10) | **61.1–65.7 GB/s inferred from measured slope** | Slope of decode step time against resident KV volume, two frameworks (§0.1). | Supports the ~3.4× model-derived effective-path ratio |
 | Tier effective bandwidth (CXL) | 32 / **64** / 121 GB/s as a range | CXL 3.0 uses the PCIe 6.0 PHY at 64 GT/s; x16 gives ~121 GB/s per direction theoretical. **Still an assumption — no CXL hardware was measured.** | Block transfer 43–164 µs across the range |
 | Prefill throughput | 25% / 40% / **50%** MFU presented as a range | H100 SXM BF16 dense tensor peak ≈ 495 TFLOP/s. Published prefill MFU commonly reaches 40–50%. | 16-token estimate 9–18 ms |
 | Model geometry | 80 layers, 8 KV heads, head_dim 128 | Published Llama-3 70B configuration | Exact |

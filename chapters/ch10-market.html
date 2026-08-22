@@ -3,20 +3,46 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chapter 10: Market Landscape — KV-Cache Offloading Architecture</title>
+  <title>Chapter 10: The 2026 Landscape — KV-Cache Offloading Architecture</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .decision-table { width: 100%; border-collapse: collapse; margin: 1.25rem 0 2rem; font-size: 0.92rem; }
+    .decision-table th, .decision-table td { padding: 0.6rem 0.9rem; border: 1px solid var(--border, #33383f); text-align: left; vertical-align: top; }
+    .decision-table thead th { background: var(--surface-alt, rgba(127,127,127,0.08)); font-weight: 600; }
+    .decision-table tr.self td { font-weight: 600; background: rgba(47,143,78,0.08); }
+    .callout { border-left: 4px solid #c9860a; background: rgba(201,134,10,0.08); padding: 0.9rem 1.2rem; margin: 1.5rem 0; border-radius: 4px; font-size: 0.95rem; }
+    .callout-title { font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.78rem; margin-bottom: 0.35rem; color: #c9860a; }
+    .callout.open { border-left-color: #7a5fc4; background: rgba(122,95,196,0.08); }
+    .callout.open .callout-title { color: #7a5fc4; }
+    .pipeline { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; margin: 1.5rem 0 2rem; }
+    .pipeline .step { border: 1px solid var(--border, #33383f); border-radius: 8px; padding: 0.7rem 0.9rem; font-size: 0.85rem; font-family: 'IBM Plex Mono', monospace; font-weight: 600; }
+    .pipeline .arrow { color: var(--text-muted); font-size: 1.1rem; }
+    .pipeline .step.plane { border-color: #7a5fc4; color: #7a5fc4; }
+  </style>
 </head>
 <body>
-  <div class="watermark">© 2025 Subramaniyam (Sam) Pooni<br>All Rights Reserved<br>Proprietary & Confidential</div>
+  <div class="watermark">© 2025–2026 Subramaniyam (Sam) Pooni<br>All Rights Reserved<br>Proprietary & Confidential</div>
 
   <nav class="nav">
     <div class="nav-inner">
       <a href="../index.html" class="nav-brand"><span class="nav-brand-icon">⚡</span> KV-Cache Architecture</a>
       <div class="nav-links">
         <a href="ch00-executive-summary.html" class="nav-link"><span class="nav-chapter-num">0</span> Summary</a>
-        <a href="ch10-market.html" class="nav-link active"><span class="nav-chapter-num">10</span> Market</a>
+        <a href="ch01-introduction.html" class="nav-link"><span class="nav-chapter-num">1</span> Intro</a>
+        <a href="ch02-background.html" class="nav-link"><span class="nav-chapter-num">2</span> Background</a>
+        <a href="ch03-architecture.html" class="nav-link"><span class="nav-chapter-num">3</span> Architecture</a>
+        <a href="ch04-latency.html" class="nav-link"><span class="nav-chapter-num">4</span> Latency</a>
+        <a href="ch05-bandwidth.html" class="nav-link"><span class="nav-chapter-num">5</span> Bandwidth</a>
+        <a href="ch06-preprocessing.html" class="nav-link"><span class="nav-chapter-num">6</span> Preprocessing</a>
+        <a href="ch07-kv-cache.html" class="nav-link"><span class="nav-chapter-num">7</span> KV-Cache</a>
+        <a href="ch08-moe.html" class="nav-link"><span class="nav-chapter-num">8</span> MoE</a>
+        <a href="ch09-gpu-integration.html" class="nav-link"><span class="nav-chapter-num">9</span> GPU</a>
+        <a href="ch10-market.html" class="nav-link active"><span class="nav-chapter-num">10</span> Landscape</a>
+        <a href="ch11-performance.html" class="nav-link"><span class="nav-chapter-num">11</span> Performance</a>
+        <a href="ch12-implementation.html" class="nav-link"><span class="nav-chapter-num">12</span> Implementation</a>
+        <a href="ch13-conclusion.html" class="nav-link"><span class="nav-chapter-num">13</span> Conclusion</a>
         <a href="../figures/index.html" class="nav-link">📊 Figures</a>
       </div>
     </div>
@@ -26,52 +52,76 @@
     <div class="container">
       <header class="chapter-header">
         <div class="chapter-label">Chapter 10</div>
-        <h1 class="chapter-title">Market Landscape</h1>
-        <p class="chapter-subtitle">Commercial hardware, software frameworks, academic research, and the innovation gap.</p>
+        <h1 class="chapter-title">The 2026 Landscape</h1>
+        <p class="chapter-subtitle">The field has specialized, not stalled. This chapter maps what each system actually optimizes and where this package's own contribution fits — and does not fit — inside that map.</p>
       </header>
 
-      <div class="stats-grid" style="margin-bottom: 3rem;">
-        <div class="stat-box"><div class="stat-value">6</div><div class="stat-label">Figures in Chapter</div></div>
-        <div class="stat-box"><div class="stat-value">Gap</div><div class="stat-label">We Fill</div></div>
+      <h2>10.1 The field did not leave a gap; it specialized</h2>
+      <p>An earlier draft of this chapter argued that the KV-cache-over-CXL landscape was uniformly unsophisticated — generic LRU or random eviction everywhere, passive memory hardware, and a wide-open gap for a "complete" solution. That framing does not survive contact with what has actually shipped and published in 2026. It should be retired outright, not softened: the systems below are not doing the same coarse thing this package's early framing implied. They have specialized into distinct pieces of a larger problem, each solving a different sub-decision well. The honest question is no longer "does anyone do anything sophisticated with KV cache?" It is whether these specialized pieces should eventually be unified by a higher-level control architecture that jointly decides relevance, reuse, residency, and movement — and if so, what that architecture looks like. Nobody, including this package, has built or tested that unified architecture yet.</p>
+
+      <h2>10.2 What each system actually optimizes</h2>
+      <p>Table 10.1 organizes the landscape by the specific decision each system is built to make, rather than by how advanced its eviction policy sounds. Read down the right column first: these are complementary decisions, not competing claims to the same prize.</p>
+
+      <table class="decision-table">
+        <caption style="text-align: left; margin-bottom: 0.5rem; font-weight: 600;">Table 10.1 — The 2026 KV-cache landscape, by decision optimized</caption>
+        <thead>
+          <tr><th>System</th><th>Primary decision/problem it optimizes</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>vLLM</td><td>GPU KV allocation / paging — the baseline serving-framework capability every offload layer sits on top of.</td></tr>
+          <tr><td>LMCache</td><td>KV persistence, reuse and movement across tiers and engines. It has grown well past "block-level KV management with CPU/SSD offload" into a first-class KV layer: pinning, lookup, cleanup, movement, compression, batched movement, compute/I·O pipelining, cross-engine cache transfer, and prefill/decode disaggregation. Describing it as a simple offload cache understates it.</td></tr>
+          <tr><td>TraCT</td><td>Rack-scale KV sharing and transfer over CXL. TraCT is implemented on NVIDIA Dynamo and performs direct GPU↔CXL operations behind a rack-wide, prefix-aware cache — it is already a CXL-native KV-cache system, not a gap waiting to be filled.</td></tr>
+          <tr><td>PNM-KV</td><td>Select which KV/token pages are needed <em>before</em> paying the movement cost, using a processing-near-memory accelerator sitting in or near CXL memory. This is conceptually adjacent to this package's own emerging thinking about a control plane, not a cruder version of it — PNM-KV reports up to 21.9× throughput improvement in its own benchmarks (arXiv:2511.00321), a figure cited here as their reported result, not independently verified.</td></tr>
+          <tr><td>Tutti</td><td>Efficient GPU↔NVMe KV object movement. Tutti (arXiv:2605.03375) removes the CPU from the KV data/I·O critical path — the CPU only loads I·O kernels to the GPU once per layer — and uses GPU io_uring plus slack-aware I·O scheduling for asynchronous, GPU-direct object transfer. Against GDS-enabled SSD-backed LMCache, Tutti reports 78.3% TTFT reduction under strict SLO constraints, 2× higher achievable request rate, 27% lower serving cost, and near-DRAM performance at much greater capacity.</td></tr>
+          <tr><td>CacheWise</td><td>Predict future KV reuse from agent and tool-call behavior. CacheWise combines prefix-aware scheduling with reuse-aware eviction guided by lightweight predictions from tool-call metadata, rather than a generic recency or frequency policy. In a vLLM implementation over its own collected coding-agent traces, it reports 2–2.6× fewer KV-cache evictions and up to 3.5× faster agent session completion.</td></tr>
+          <tr class="self"><td>This package's direction</td><td>An open design question, not a shipped system: whether relevance estimation, reuse prediction, residency, and movement can be decided jointly by one control plane instead of separately by each layer above.</td></tr>
+        </tbody>
+      </table>
+
+      <p>Read this way, the claim that this field handles every KV block with one uniform policy does not hold up. CacheWise treats reuse as a prediction problem informed by agent state. PNM-KV treats selection as a near-memory decision made before movement, not after. LMCache treats the KV object itself as something to be pinned, moved, compressed, and shared across engines and tiers. TraCT treats CXL as rack-scale shared transport with its own prefix cache. Tutti treats the GPU-NVMe path as an I·O-scheduling problem, not a cache-policy problem. None of these reduce to a single generic recency, randomized, or fixed-rule policy — that older characterization no longer describes the field, if it ever fully did.</p>
+
+      <h2>10.3 What is genuinely still open</h2>
+      <p>The pieces above are specialized, but they are not unified. CacheWise's tool-call-driven reuse prediction lives inside vLLM's eviction path; it does not decide where a block should physically reside once predicted useful. PNM-KV's near-memory selection avoids wasted recalls, but selection and cross-tier movement policy are still separate concerns in its design. LMCache spans tiers and engines but does not itself predict future reuse from agent or tool signals the way CacheWise does. TraCT solves rack-wide CXL transport but is not, on its own, a relevance-prediction or selection system. Tutti's contribution is squarely at the GPU↔NVMe movement layer.</p>
+      <p>The open question this package is now oriented around is whether a higher-level KV-state control plane should sit above these pieces — jointly deciding what is relevant, what will be reused, where it should live, and when it should move — rather than leaving each decision to a separate subsystem tuned in isolation. That is a design question. It has not been built, and this package has not tested it.</p>
+
+      <h2>10.4 A design direction, not an architecture</h2>
+      <p>The sketch below is offered as exactly that: a design direction. It describes a plausible shape for a unified control plane, built by generalizing the roles the systems in §10.2 already play separately. None of it beyond the persistence sub-result in Chapter 7 has been implemented or measured by this package. It should not be read as a roadmap with committed timelines or as evidence of anything beyond the one narrow result it is built around.</p>
+
+      <div class="pipeline">
+        <div class="step">Model/Agent State<br><span style="font-weight:400; font-size:0.75rem;">attention signals · tool state/deadlines · reuse history/identity</span></div>
+        <span class="arrow">→</span>
+        <div class="step plane">KV-State Control Plane<br><span style="font-weight:400; font-size:0.75rem;">relevance estimation · reuse prediction · hardware state</span></div>
+        <span class="arrow">→</span>
+        <div class="step">Select</div>
+        <span class="arrow">→</span>
+        <div class="step">Place</div>
+        <span class="arrow">→</span>
+        <div class="step">Move</div>
+        <span class="arrow">→</span>
+        <div class="step">Attend</div>
+        <span class="arrow">→</span>
+        <div class="step">Observe</div>
+        <span class="arrow">→</span>
+        <div class="step" style="border-style: dashed;">feeds back to Model/Agent State</div>
       </div>
 
-      <h2>10.1 Competitive Landscape</h2>
-      <p style="font-size: 1.1rem; color: #475569; margin-bottom: 1.5rem;">What exists today vs. what my research addresses—the innovation gap nobody has filled.</p>
-
-      <div class="figure-embed" style="margin: 2rem 0;">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figure 10.0 — Competitive Landscape & Innovation Gap</span>
-          <a href="../figures/ch10-market/competitive-landscape.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
-        </div>
-        <iframe src="../figures/ch10-market/competitive-landscape.html" style="width:100%;height:1400px;border:none;"></iframe>
+      <div class="callout open">
+        <div class="callout-title">Design direction — not implemented, not tested</div>
+        FILTER→SELECT→PLACE→MOVE→ATTEND→OBSERVE, and the feedback loop back into model/agent state, is a conceptual pipeline, not a built system. This package's own strongest empirical result — persistent identity-keyed policy metadata surviving tier eviction, +34.15 points in the Chapter 7 simulation, itself provisional and simulator-only — is evidence for one small piece of this picture: the RESIDENCY question, whether policy state survives movement. It is not evidence that relevance estimation, reuse prediction, selection, placement, or the feedback loop work, because none of those have been built or measured. Treating the persistence result as validation of the full pipeline would be a significant overclaim; it validates one box in it.
       </div>
 
-      <h2>10.2 Market Overview</h2>
-
-      <div class="figure-embed" style="margin: 2rem 0;">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figures 10.1-10.3 — Market Landscape</span>
-          <a href="../figures/ch10-market/market-landscape.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
-        </div>
-        <iframe src="../figures/ch10-market/market-landscape.html" style="width:100%;height:700px;border:none;"></iframe>
-      </div>
-
-      <h2>10.3 KV-Cache Solutions Landscape</h2>
-
-      <div class="figure-embed" style="margin: 2rem 0;">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figures 10.4-10.6 — KV-Cache Landscape</span>
-          <a href="../figures/ch10-market/kv-cache-landscape.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
-        </div>
-        <iframe src="../figures/ch10-market/kv-cache-landscape.html" style="width:100%;height:700px;border:none;"></iframe>
-      </div>
+      <h2>10.5 Where this leaves the argument</h2>
+      <p>The claim this chapter makes is narrower than earlier drafts implied, and it is the honest one available right now. An earlier draft's positioning of this package as the sole complete CXL-native KV-cache system does not hold — TraCT already is a CXL-native, rack-scale KV-cache system running on Dynamo, and describing this package that way is false on its face. This package also does not claim its per-head eviction-queue structure or its recency/frequency scoring function are novel contributions to a field that lacked sophistication; CacheWise, PNM-KV, LMCache, TraCT, and Tutti each already solve a specific, real, and non-trivial sub-problem in this space, several of them with hardware or trace-driven results this package has not attempted to reproduce. What this package does have is one measured-in-simulation result about metadata persistence across a tier boundary, and a design question — worth taking seriously precisely because the field has specialized enough that the pieces now look like they could compose — about whether a joint control plane over relevance, reuse, residency, and movement is worth building. RoPE-position-window prefetching, in particular, remains exactly that: an open idea, not a validated technique. A [P−W, P+W] prefetch window around a predicted rotary position has not been shown on this package's target workloads to provide a meaningful predictive advantage over the reuse-prediction approaches already shipping elsewhere (CacheWise's tool-call-driven prediction, for instance); it belongs in future-work discussion, not in a list of this package's differentiators.</p>
 
       <div class="chapter-nav">
         <a href="ch09-gpu-integration.html" class="chapter-nav-btn prev"><span class="chapter-nav-label">← Previous</span><span class="chapter-nav-title">GPU Integration</span></a>
         <a href="ch11-performance.html" class="chapter-nav-btn next"><span class="chapter-nav-label">Next →</span><span class="chapter-nav-title">Performance</span></a>
       </div>
     </div>
-    <footer class="footer"><p style="font-size: 0.8rem; color: var(--text-muted);">© 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.</p></footer>
+    <footer class="footer">
+      <p style="font-size: 0.8rem; color: var(--text-muted);">© 2025–2026 Subramaniyam (Sam) Pooni. All Rights Reserved.</p>
+      <p style="font-size: 0.8rem; color: var(--text-muted);">KV-Cache Offloading Architecture — v6.0 — August 2026</p>
+    </footer>
   </div>
 </body>
 </html>

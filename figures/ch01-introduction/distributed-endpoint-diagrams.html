@@ -213,8 +213,8 @@ h1 { font-size: 1.875rem; font-weight: 700; text-align: center; margin-bottom: 8
         </div>
       </div>
       <div class="wall-result">
-        <div class="wall-result-label">Off-chip access penalty</div>
-        <div class="wall-result-value">65×</div>
+        <div class="wall-result-label">KV byte vs weight byte — measured</div>
+        <div class="wall-result-value">3.4×</div>
       </div>
     </div>
   </div>
@@ -244,7 +244,7 @@ h1 { font-size: 1.875rem; font-weight: 700; text-align: center; margin-bottom: 8
   <div class="card bottom">
     <div class="bottom-label">THE BOTTLENECK</div>
     <div class="bottom-title">The GPU doesn't lack compute. It lacks data.</div>
-    <div class="bottom-desc">Capacity gap (16×) forces off-chip storage. Bandwidth gap (65×) makes off-chip access catastrophic.</div>
+    <div class="bottom-desc">A memory tier can relieve capacity while leaving HBM-side KV consumption as a separate constraint. On the measured GB10 setup, the two tested stacks showed similar KV slopes; the ~3.4× ratio is model-derived, not a direct byte-level measurement.</div>
   </div>
 
   <!-- References -->

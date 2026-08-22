@@ -3,13 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chapter 8: MoE Routing — KV-Cache Offloading Architecture</title>
+  <title>Chapter 8: Mixture-of-Experts and KV Cache Interaction — KV-Cache Offloading Architecture</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .callout { border-left: 4px solid #c9860a; background: rgba(201,134,10,0.08); padding: 0.9rem 1.2rem; margin: 1.5rem 0; border-radius: 4px; font-size: 0.95rem; }
+    .callout-title { font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.78rem; margin-bottom: 0.35rem; color: #c9860a; }
+    .callout.open { border-left-color: #7a5fc4; background: rgba(122,95,196,0.08); }
+    .callout.open .callout-title { color: #7a5fc4; }
+    .callout.hypo { border-left-color: #2f6fc4; background: rgba(47,111,196,0.08); }
+    .callout.hypo .callout-title { color: #2f6fc4; }
+  </style>
 </head>
 <body>
-  <div class="watermark">© 2025 Subramaniyam (Sam) Pooni<br>All Rights Reserved<br>Proprietary & Confidential</div>
+  <div class="watermark">© 2025–2026 Subramaniyam (Sam) Pooni<br>All Rights Reserved<br>Proprietary & Confidential</div>
 
   <nav class="nav">
     <div class="nav-inner">
@@ -26,32 +34,62 @@
     <div class="container">
       <header class="chapter-header">
         <div class="chapter-label">Chapter 8</div>
-        <h1 class="chapter-title">Mixture-of-Experts Routing</h1>
-        <p class="chapter-subtitle">Handling MoE models with expert-aware prefetching and load balancing.</p>
+        <h1 class="chapter-title">Mixture-of-Experts and KV Cache Interaction</h1>
+        <p class="chapter-subtitle">A scoping chapter: why the architecture argument in this package needs to say something about MoE, and why nothing here is a measurement.</p>
       </header>
 
-      <div class="stats-grid" style="margin-bottom: 3rem;">
-        <div class="stat-box"><div class="stat-value">5</div><div class="stat-label">Figures in Chapter</div></div>
-        <div class="stat-box"><div class="stat-value">8</div><div class="stat-label">Experts/Layer</div></div>
-        <div class="stat-box"><div class="stat-value">Top-2</div><div class="stat-label">Routing</div></div>
+      <p>
+        Every hardware measurement in this package — the decode bandwidth decomposition in Chapter 4, the KV byte-cost ratios, the persistence result in Chapter 7 — was collected against Qwen2.5-7B-Instruct on GB10, a dense transformer. Dense means every layer's feedforward block is a single feedforward network, and every token that passes through a layer activates all of that layer's weights. A growing share of the models this architecture will actually serve are not built that way, and it would be an omission to leave that unaddressed. This chapter explains what mixture-of-experts (MoE) architectures are, why they matter to the KV-cache argument, and — critically — why they mostly don't.
+      </p>
+
+      <h2>8.1 What MoE changes</h2>
+      <p>
+        In a dense transformer layer, the feedforward sub-block is one network: every token's hidden state is pushed through the same weights. An MoE layer replaces that single feedforward network with a bank of many smaller feedforward networks, called experts, plus a small router network. For each token, the router scores the experts and selects a small subset — commonly the top-<em>k</em> for some small <em>k</em>, such as top-2 or top-8 — and only those selected experts process that token. The token's output is a combination of the outputs of the experts it was routed to.
+      </p>
+      <p>
+        The consequence is a decoupling of two quantities that are the same thing in a dense model: total parameter count and per-token active parameter count. An MoE model can hold a very large number of experts — order of hundreds in some published architectures — giving it a large total weight footprint, while any single token only ever touches a small fraction of those weights, giving it a much smaller active-compute footprint per token than a dense model of equivalent total size. This is the entire point of the architecture: more capacity without a proportional increase in per-token FLOPs.
+      </p>
+
+      <h2>8.2 What MoE does not change</h2>
+      <p>
+        The routing and expert-selection machinery described above lives entirely in the feedforward sub-block of each layer. It has no direct relationship to the attention sub-block — the part of the layer that computes and consumes the KV cache. In the large majority of published MoE LLMs, attention is architecturally identical to what a dense model of comparable scale would use: still grouped-query attention (GQA) in most current designs, with the same per-token key and value vector shapes, the same per-layer KV growth with sequence length, and the same cache eviction and residency behavior this package has been describing throughout. MoE changes which expert weights get read on the feedforward side of a token's pass through a layer. It does not change how keys and values are computed, stored, or evicted on the attention side.
+      </p>
+      <p>
+        This separation is the load-bearing claim of this chapter: the two-term decode model developed in Chapter 4 — a KV-read term and a weight-read term, both bandwidth-bound at low batch sizes — and the KV byte-cost accounting built on top of it in Chapter 7 describe the attention path. Because MoE is a feedforward-path modification, those arguments are, in structure, largely orthogonal to whether the underlying model is dense or MoE. The router adds a small amount of extra compute and a data-dependent memory access pattern into the weight-read term, but it does not touch the KV-read term or the logic that governs what stays resident in the cache.
+      </p>
+
+      <div class="callout open">
+        <div class="callout-title">Open question — not yet measured</div>
+        "Largely orthogonal" is a structural claim about where MoE routing sits in the layer, not a measured result. Nothing in this package has repeated the Chapter 4 bandwidth decomposition, or the Chapter 7 persistence experiment, on an MoE model. All GB10 numbers in this package are from a dense 7B model. Whether the two-term decode model, the KV byte-cost ratios, and the persistence gain hold in the same proportions on an MoE model is an open validation gap, not a settled conclusion.
       </div>
 
-      <h2>8.1 MoE Architecture & Routing</h2>
+      <h2>8.3 A hypothesis worth naming: MoE likely sharpens the weight-read term</h2>
+      <p>
+        Several current large-scale model families — architectures in the general class of DeepSeek-V3, as one publicly documented example — use MoE designs with a large number of experts (order of hundreds) and top-<em>k</em> routing (commonly cited around top-8), producing models whose total parameter count is far larger than their per-token active parameter count. Readers should treat any specific figures for a given model family as needing independent verification against that model's current published documentation; architectures and configurations in this space have continued to change through 2026.
+      </p>
+      <p>
+        The structural point that follows is a hypothesis, not a tested claim. In the two-term decode model of Chapter 4, the weight-read term is driven by how many weight bytes must be resident and available to be read, not strictly by how many are read per token. An MoE model with a large total expert count has a much larger resident weight footprint than a dense model with the same active-parameter count, even though its per-token compute is sparse. If that resident footprint puts more pressure on the memory hierarchy — more weight bytes competing for the same fast-tier capacity that KV cache also wants — the fixed-path, weight-read side of the decode-time bandwidth budget would plausibly become <em>more</em> dominant on an MoE model, not less, relative to the KV-read term. That would, if it holds, make the case for this package's overall architecture stronger on MoE models than on the dense model actually measured here, since offloading strategy has to account for a KV term that is being squeezed by a larger, not smaller, competing weight-read term.
+      </p>
 
-      <div class="figure-embed" style="margin: 2rem 0;">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figures 8.1-8.5 — MoE Routing Strategy</span>
-          <a href="../figures/ch08-moe/moe-routing.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
-        </div>
-        <iframe src="../figures/ch08-moe/moe-routing.html" style="width:100%;height:700px;border:none;"></iframe>
+      <div class="callout hypo">
+        <div class="callout-title">Hypothesis, not a result</div>
+        MoE's large total-weight footprint plausibly increases the relative weight of the weight-read term in the Chapter 4 decode model. This is architecturally motivated reasoning about where MoE sits relative to the attention path, not a bandwidth measurement, and it should not be cited as one until it is tested.
       </div>
+
+      <h2>8.4 What would close this gap</h2>
+      <p>
+        The validation step this chapter points to is direct: repeat the Chapter 4 decode-time bandwidth decomposition — the same KV-read/weight-read split, the same batch-size sweep — on a current MoE model, and compare the resulting term ratios against the dense Qwen2.5-7B-Instruct baseline used throughout this package. A second, smaller check would confirm that KV cache size and shape for the MoE model's attention layers track the dense-model formulas in Chapter 7 without modification, since that is the assumption §8.2 rests its "orthogonal" claim on. Neither has been run. Until it is, MoE should be read in this package as scoping and motivation for why the architecture matters broadly, not as a second evidence base alongside the dense-model measurements in Chapters 4 through 7.
+      </p>
 
       <div class="chapter-nav">
-        <a href="ch07-kv-cache.html" class="chapter-nav-btn prev"><span class="chapter-nav-label">← Previous</span><span class="chapter-nav-title">KV-Cache</span></a>
+        <a href="ch07-kv-cache.html" class="chapter-nav-btn prev"><span class="chapter-nav-label">← Previous</span><span class="chapter-nav-title">KV State Management</span></a>
         <a href="ch09-gpu-integration.html" class="chapter-nav-btn next"><span class="chapter-nav-label">Next →</span><span class="chapter-nav-title">GPU Integration</span></a>
       </div>
     </div>
-    <footer class="footer"><p style="font-size: 0.8rem; color: var(--text-muted);">© 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.</p></footer>
+    <footer class="footer">
+      <p style="font-size: 0.8rem; color: var(--text-muted);">© 2025–2026 Subramaniyam (Sam) Pooni. All Rights Reserved.</p>
+      <p style="font-size: 0.75rem; color: var(--text-muted);">KV-Cache Offloading Architecture — v6.0 — August 2026</p>
+    </footer>
   </div>
 </body>
 </html>

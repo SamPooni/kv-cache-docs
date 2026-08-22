@@ -40,7 +40,7 @@ was wrong, and wrong in the pessimistic direction.
 ### 1.2 The decode model is two-term, not one-term
 `t = a + b·KV_GiB`, fitted over a batch × context sweep:
 
-| Framework | Fit (ms) | n | R² | Weight BW | KV BW |
+| Framework | Fit (ms) | n | R² | Inferred fixed-path BW | Inferred KV BW |
 |---|---|---|---|---|---|
 | HuggingFace + SDPA, unpaged | `100.3 + 16.34·KV_GiB` | 7 | **0.991** | 151.5 GB/s | **65.7 GB/s** |
 | vLLM 0.20.1 + FlashAttention-2, paged | `73.9 + 17.58·KV_GiB` | 9 | 0.945 | 205.7 GB/s | **61.1 GB/s** |
@@ -50,10 +50,8 @@ As a fraction of the 236.5 GB/s actually achieved:
 
 ### 1.3 The results that carry the argument
 - **KV is read at roughly a quarter of achievable memory bandwidth.**
-- **A KV byte costs 3.4× a weight byte** on this hardware (205.7 ÷ 61.1).
-- **The kernel is not the lever.** Two frameworks, different attention implementations,
-  paged vs unpaged layout → KV slopes within **8%** (16.34 vs 17.58 ms/GiB), while the
-  weight read improves **34%** between them.
+- **Under the two-term fit, the inferred effective KV path is ~3.4× more costly per byte than the fixed path** on this hardware (205.7 ÷ 61.1). This is a model-derived ratio, not a direct byte-level hardware measurement.
+- **Kernel substitution alone did not eliminate the measured KV slope.** Two tested frameworks with different attention implementations and paged vs unpaged layout produced KV slopes within **8%** (16.34 vs 17.58 ms/GiB), while the inferred fixed-path bandwidth improved **34%** between them. This does not generalize to all kernels, GPUs, models, or decode regimes.
 - **Capacity was not the binding constraint in any configuration measured.** Everything fit
   in 128 GiB; throughput still fell from **150 tok/s at batch 16 × 4K to 46 tok/s at
   batch 16 × 16K**, with memory to spare and nothing evicted.
@@ -209,7 +207,7 @@ quoted with its inputs.
 | Wall | Statement | Effect of adding a memory tier |
 |---|---|---|
 | **Capacity** | HBM cannot hold the KV of all sequences you want resident | **Relieved** — this is what the tier is for |
-| **Bandwidth (a) — HBM-side** | Attention re-reads active KV out of HBM every decode step | **Unchanged** — measured in §1.2, and no kernel fixes it |
+| **Bandwidth (a) — HBM-side** | Attention re-reads active KV out of HBM every decode step | **Observed on GB10** — measured in §1.2; the two tested stacks did not remove it |
 | **Bandwidth (b) — tier-ingress** | KV must cross the tier boundary fast enough to feed attention | **Created** |
 | **Transfer / latency** | Each transfer must complete before compute stalls on it | **Created**, and distinct from (b) |
 

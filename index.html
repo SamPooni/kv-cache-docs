@@ -65,6 +65,30 @@
       font-size: 0.85rem;
       color: var(--text-muted);
       margin-top: 0.25rem;
+      max-width: 180px;
+    }
+
+    .evidence-tag {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      margin-top: 0.5rem;
+    }
+    .evidence-measured {
+      color: var(--accent-cyan);
+      background: rgba(88, 166, 255, 0.12);
+    }
+    .evidence-simulated {
+      color: var(--accent-purple);
+      background: rgba(163, 113, 247, 0.12);
+    }
+    .evidence-analytical {
+      color: var(--text-secondary);
+      background: var(--bg-tertiary);
     }
     
     .section-title {
@@ -254,7 +278,7 @@
 </head>
 <body>
   <div class="watermark">
-    © 2025 Subramaniyam (Sam) Pooni<br>
+    © 2025–2026 Subramaniyam (Sam) Pooni<br>
     All Rights Reserved<br>
     Proprietary & Confidential
   </div>
@@ -280,25 +304,29 @@
     <!-- Hero Section -->
     <div class="hero">
       <div class="hero-label">Technical Reference Documentation</div>
-      <h1 class="hero-title">Distributed Endpoint Architecture for<br>KV-Cache Offloading in LLM Inference</h1>
-      <p class="hero-subtitle">A comprehensive guide to memory-efficient large language model serving using CXL-based intelligent memory endpoints with hardware-accelerated cache management.</p>
+      <h1 class="hero-title">KV-Cache Offloading for LLM Inference<br>Over CXL Memory</h1>
+      <p class="hero-subtitle">A hardware-measured decomposition of decode-phase KV bandwidth, and a protocol-level proposal for persisting eviction-policy metadata across memory tiers.</p>
       
       <div class="hero-stats">
         <div class="hero-stat">
+          <div class="hero-stat-value">3.4×</div>
+          <div class="hero-stat-label">KV byte cost vs weight bytes</div>
+          <div class="evidence-tag evidence-measured">Measured, model-derived · DGX Spark GB10</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-value">87%</div>
+          <div class="hero-stat-label">Bandwidth achieved vs spec (236.5 of 273 GB/s)</div>
+          <div class="evidence-tag evidence-measured">Measured</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-value">+34.15 pts</div>
+          <div class="hero-stat-label">Eviction-metadata hit-rate gain, LFU @ 32 GiB</div>
+          <div class="evidence-tag evidence-simulated">Simulated, provisional</div>
+        </div>
+        <div class="hero-stat">
           <div class="hero-stat-value">6×</div>
-          <div class="hero-stat-label">Memory Expansion</div>
-        </div>
-        <div class="hero-stat">
-          <div class="hero-stat-value">16×</div>
-          <div class="hero-stat-label">User Capacity</div>
-        </div>
-        <div class="hero-stat">
-          <div class="hero-stat-value">97%</div>
-          <div class="hero-stat-label">HBM Hit Rate</div>
-        </div>
-        <div class="hero-stat">
-          <div class="hero-stat-value">36%</div>
-          <div class="hero-stat-label">Cost Reduction</div>
+          <div class="hero-stat-label">Memory expansion via CXL tiering</div>
+          <div class="evidence-tag evidence-analytical">Analytical</div>
         </div>
       </div>
     </div>
@@ -306,8 +334,8 @@
     <!-- Pitch CTA Banner -->
     <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 1.5rem 2rem; text-align: center; margin-bottom: 2rem;">
       <a href="pitch.html" style="color: white; text-decoration: none; display: inline-block;">
-        <div style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem;">💡 The Innovation Gap: What Nobody Has Yet</div>
-        <div style="font-size: 0.95rem; opacity: 0.9;">Per-head tracking • Attention-aware eviction • RoPE prefetch • Controller intelligence → <span style="text-decoration: underline;">Read the Pitch</span></div>
+        <div style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem;">💡 The Pitch</div>
+        <div style="font-size: 0.95rem; opacity: 0.9;">Protocol-level persistence of eviction-policy metadata across memory tiers → <span style="text-decoration: underline;">Read the pitch</span></div>
       </a>
     </div>
 
@@ -316,7 +344,7 @@
       <div class="quick-links">
         <a href="pitch.html" class="quick-link" style="background: linear-gradient(135deg, #667eea, #764ba2); border-color: transparent; color: white;">
           <span class="quick-link-icon">💡</span>
-          The Innovation Gap
+          The Pitch
         </a>
         <a href="chapters/ch00-executive-summary.html" class="quick-link">
           <span class="quick-link-icon">📋</span>
@@ -353,11 +381,11 @@
             <span class="chapter-num">CH 0</span>
             <span class="chapter-card-title">Executive Summary</span>
           </div>
-          <p class="chapter-card-desc">High-level overview of the memory wall problem in LLM inference and the proposed intelligent endpoint architecture solution.</p>
+          <p class="chapter-card-desc">The core findings condensed: measured KV bandwidth and cost ratios, the metadata-persistence proposal, and what remains open.</p>
           <div class="chapter-card-topics">
-            <span class="topic-tag">Problem Statement</span>
             <span class="topic-tag">Key Results</span>
-            <span class="topic-tag">Architecture Overview</span>
+            <span class="topic-tag">Scope</span>
+            <span class="topic-tag">Evidence Tiers</span>
           </div>
         </a>
 
@@ -367,11 +395,11 @@
             <span class="chapter-num">CH 1</span>
             <span class="chapter-card-title">Introduction</span>
           </div>
-          <p class="chapter-card-desc">The von Neumann bottleneck, why KV-cache matters for LLM serving, and the scope of this technical documentation.</p>
+          <p class="chapter-card-desc">Why KV-cache bandwidth and capacity matter for LLM serving, and what this document does and does not claim.</p>
           <div class="chapter-card-topics">
-            <span class="topic-tag">Memory Bottleneck</span>
-            <span class="topic-tag">KV-Cache Importance</span>
+            <span class="topic-tag">Motivation</span>
             <span class="topic-tag">Document Scope</span>
+            <span class="topic-tag">Terminology</span>
           </div>
         </a>
 
@@ -381,11 +409,11 @@
             <span class="chapter-num">CH 2</span>
             <span class="chapter-card-title">Background</span>
           </div>
-          <p class="chapter-card-desc">LLM inference fundamentals, the bandwidth-compute gap, and limitations of current approaches like vLLM and tensor parallelism.</p>
+          <p class="chapter-card-desc">LLM inference fundamentals — prefill vs. decode, the memory-bandwidth gap, and how existing serving stacks handle KV state.</p>
           <div class="chapter-card-topics">
             <span class="topic-tag">Prefill vs Decode</span>
             <span class="topic-tag">Memory Wall</span>
-            <span class="topic-tag">Current Solutions</span>
+            <span class="topic-tag">Existing Approaches</span>
           </div>
         </a>
 
@@ -393,13 +421,13 @@
         <a href="chapters/ch03-architecture.html" class="chapter-card">
           <div class="chapter-card-header">
             <span class="chapter-num">CH 3</span>
-            <span class="chapter-card-title">Distributed Endpoint Architecture</span>
+            <span class="chapter-card-title">System Architecture</span>
           </div>
-          <p class="chapter-card-desc">Core architecture concepts including memory controller offloading, CXL 3.0, and system topology for single and multi-node deployments.</p>
+          <p class="chapter-card-desc">The tiered memory system under study: CXL attachment topology, controller roles, and where KV state physically lives.</p>
           <div class="chapter-card-topics">
-            <span class="topic-tag">CXL 3.0</span>
-            <span class="topic-tag">Endpoint Design</span>
-            <span class="topic-tag">System Topology</span>
+            <span class="topic-tag">CXL Topology</span>
+            <span class="topic-tag">Controller Design</span>
+            <span class="topic-tag">Tier Layout</span>
           </div>
         </a>
 
@@ -407,13 +435,13 @@
         <a href="chapters/ch04-latency.html" class="chapter-card">
           <div class="chapter-card-header">
             <span class="chapter-num">CH 4</span>
-            <span class="chapter-card-title">Effective Latency Analysis</span>
+            <span class="chapter-card-title">Hardware Measurement Methodology and Results</span>
           </div>
-          <p class="chapter-card-desc">Two-tier cache model analysis, latency formulas, and the 65× improvement over traditional PCIe paths.</p>
+          <p class="chapter-card-desc">How the DGX Spark GB10 measurements were collected, the decode-latency model that was fit, and its accuracy and limits.</p>
           <div class="chapter-card-topics">
-            <span class="topic-tag">Cache Tiers</span>
-            <span class="topic-tag">Latency Formula</span>
-            <span class="topic-tag">PCIe Comparison</span>
+            <span class="topic-tag">Methodology</span>
+            <span class="topic-tag">GB10 Results</span>
+            <span class="topic-tag">Model Fit</span>
           </div>
         </a>
 
@@ -421,13 +449,13 @@
         <a href="chapters/ch05-bandwidth.html" class="chapter-card">
           <div class="chapter-card-header">
             <span class="chapter-num">CH 5</span>
-            <span class="chapter-card-title">Bandwidth Aggregation</span>
+            <span class="chapter-card-title">Bandwidth and Tier Economics</span>
           </div>
-          <p class="chapter-card-desc">CXL switch topology for linear bandwidth scaling, layer prefetch strategies, and practical bandwidth calculations.</p>
+          <p class="chapter-card-desc">What fraction of spec bandwidth each tier actually delivers, and the cost/capacity tradeoffs across the memory hierarchy.</p>
           <div class="chapter-card-topics">
-            <span class="topic-tag">Switch Topology</span>
-            <span class="topic-tag">Prefetch Strategy</span>
-            <span class="topic-tag">Bandwidth Math</span>
+            <span class="topic-tag">Achieved Bandwidth</span>
+            <span class="topic-tag">Tier Cost</span>
+            <span class="topic-tag">Capacity Tradeoffs</span>
           </div>
         </a>
 
@@ -435,13 +463,13 @@
         <a href="chapters/ch06-preprocessing.html" class="chapter-card">
           <div class="chapter-card-header">
             <span class="chapter-num">CH 6</span>
-            <span class="chapter-card-title">Preprocessing Offload</span>
+            <span class="chapter-card-title">Preprocessing and Prefill Considerations</span>
           </div>
-          <p class="chapter-card-desc">Offloading tokenization, image processing, and format conversion to ARM cores in endpoints for 5-10× latency reduction.</p>
+          <p class="chapter-card-desc">How prefill-phase work and input preprocessing interact with a tiered KV memory system, and where they don't.</p>
           <div class="chapter-card-topics">
-            <span class="topic-tag">Tokenization</span>
-            <span class="topic-tag">ARM Cores</span>
-            <span class="topic-tag">Data Conversion</span>
+            <span class="topic-tag">Prefill Phase</span>
+            <span class="topic-tag">Preprocessing</span>
+            <span class="topic-tag">Interaction Effects</span>
           </div>
         </a>
 
@@ -449,13 +477,13 @@
         <a href="chapters/ch07-kv-cache.html" class="chapter-card">
           <div class="chapter-card-header">
             <span class="chapter-num">CH 7</span>
-            <span class="chapter-card-title">Intelligent KV-Cache Management</span>
+            <span class="chapter-card-title">KV State Management — The Protocol Argument</span>
           </div>
-          <p class="chapter-card-desc">Per-head tracking, EMA-based attention scoring, RoPE-aware prefetch, and the eviction priority function achieving 97% hit rates.</p>
+          <p class="chapter-card-desc">The central proposal: persisting eviction-policy metadata across memory tiers at the protocol level, and the simulated hit-rate case for it.</p>
           <div class="chapter-card-topics">
-            <span class="topic-tag">Per-Head Tracking</span>
-            <span class="topic-tag">EMA Scoring</span>
-            <span class="topic-tag">RoPE Prefetch</span>
+            <span class="topic-tag">Eviction Metadata</span>
+            <span class="topic-tag">Protocol Design</span>
+            <span class="topic-tag">Simulated Results</span>
           </div>
         </a>
 
@@ -463,13 +491,13 @@
         <a href="chapters/ch08-moe.html" class="chapter-card">
           <div class="chapter-card-header">
             <span class="chapter-num">CH 8</span>
-            <span class="chapter-card-title">MoE Routing Support</span>
+            <span class="chapter-card-title">Mixture-of-Experts and KV Cache Interaction</span>
           </div>
-          <p class="chapter-card-desc">Handling Mixture-of-Experts models with routing histograms, activation tracking, and adaptive caching strategies.</p>
+          <p class="chapter-card-desc">How MoE routing behavior complicates KV-cache residency and eviction decisions relative to dense models.</p>
           <div class="chapter-card-topics">
-            <span class="topic-tag">Expert Selection</span>
-            <span class="topic-tag">Histogram Tracking</span>
-            <span class="topic-tag">Cache Strategy</span>
+            <span class="topic-tag">Expert Routing</span>
+            <span class="topic-tag">Cache Interaction</span>
+            <span class="topic-tag">MoE-Specific Effects</span>
           </div>
         </a>
 
@@ -477,12 +505,12 @@
         <a href="chapters/ch09-gpu-integration.html" class="chapter-card">
           <div class="chapter-card-header">
             <span class="chapter-num">CH 9</span>
-            <span class="chapter-card-title">GPU Integration</span>
+            <span class="chapter-card-title">GPU and Controller Integration</span>
           </div>
-          <p class="chapter-card-desc">Memory mapping, hint interfaces, driver-to-firmware translation, and fault handling for seamless GPU access.</p>
+          <p class="chapter-card-desc">Integration points between GPU memory management and a CXL memory controller — mapping, hints, and fault paths.</p>
           <div class="chapter-card-topics">
             <span class="topic-tag">Memory Mapping</span>
-            <span class="topic-tag">Hint API</span>
+            <span class="topic-tag">Controller Hints</span>
             <span class="topic-tag">Fault Handling</span>
           </div>
         </a>
@@ -491,13 +519,13 @@
         <a href="chapters/ch10-market.html" class="chapter-card">
           <div class="chapter-card-header">
             <span class="chapter-num">CH 10</span>
-            <span class="chapter-card-title">Market Landscape</span>
+            <span class="chapter-card-title">The 2026 Landscape</span>
           </div>
-          <p class="chapter-card-desc">Analysis of commercial CXL products, software frameworks, recent research, and competitive differentiation.</p>
+          <p class="chapter-card-desc">Where commercial CXL products and inference-serving software stand as of 2026, and how this work relates to them.</p>
           <div class="chapter-card-topics">
-            <span class="topic-tag">Samsung CMM</span>
-            <span class="topic-tag">vLLM/Mooncake</span>
-            <span class="topic-tag">Differentiation</span>
+            <span class="topic-tag">CXL Products</span>
+            <span class="topic-tag">Serving Stacks</span>
+            <span class="topic-tag">Positioning</span>
           </div>
         </a>
 
@@ -505,13 +533,13 @@
         <a href="chapters/ch11-performance.html" class="chapter-card">
           <div class="chapter-card-header">
             <span class="chapter-num">CH 11</span>
-            <span class="chapter-card-title">Performance Analysis</span>
+            <span class="chapter-card-title">Results Summary</span>
           </div>
-          <p class="chapter-card-desc">TTFT improvements, compute vs IO-bound analysis, continuous batching impact, and asymptotic speedup models.</p>
+          <p class="chapter-card-desc">All measured, simulated, and analytical results gathered in one place, each labeled with its evidence tier.</p>
           <div class="chapter-card-topics">
-            <span class="topic-tag">TTFT Analysis</span>
-            <span class="topic-tag">Crossover Points</span>
-            <span class="topic-tag">Speedup Models</span>
+            <span class="topic-tag">Consolidated Results</span>
+            <span class="topic-tag">Evidence Tiers</span>
+            <span class="topic-tag">Caveats</span>
           </div>
         </a>
 
@@ -519,13 +547,13 @@
         <a href="chapters/ch12-implementation.html" class="chapter-card">
           <div class="chapter-card-header">
             <span class="chapter-num">CH 12</span>
-            <span class="chapter-card-title">Implementation Considerations</span>
+            <span class="chapter-card-title">A Decision Procedure</span>
           </div>
-          <p class="chapter-card-desc">Hardware requirements, software stack, driver modifications, firmware development, and deployment scenarios.</p>
+          <p class="chapter-card-desc">A practical procedure for deciding when a CXL-tiered KV-cache design is worth adopting for a given deployment.</p>
           <div class="chapter-card-topics">
-            <span class="topic-tag">Hardware Reqs</span>
-            <span class="topic-tag">Software Stack</span>
-            <span class="topic-tag">Deployment</span>
+            <span class="topic-tag">Decision Criteria</span>
+            <span class="topic-tag">Deployment Fit</span>
+            <span class="topic-tag">Tradeoff Checklist</span>
           </div>
         </a>
 
@@ -535,10 +563,10 @@
             <span class="chapter-num">CH 13</span>
             <span class="chapter-card-title">Conclusion</span>
           </div>
-          <p class="chapter-card-desc">Summary of contributions, key takeaways, and future research directions for next-generation LLM infrastructure.</p>
+          <p class="chapter-card-desc">What was established, what remains provisional, and the open questions for future measurement work.</p>
           <div class="chapter-card-topics">
-            <span class="topic-tag">Contributions</span>
-            <span class="topic-tag">Key Takeaways</span>
+            <span class="topic-tag">Summary</span>
+            <span class="topic-tag">Open Questions</span>
             <span class="topic-tag">Future Work</span>
           </div>
         </a>
@@ -616,13 +644,13 @@
     <footer class="footer">
       <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-primary);">
         <p style="font-size: 0.8rem; color: var(--text-muted);">
-          © 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.<br>
+          © 2025–2026 Subramaniyam (Sam) Pooni. All Rights Reserved.<br>
           This document contains proprietary and confidential information.<br>
           Unauthorized reproduction or distribution is strictly prohibited.
         </p>
       </div>
       <p>Distributed Endpoint Architecture for KV-Cache Offloading in LLM Inference</p>
-      <p style="margin-top: 0.5rem;">Technical Documentation v3.0 — December 2025</p>
+      <p style="margin-top: 0.5rem;">Technical Documentation v6.0 — August 2026</p>
     </footer>
   </div>
 </body>

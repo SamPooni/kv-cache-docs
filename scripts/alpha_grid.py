@@ -1,7 +1,8 @@
 import json, importlib.util, numpy as np
+from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor
 def load():
-    s=importlib.util.spec_from_file_location("m","kv_tiering_sim_v2.py")
+    s=importlib.util.spec_from_file_location("m", Path(__file__).with_name("kv_tiering_sim_v2.py"))
     m=importlib.util.module_from_spec(s); s.loader.exec_module(m); return m
 def job(a):
     alpha,hb,sd,pm=a; m=load(); wl=m.build_workload(sd)
@@ -15,5 +16,5 @@ with ProcessPoolExecutor(max_workers=4) as ex:
     for i,(k,v) in enumerate(ex.map(job,jobs),1):
         out["|".join(map(str,k))]=v
         if i%24==0: print(f" {i}/{len(jobs)}",flush=True)
-json.dump(out,open("alpha_grid.json","w"),indent=1)
+json.dump(out,open(Path(__file__).parents[1]/"data"/"alpha_grid.json","w"),indent=1)
 print("done")

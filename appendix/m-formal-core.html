@@ -409,7 +409,7 @@ subject to  the constraints of §M.4.2 – §M.4.3</pre>
         <div class="callout-title"><span class="danger">The byte-counting terms are now known to need weighting</span></div>
         <p>This objective was written assuming a single memory bandwidth. <a href="l-measurements.html">Appendix L</a>
         measures two: KV read at <strong>26–28% of achievable bandwidth</strong> against
-        <strong>87% for weights</strong>, a <strong>3.4× per-byte penalty on KV</strong>, stable across two
+        <strong>87% for weights</strong>, a <strong>~3.4× model-derived effective-path ratio</strong>, with similar KV slopes across two tested
         frameworks and two attention kernels. <span class="mono">Measured</span>. <strong>A KV byte is not
         interchangeable with a weight byte</strong>, and the terms above should be weighted accordingly. This
         is the one place where measurement has already amended the specification.</p>
@@ -542,7 +542,7 @@ A_traffic  =  Σ_b (n_b + δ_b) · M_b  /  U    total boundary traffic per usefu
               <td><strong>Now measured</strong><br>(was assumed)</td>
               <td><strong>The decode cost model.</strong> §M.4.4's objective assumed a single memory
               bandwidth. Measurement on GB10 shows two, with KV read at ~26% of achievable bandwidth against
-              87% for weights — a <strong>3.4× per-byte penalty on KV</strong>, stable across two frameworks
+              87% for weights — a <strong>~3.4× model-derived effective-path ratio</strong>, with similar KV slopes across two tested frameworks
               and two attention kernels. The objective's byte-counting terms should therefore be weighted.
               See <a href="l-measurements.html">Appendix L</a>.</td>
             </tr>
@@ -589,7 +589,7 @@ A_traffic  =  Σ_b (n_b + δ_b) · M_b  /  U    total boundary traffic per usefu
         </p>
       </div>
       <p>Distributed Endpoint Architecture for KV-Cache Offloading in LLM Inference</p>
-      <p style="margin-top: 0.5rem;">Technical Documentation v5.0 — August 2026</p>
+      <p style="margin-top: 0.5rem;">Technical Documentation v5.0.2 — August 2026</p>
     </footer>
   </div>
 </body>

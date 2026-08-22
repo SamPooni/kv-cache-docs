@@ -3,20 +3,32 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chapter 12: Implementation — KV-Cache Offloading Architecture</title>
+  <title>Chapter 12: A Decision Procedure — KV-Cache Offloading Architecture</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
-  <div class="watermark">© 2025 Subramaniyam (Sam) Pooni<br>All Rights Reserved<br>Proprietary & Confidential</div>
+  <div class="watermark">© 2025–2026 Subramaniyam (Sam) Pooni<br>All Rights Reserved<br>Proprietary & Confidential</div>
 
   <nav class="nav">
     <div class="nav-inner">
       <a href="../index.html" class="nav-brand"><span class="nav-brand-icon">⚡</span> KV-Cache Architecture</a>
       <div class="nav-links">
         <a href="ch00-executive-summary.html" class="nav-link"><span class="nav-chapter-num">0</span> Summary</a>
-        <a href="ch12-implementation.html" class="nav-link active"><span class="nav-chapter-num">12</span> Implementation</a>
+        <a href="ch01-introduction.html" class="nav-link"><span class="nav-chapter-num">1</span> Intro</a>
+        <a href="ch02-background.html" class="nav-link"><span class="nav-chapter-num">2</span> Background</a>
+        <a href="ch03-architecture.html" class="nav-link"><span class="nav-chapter-num">3</span> Architecture</a>
+        <a href="ch04-latency.html" class="nav-link"><span class="nav-chapter-num">4</span> Measurement</a>
+        <a href="ch05-bandwidth.html" class="nav-link"><span class="nav-chapter-num">5</span> Bandwidth</a>
+        <a href="ch06-preprocessing.html" class="nav-link"><span class="nav-chapter-num">6</span> Preprocessing</a>
+        <a href="ch07-kv-cache.html" class="nav-link"><span class="nav-chapter-num">7</span> Residency Case Study</a>
+        <a href="ch08-moe.html" class="nav-link"><span class="nav-chapter-num">8</span> MoE</a>
+        <a href="ch09-gpu-integration.html" class="nav-link"><span class="nav-chapter-num">9</span> GPU Integration</a>
+        <a href="ch10-market.html" class="nav-link"><span class="nav-chapter-num">10</span> Landscape</a>
+        <a href="ch11-performance.html" class="nav-link"><span class="nav-chapter-num">11</span> Performance</a>
+        <a href="ch12-implementation.html" class="nav-link active"><span class="nav-chapter-num">12</span> Decision Procedure</a>
+        <a href="ch13-conclusion.html" class="nav-link"><span class="nav-chapter-num">13</span> Conclusion</a>
         <a href="../figures/index.html" class="nav-link">📊 Figures</a>
       </div>
     </div>
@@ -26,42 +38,60 @@
     <div class="container">
       <header class="chapter-header">
         <div class="chapter-label">Chapter 12</div>
-        <h1 class="chapter-title">Implementation Details</h1>
-        <p class="chapter-subtitle">Software integration, cache management placement, quantization, and TCO analysis.</p>
+        <h1 class="chapter-title">A Decision Procedure</h1>
+        <p class="chapter-subtitle">A ten-step procedure for deciding whether, and how, the KV-state control plane of Chapter 3 — SELECT, PLACE, MOVE — applies to your own system, using only what this package has actually established, in the order the questions need to be asked.</p>
       </header>
 
-      <div class="stats-grid" style="margin-bottom: 3rem;">
-        <div class="stat-box"><div class="stat-value">5</div><div class="stat-label">Figures in Chapter</div></div>
-        <div class="stat-box"><div class="stat-value">vLLM</div><div class="stat-label">Integration</div></div>
-        <div class="stat-box"><div class="stat-value">3-Year</div><div class="stat-label">TCO Analysis</div></div>
-      </div>
+      <p>Chapter 3 replaced a single conflated eviction decision with a control plane spanning two orthogonal hierarchies — an information hierarchy (agent state → context-region summaries → candidate regions → KV blocks → token-level KV) and a physical hierarchy (HBM → host/CXL DRAM → NVMe/remote) — resolved through three joint stages: SELECT, PLACE, MOVE. That architecture is mostly proposed, not validated; Chapter 3, §3.3 is explicit about which pieces have evidence and which do not. This chapter turns that same honesty into a procedure. It is not a checklist for adopting a tiering system — it is a checklist for deciding, stage by stage, whether the control plane's assumptions hold for your workload, and for knowing exactly which of your conclusions rest on this package's evidence versus your own measurement.</p>
 
-      <h2>12.1 Cache Management Placement</h2>
+      <h2>12.1 Step One: Is KV Growth Actually the Bottleneck?</h2>
+      <p>Before evaluating any part of the control plane, check whether your workload's KV footprint can exceed fast-tier (HBM) capacity at all. If it can't, none of SELECT, PLACE, or MOVE has anything to do yet — you don't have the problem this package's architecture exists to solve.</p>
+      <p>The capacity-crossover arithmetic from Chapters 2 and 5 is the filter. For Llama-3 70B-class GQA models, KV cache costs approximately 320 KiB per token, and the crossover point — where a single sequence's KV cache exceeds the size of the model's own weights — lands at roughly 427,000 tokens of context. If your realistic sequence lengths and concurrency stay well under the point where aggregate KV demand exceeds your fast-tier budget, look elsewhere first — batching, model-weight quantization, request scheduling — before reaching for a control-plane architecture at all.</p>
 
-      <div class="figure-embed" style="margin: 2rem 0;">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figure 12.2 — Cache Management Placement Options</span>
-          <a href="../figures/ch12-implementation/cache-management-placement.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
-        </div>
-        <iframe src="../figures/ch12-implementation/cache-management-placement.html" style="width:100%;height:600px;border:none;"></iframe>
-      </div>
+      <h2>12.2 Step Two: What Kind of Workload Is This?</h2>
+      <p>If capacity is binding, classify the workload: dense-attention, sparse-attention, prefix-reuse-heavy, agentic/tool-using, or some mix. This classification determines which signal type in Chapter 3's taxonomy — past-only (recency, frequency, EMA-style decayed scores) versus predictive (agent/tool-call state, tool-return timing, prefix identity, attention signals) — is likely to matter for your SELECT stage.</p>
+      <p>Agentic and tool-using workloads are exactly where predictive signals have shown the largest measured external gains: per Chapter 10, CacheWise-class systems using agent/tool-derived predictive signals report 2–2.6x fewer evictions and up to 3.5x completion-time improvement over past-only baselines. If your workload is agentic, predictive signals are the more promising direction to prototype for SELECT, even though this package itself has not tested them — see Step Five.</p>
 
-      <h2>12.2 Complete KV-Cache Diagrams</h2>
+      <h2>12.3 Step Three: How Much Historical KV Must Be Consumed Each Step?</h2>
+      <p>Quantify the decode-phase cost of reading resident KV. This is not a hypothetical — Chapter 4's two-term fit methodology measures KV bandwidth as a real, separately-attributable cost component of decode, distinct from weight bandwidth. Apply that same fitting approach to your own model and hardware to see how much of your decode-phase bandwidth is actually KV traffic versus weight traffic. If KV bandwidth is a small fraction of the total, the control plane's MOVE stage has less to gain from being optimized aggressively; if it's a large fraction, movement cost (Step Seven) and hiding movement (Step Eight) become high-leverage.</p>
 
-      <div class="figure-embed" style="margin: 2rem 0;">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figures 12.1, 12.3-12.5 — Implementation Details</span>
-          <a href="../figures/ch12-implementation/kv-cache-diagrams-html.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
-        </div>
-        <iframe src="../figures/ch12-implementation/kv-cache-diagrams-html.html" style="width:100%;height:700px;border:none;"></iframe>
-      </div>
+      <h2>12.4 Step Four: Can Selection Reduce the Working Set Before Movement?</h2>
+      <p>This is the SELECT stage of Chapter 3's architecture, and it is explicitly unvalidated in this package — no simulation or hardware result here tests whether relevance/candidate filtering, ahead of any tier-placement decision, actually reduces the working set that PLACE and MOVE must handle. Chapter 3, §3.3 lists SELECT plainly as a proposed design with no result behind it.</p>
+      <p>The closest external evidence that this direction is viable comes from Chapter 10's survey of PNM-KV, which performs selection before recall and reports a 21.9x figure of its own (their number, not this package's — it has not been reproduced here). Treat it as a signal that selection-before-movement is a live and plausible technique in the field, not as a validated property of this package's own architecture. If you build SELECT, budget it as new engineering and new measurement, not as inherited evidence.</p>
+
+      <h2>12.5 Step Five: Can Future Reuse Be Predicted, Not Just Recalled?</h2>
+      <p>A narrower version of Step Four: can SELECT use predictive signals — agent state, tool-call timing, prefix identity — rather than only past-access signals, per the taxonomy in Chapter 3, §3.4? Again, this package has not tested predictive signals; its one strong empirical result (Step Six, below) is built entirely on a past-only, recency/frequency-style score replayed against traces, not live agent state.</p>
+      <p>CacheWise is again the relevant external evidence, and again it is external: it demonstrates predictive signals working for agentic workloads elsewhere, not here. If your workload is agentic (Step Two), this is the direction most worth a small, isolated prototype before committing to any larger SELECT design — but go in expecting to generate your own evidence, not to confirm ours.</p>
+
+      <h2>12.6 Step Six: What Must Stay Resident vs. What Can Move?</h2>
+      <p>This is the PLACE decision, and it is the one piece of Chapter 3's architecture with actual simulated evidence behind it in this package: the persistent-metadata result from Chapter 7, showing that policy state surviving a tier eviction — rather than being discarded and rebuilt from scratch — improves hit rate by +34.15 points for LFU and +24.85 points for EMA (α=0.01) under a 32 GiB HBM budget. It is simulated and provisional, not measured on real hardware, but it is this package's strongest result, and Chapter 3, §3.3 confirms it is the only row in the architecture's evidence table marked "has evidence."</p>
+      <p>It is also the cheapest of all ten steps to check yourself: it's a protocol-level question about whether metadata persistence helps, answerable in software simulation against your own access traces before touching any tiering hardware at all. If you take one concrete, well-evidenced action from this chapter, make it replicating this experiment against your own workload.</p>
+
+      <h2>12.7 Step Seven: What Can Be Moved, and at What Cost?</h2>
+      <p>Once PLACE has decided what belongs off the fast tier, MOVE has to actually transfer it, and the cost of that transfer is Chapter 5's analytical tier-fetch/regenerate cost model — an order-of-magnitude estimate, not a measurement on real CXL hardware. Do not treat the bandwidth and latency ranges used in that model as ground truth for your deployment; they are modeling assumptions this package has not validated against a physical CXL fabric. Measuring your own tier-ingress bandwidth and per-transfer latency is a prerequisite before any MOVE design decision, not an optional follow-up.</p>
+
+      <h2>12.8 Step Eight: Can Movement Be Hidden Behind Compute?</h2>
+      <p>This is the other half of MOVE, and it is where the payoff of a working control plane looks largest — when it works. Chapters 7 and 11 report that under an idealized-overlap model, recompute avoidance becomes more than 99% of total stall, meaning that when a fetch or transfer can be scheduled behind ongoing compute rather than sitting on the critical path, the residual cost of movement nearly disappears. That is an idealized figure, not a hardware measurement, but it is a strong argument for treating MOVE scheduling — not just MOVE bandwidth — as a first-class design target: hiding a slow transfer well can matter more than making the transfer itself faster.</p>
+
+      <h2>12.9 Step Nine: What Representation Should Each Tier Hold?</h2>
+      <p>A tier doesn't have to hold full-precision KV. It could hold compressed or quantized KV, or — per the information hierarchy in Chapter 3 — a context-region summary rather than token-level KV at all. Both options are open questions in this package. Chapter 4 notes explicitly that fp8 KV compression was not measured; no throughput, accuracy, or bandwidth number exists here for it. And the summary-representation idea is a structural feature of Chapter 3's information hierarchy, not a tested mechanism — nothing in this package builds or measures a context-region summary as an actual stored artifact. Both are legitimate design directions and both require your own prototyping before you can size their benefit.</p>
+
+      <h2>12.10 Step Ten: Where Does the Mechanism Belong?</h2>
+      <p>Finally, decide whether a given piece of the control plane belongs in the runtime, in the device/controller, or in a shared control plane spanning both. Chapter 9 lays out the GPU/controller integration design space this question sits inside. Chapter 3, §3.5 offers one narrow, already-adopted design note within that larger space — host owns policy, device owns mechanism — describing specifically who executes the residency-persistence operation inside PLACE and MOVE. That note answers Step Ten for one sub-mechanism; it does not answer it for SELECT, for predictive-signal processing, or for movement scheduling, all of which remain open placement questions of their own.</p>
+
+      <h2>12.11 What This Package Can Currently Support With Evidence</h2>
+      <p>Set against all ten steps, three currently rest on evidence generated inside this package: Step One's capacity-crossover arithmetic, Step Three's measured decode-phase KV bandwidth split, and Step Six's simulated residency-persistence result. All three are either directly measured or grounded in a repeatable measurement methodology, and all three are cheap to re-run against your own numbers before committing further engineering.</p>
+      <p>The remaining six — selection (Step Four), prediction (Step Five), movement cost (Step Seven), hiding movement (Step Eight), representation (Step Nine), and mechanism placement (Step Ten) — remain open design work. Some have promising external evidence (CacheWise for prediction, PNM-KV for selection); some have only analytical or idealized models (movement cost, hiding movement); one is untested in any form here (representation). Be explicit with yourself about that ratio: seven of ten steps in this procedure are open, not validated, and the honest reading of this package is that the control plane's architecture (Chapter 3) is a coherent design with one solidly evidenced load-bearing piece, not a finished, measured system. Use this chapter to decide what to build, not what to assume already works.</p>
 
       <div class="chapter-nav">
         <a href="ch11-performance.html" class="chapter-nav-btn prev"><span class="chapter-nav-label">← Previous</span><span class="chapter-nav-title">Performance</span></a>
         <a href="ch13-conclusion.html" class="chapter-nav-btn next"><span class="chapter-nav-label">Next →</span><span class="chapter-nav-title">Conclusion</span></a>
       </div>
     </div>
-    <footer class="footer"><p style="font-size: 0.8rem; color: var(--text-muted);">© 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.</p></footer>
+    <footer class="footer">
+      <p style="font-size: 0.8rem; color: var(--text-muted);">© 2025–2026 Subramaniyam (Sam) Pooni. All Rights Reserved.</p>
+      <p style="font-size: 0.8rem; color: var(--text-muted);">KV-Cache Offloading Architecture — v6.0 — August 2026</p>
+    </footer>
   </div>
 </body>
 </html>

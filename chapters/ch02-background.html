@@ -1,114 +1,79 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chapter 2: Background — KV-Cache Offloading Architecture</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/style.css">
-</head>
-<body>
-  <div class="watermark">© 2025 Subramaniyam (Sam) Pooni<br>All Rights Reserved<br>Proprietary & Confidential</div>
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Chapter 2: Background — KV-Cache Offloading Architecture</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet"><link rel="stylesheet" href="../css/style.css"></head><body><div class="watermark">© 2025–2026 Subramaniyam (Sam) Pooni<br>All Rights Reserved<br>Proprietary & Confidential</div><nav class="nav">
+<a href="../index.html">Home</a>
+<a href="ch00-executive-summary.html">Ch 0</a>
+<a href="ch01-introduction.html">Ch 1</a>
+<a href="ch02-background.html" class="active">Ch 2</a>
+<a href="ch03-architecture.html">Ch 3</a>
+<a href="ch04-latency.html">Ch 4</a>
+<a href="ch05-bandwidth.html">Ch 5</a>
+<a href="ch06-preprocessing.html">Ch 6</a>
+<a href="ch07-kv-cache.html">Ch 7</a>
+<a href="ch08-moe.html">Ch 8</a>
+<a href="ch09-gpu-integration.html">Ch 9</a>
+<a href="ch10-market.html">Ch 10</a>
+<a href="ch11-performance.html">Ch 11</a>
+<a href="ch12-implementation.html">Ch 12</a>
+<a href="ch13-conclusion.html">Ch 13</a>
+</nav><div class="page-wrapper"><div class="container">
 
-  <nav class="nav">
-    <div class="nav-inner">
-      <a href="../index.html" class="nav-brand"><span class="nav-brand-icon">⚡</span> KV-Cache Architecture</a>
-      <div class="nav-links">
-        <a href="ch00-executive-summary.html" class="nav-link"><span class="nav-chapter-num">0</span> Summary</a>
-        <a href="ch02-background.html" class="nav-link active"><span class="nav-chapter-num">2</span> Background</a>
-        <a href="ch07-kv-cache.html" class="nav-link"><span class="nav-chapter-num">7</span> KV-Cache</a>
-        <a href="../figures/index.html" class="nav-link">📊 Figures</a>
-      </div>
-    </div>
-  </nav>
+<h1>Chapter 2: Background</h1>
 
-  <div class="page-wrapper">
-    <div class="container">
-      <header class="chapter-header">
-        <div class="chapter-label">Chapter 2</div>
-        <h1 class="chapter-title">Background: LLM Inference Fundamentals</h1>
-        <p class="chapter-subtitle">Understanding prefill vs decode, the roofline model, and why KV-cache exists.</p>
-      </header>
+<p>This chapter lays out the mechanics that the rest of this package assumes as given: how autoregressive decoding uses a key/value (KV) cache, how attention head layout (MHA, GQA, MQA) determines that cache's memory footprint, why KV data is safe to move once it has been written, and the memory-hierarchy tradeoffs that make offloading it to CXL-attached memory an interesting design point rather than a curiosity.</p>
 
-      <div class="stats-grid" style="margin-bottom: 3rem;">
-        <div class="stat-box"><div class="stat-value">8</div><div class="stat-label">Figures in Chapter</div></div>
-        <div class="stat-box"><div class="stat-value">2</div><div class="stat-label">Inference Phases</div></div>
-        <div class="stat-box"><div class="stat-value">1000×</div><div class="stat-label">Recompute Savings</div></div>
-      </div>
+<h2>2.1 Autoregressive Decoding and the KV Cache</h2>
+<p>A transformer decoder generates text one token at a time. At each step, the model computes attention over every token that came before it in the sequence — for each query, it needs the keys and values of all prior positions. Recomputing those keys and values from scratch at every generation step would mean redoing the full forward pass over the entire prefix for every new token, which scales quadratically with sequence length and is wasteful: the keys and values for a given token, once computed, do not change. The standard optimization is to compute them once and cache them, appending the new token's K and V to the cache at each step and reusing everything already stored.</p>
+<p>Inference under this scheme splits into two phases with very different performance characteristics:</p>
+<ul>
+<li><strong>Prefill</strong> — the prompt (potentially thousands of tokens) is processed in a single forward pass, computing K and V for every prompt token at once. This phase does large matrix multiplications and is <strong>compute-bound</strong>: throughput is limited by available FLOPs.</li>
+<li><strong>Decode</strong> — tokens are generated one at a time. Each step must read the entire resident KV cache to compute attention, but does very little arithmetic per token. This phase is <strong>memory-bandwidth-bound</strong>: the bottleneck is how fast the accelerator can stream KV data out of memory, not how fast it can multiply.</li>
+</ul>
+<p>Because decode re-reads the full KV cache on every single step, and the cache grows with sequence length and number of concurrent sequences, KV cache size becomes the dominant constraint on both how many requests can be served concurrently and how fast each one decodes. This is the pressure that motivates everything downstream in this package: if the KV cache does not fit in fast on-accelerator memory, something has to give.</p>
 
-      <h2>2.1 Inference Fundamentals</h2>
+<h2>2.2 Attention Head Layout: MHA, GQA, MQA</h2>
+<p>The size of the KV cache is determined not by the number of query heads a model uses, but by the number of <em>key/value</em> heads — a distinction that head-layout choices deliberately exploit.</p>
+<ul>
+<li><strong>Multi-Head Attention (MHA)</strong> — the original transformer design. Every query head has its own dedicated K and V head. If a model has 64 query heads, it has 64 KV heads. This gives maximum representational flexibility but the largest possible KV cache.</li>
+<li><strong>Grouped-Query Attention (GQA)</strong> — a middle ground. Query heads are grouped, and each group shares a single KV head. A model might have 64 query heads but only 8 KV heads (an 8:1 grouping), cutting KV cache size by 8× relative to MHA at the same query-head count, with modest quality impact. GQA is the layout used by most modern large open-weight models — for example, Llama-3 70B uses GQA with 64 query heads and 8 KV heads.</li>
+<li><strong>Multi-Query Attention (MQA)</strong> — the extreme case: all query heads share a single KV head. This minimizes KV cache size further still, but concentrates more of the model's representational burden onto that one shared KV projection, carrying more quality risk than GQA at comparable head counts.</li>
+</ul>
+<p>The exact formula for KV cache size, in bytes, for one token of context is:</p>
+<div class="formula">bytes_per_token&nbsp;=&nbsp;2&nbsp;×&nbsp;layers&nbsp;×&nbsp;kv_heads&nbsp;×&nbsp;head_dim&nbsp;×&nbsp;bytes_per_element</div>
+<p>The leading factor of 2 accounts for storing both K and V. <code>layers</code> is the number of transformer blocks, <code>kv_heads</code> is the number of key/value heads (not query heads), <code>head_dim</code> is the dimensionality of each head, and <code>bytes_per_element</code> depends on the numeric precision used for the cache (2 bytes for FP16/BF16, 1 byte for INT8, etc.). The load-bearing variable here is <code>kv_heads</code>: two models with similar total parameter counts and similar query-head counts can have very different KV footprints purely because of how many KV heads each uses. This is why "model size" alone is a poor predictor of KV cache pressure — head layout has to be checked directly.</p>
 
-      <div class="figure-embed" style="margin: 2rem 0;">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Visual Appendix — Background Figures</span>
-          <a href="../figures/ch02-background/visual-appendix.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
-        </div>
-        <iframe src="../figures/ch02-background/visual-appendix.html" style="width:100%;height:800px;border:none;"></iframe>
-      </div>
+<h3>Representative KV Cache Sizes (FP16, per token)</h3>
+<table class="data-table">
+<thead><tr><th>Model</th><th>Attention Layout</th><th>KV Heads</th><th>KV Cache per Token</th></tr></thead>
+<tbody>
+<tr><td>Llama-1 65B</td><td>MHA</td><td>64</td><td>2560 KiB</td></tr>
+<tr><td>Llama-2 / Llama-3 70B</td><td>GQA</td><td>8</td><td>320 KiB</td></tr>
+<tr><td>Llama-3 8B</td><td>GQA</td><td>8</td><td>128 KiB</td></tr>
+<tr><td>Qwen2.5-7B</td><td>GQA</td><td>4</td><td>56 KiB</td></tr>
+</tbody>
+</table>
+<p>These figures are analytically derived from each model's published configuration (layer count, KV head count, head dimension) using the formula above; they are not measured from a running system. The gap between Llama-1 65B's MHA layout and Llama-3 70B's GQA layout — an 8× reduction in per-token KV cost between two models of roughly comparable scale — illustrates why head layout, not parameter count, is the number to check first when sizing a KV cache budget.</p>
 
-      <h2>2.2 Prefill vs Decode Phases</h2>
+<h2>2.3 The Write-Once Property of KV</h2>
+<p>Causal attention means a token's query can only attend to keys and values at or before its own position — never forward. Consequently, once the key and value vectors for a given token are computed during prefill or the decode step that produced that token, they are fixed for the remainder of that sequence's generation: no later computation ever revises them. A KV entry is therefore <strong>written exactly once</strong> and, from that point forward, is only ever <strong>read</strong> — once per subsequent decode step for as long as it remains resident and part of an active sequence's attention context.</p>
+<p>This write-once property is what makes KV data cacheable and migratable in the first place. It means a KV block can be safely copied, moved to a slower memory tier, or evicted and later reloaded without any risk of it going stale mid-sequence — there is no writer to race against. It does not by itself imply any fixed ratio of total read traffic to write traffic; that ratio depends on how many decode steps remain and how long a block stays resident and relevant, which is workload-dependent. What is structurally guaranteed is only the asymmetry: one write, followed by zero or more reads, never followed by another write to that same entry.</p>
 
-      <div class="figure-embed" style="margin: 2rem 0;">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figure 2.1-2.3 — Inference Phases</span>
-          <a href="../figures/ch02-background/figure-2-1-inference-phases.html" target="_blank" class="figure-embed-link">View Source ↗</a>
-        </div>
-        <iframe src="../figures/ch02-background/figure-2-1-inference-phases.html" style="width:100%;height:500px;border:none;background:#1a1a2e;"></iframe>
-      </div>
+<h2>2.4 Memory Hierarchy and the Capacity/Bandwidth Tradeoff</h2>
+<p>Accelerator memory (GPU HBM) sits at one end of the hierarchy: bandwidth in the range of several hundred GB/s to a few TB/s, but capacity measured in tens of gigabytes per device — a hard ceiling shared with model weights, activations, and everything else that needs to live there during inference. Host DRAM, and more recently CXL-attached memory, sit further out: capacity can be an order of magnitude or more larger, but that memory is reached over an interconnect — PCIe-based CXL links in the case of CXL memory — with materially lower bandwidth than HBM and non-trivial added latency per access compared to a local memory controller.</p>
+<p>This is the classic capacity-versus-bandwidth tradeoff, and it is the structural reason tiered KV placement exists as a design space at all: keep the KV data that is about to be read on the fast, capacity-constrained tier; push KV data that will not be needed again soon onto the larger, slower tier; and move data between tiers before it is needed rather than after, wherever that is achievable. None of the specific policies for making those decisions are introduced here — this chapter is only establishing that the tradeoff is real and quantifiable, not proposing how to navigate it.</p>
 
-      <div class="figure-embed" style="margin: 2rem 0;">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Section 2.1 — Inference Fundamentals Deep Dive</span>
-          <a href="../figures/ch02-background/section-2-1-inference-fundamentals.html" target="_blank" class="figure-embed-link">View Source ↗</a>
-        </div>
-        <iframe src="../figures/ch02-background/section-2-1-inference-fundamentals.html" style="width:100%;height:500px;border:none;background:#1a1a2e;"></iframe>
-      </div>
+<h2>2.5 Eviction Policies, in Brief</h2>
+<p>When the fast tier is full and new KV data needs to be written, something already resident has to leave. The decision of what leaves is the <strong>eviction policy</strong>. This package discusses eviction policy design in depth in a later chapter; here it is enough to name the standard reference points from the caching literature by acronym, since they recur throughout:</p>
+<ul>
+<li><strong>LRU</strong> (least recently used) — evict whatever was accessed longest ago.</li>
+<li><strong>LFU</strong> (least frequently used) — evict whatever has been accessed the fewest times.</li>
+</ul>
+<p>Beyond these two textbook baselines, decayed-frequency and exponential-moving-average (EMA) style scoring — where access frequency is tracked but weighted to favor recent activity over old activity — is a well-established general technique in caching literature. The specific formulation and citation used for KV-cache eviction in this package is deferred to the KV-cache management chapter, where it is evaluated directly against LRU and LFU baselines.</p>
 
-      <h2>2.3 Why KV-Cache Exists</h2>
+<div class="chapter-nav">
+<a href="ch01-introduction.html" class="chapter-nav-btn prev"><span class="chapter-nav-label">← Previous</span><span class="chapter-nav-title">Introduction</span></a>
+<a href="ch03-architecture.html" class="chapter-nav-btn next"><span class="chapter-nav-label">Next →</span><span class="chapter-nav-title">Architecture</span></a>
+</div>
 
-      <div class="figure-embed" style="margin: 2rem 0;">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figure 2.4 — With vs Without KV-Cache</span>
-          <a href="../figures/ch02-background/figure-2-3-why-kv-cache.html" target="_blank" class="figure-embed-link">View Source ↗</a>
-        </div>
-        <iframe src="../figures/ch02-background/figure-2-3-why-kv-cache.html" style="width:100%;height:500px;border:none;background:#1a1a2e;"></iframe>
-      </div>
-
-      <div class="figure-embed" style="margin: 2rem 0;">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figure 2.5 — KV-Cache Growth</span>
-          <a href="../figures/ch02-background/figure-2-2-kv-cache-growth.html" target="_blank" class="figure-embed-link">View Source ↗</a>
-        </div>
-        <iframe src="../figures/ch02-background/figure-2-2-kv-cache-growth.html" style="width:100%;height:500px;border:none;background:#1a1a2e;"></iframe>
-      </div>
-
-      <h2>2.4 Roofline Model</h2>
-
-      <div class="figure-embed" style="margin: 2rem 0;">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figure 2.7 — Roofline Analysis</span>
-          <a href="../figures/ch02-background/figure-2-4-roofline.html" target="_blank" class="figure-embed-link">View Source ↗</a>
-        </div>
-        <iframe src="../figures/ch02-background/figure-2-4-roofline.html" style="width:100%;height:500px;border:none;background:#1a1a2e;"></iframe>
-      </div>
-
-      <h2>2.5 Current Approaches</h2>
-
-      <div class="figure-embed" style="margin: 2rem 0;">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figure 2.8 — Approaches Comparison Matrix</span>
-          <a href="../figures/ch02-background/current-approaches-comparison.html" target="_blank" class="figure-embed-link">View Source ↗</a>
-        </div>
-        <iframe src="../figures/ch02-background/current-approaches-comparison.html" style="width:100%;height:500px;border:none;background:#1a1a2e;"></iframe>
-      </div>
-
-      <div class="chapter-nav">
-        <a href="ch01-introduction.html" class="chapter-nav-btn prev"><span class="chapter-nav-label">← Previous</span><span class="chapter-nav-title">Introduction</span></a>
-        <a href="ch03-architecture.html" class="chapter-nav-btn next"><span class="chapter-nav-label">Next →</span><span class="chapter-nav-title">Architecture</span></a>
-      </div>
-    </div>
-    <footer class="footer"><p style="font-size: 0.8rem; color: var(--text-muted);">© 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.</p></footer>
-  </div>
-</body>
-</html>
+</div></div><footer class="footer">
+<p>© 2025–2026 Subramaniyam (Sam) Pooni. All Rights Reserved.</p>
+<p>KV-Cache Offloading Architecture — v6.0 — August 2026</p>
+</footer></body></html>

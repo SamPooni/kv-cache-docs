@@ -106,7 +106,7 @@
       <span class="mono">Analytical model</span> (the two bandwidths, which are derived from the fit
       coefficients and the resident weight bytes, not read off an instrument).</p>
 
-      <p>The derived bandwidths follow from the two coefficients. The intercept
+      <p>The derived effective bandwidths follow from the two coefficients. The intercept
       <span class="mono">a</span> is the KV-independent term and is charged against the 15.2 GB of resident
       weights; the slope <span class="mono">b</span> is milliseconds per GiB of resident KV:</p>
 
@@ -115,7 +115,7 @@
           <div class="step-num">Weight</div>
           <div class="step-content">
             <div class="step-eq">15.2 GB ÷ 100.3 ms = <strong>151.5 GB/s</strong> (HF) &nbsp;·&nbsp; 15.2 GB ÷ 73.9 ms = <strong>205.7 GB/s</strong> (vLLM)</div>
-            <div class="step-explain">The intercept is the per-step weight traversal. It does not depend on context length.</div>
+            <div class="step-explain">The intercept is the fitted context-independent term. It includes weight traversal and other fixed decode work; it does not depend on resident KV volume in this model.</div>
           </div>
         </div>
         <div class="derivation-step">
@@ -154,36 +154,34 @@
       </div>
 
       <div class="callout insight">
-        <div class="callout-title">2. A KV byte costs 3.4× a weight byte on this hardware</div>
+        <div class="callout-title">2. The two-term fit implies a ~3.4× effective-path ratio on this hardware</div>
         <p><span class="mono">205.7 ÷ 61.1 = 3.4×</span>, taken within the vLLM configuration so that the
-        comparison is like-for-like. <span class="mono">Measured</span>, ratio
-        <span class="mono">Analytical model</span>. The consequence for the objective function of
+        comparison is like-for-like. <span class="mono">Measured inputs</span>, ratio
+        <span class="mono">Analytical model</span>. The intercept contains fixed decode work in addition to weight traffic, so this is not a direct measurement of the cost of an individual weight byte versus an individual KV byte. The consequence for the objective function of
         <a href="m-formal-core.html">Appendix M §M.4</a> is direct: its byte-counting terms must be
         weighted, because a KV byte and a weight byte are not interchangeable.</p>
       </div>
 
       <div class="callout insight">
-        <div class="callout-title">3. The kernel is not the lever</div>
+        <div class="callout-title">3. Kernel substitution alone did not eliminate the measured KV slope</div>
         <p>Two independent frameworks, two different attention implementations, paged versus unpaged KV
         layout — and the KV slopes land <strong>within 8% of each other</strong>
         (<span class="mono">16.34</span> vs <span class="mono">17.58 ms/GiB</span>). Over the same change the
         <em>weight</em> read improves by <strong>34%</strong>
-        (<span class="mono">151.5 → 205.7 GB/s</span>), reaching 87% of achievable bandwidth. The obvious
-        hypothesis — that a better attention kernel closes the KV gap — is refuted by measurement.
-        FlashAttention-2 with paged KV performs the same as SDPA with contiguous KV on the KV term.
+        (<span class="mono">151.5 → 205.7 GB/s</span>), reaching 87% of achievable bandwidth. Within these two tested stacks, switching attention implementation and KV layout did not materially change the fitted KV slope. This is evidence about this GB10/Qwen2.5-7B operating region, not a claim about every kernel, GPU architecture, page size, model, or decode regime.
         <span class="mono">Measured</span>.</p>
       </div>
 
       <h2>L.5 What This Settles</h2>
 
-      <h3>L.5.1 Compression dominates placement</h3>
+      <h3>L.5.1 Reducing KV traffic is the first-order opportunity exposed by this measurement</h3>
 
-      <p>Reducing KV bytes is worth roughly <strong>3.4× the naive byte-accounting estimate</strong>, because
-      the bytes removed are the expensive ones. <strong>Moving KV bytes between tiers does nothing for this
-      wall</strong> — it is an HBM-side property, unaffected by what sits behind HBM. This is the sharpest
-      constraint the measurement places on the architecture: a memory tier relieves the capacity wall and
-      creates two new movement walls, but it leaves the HBM-side bandwidth wall exactly where it found it
-      (<span class="mono">CANONICAL-NUMBERS.md</span> §5).</p>
+      <p>The measurement supports a narrower conclusion: <strong>reducing KV traffic is a first-order opportunity</strong>.
+      Quantisation or compression reduces bytes per KV element; sparse or hierarchical selection can reduce the
+      number of KV elements consumed. Placement remains necessary for capacity, reuse and movement, but moving a
+      resident working set to another tier does not by itself reduce the bytes that dense attention must consume
+      once those bytes are presented to the GPU. The relative end-to-end benefit of compression, selection and
+      placement remains an experimental question (<span class="mono">CANONICAL-NUMBERS.md</span> §5).</p>
 
       <h3>L.5.2 Capacity was never the binding constraint here</h3>
 
@@ -343,7 +341,7 @@
 
       <ul>
         <li><strong>One model, one size, one machine.</strong> Qwen2.5-7B on a single GB10. No claim is made
-        about H100, MI300, or larger models. The 3.4× per-byte penalty is a GB10 number.</li>
+        about H100, MI300, or larger models. The ~3.4× model-derived effective-path ratio is specific to this GB10 fit.</li>
         <li><strong>Fixed-length uniform batches.</strong> No continuous batching with mixed arrival, no
         ragged sequence lengths. Real serving is neither.</li>
         <li><strong>The vLLM fit is noisier</strong> (R² <span class="mono">0.945</span> against
@@ -377,15 +375,14 @@
               <td><strong>A — bytes are what matter</strong></td>
               <td>Slope holds near <span class="mono">17.6 ms/GiB</span> while the GiB halve</td>
               <td><strong>~2× on the KV term.</strong> Confirms that the wall is a byte count and that
-              compression is the lever. The objective function's weighting in
+              byte reduction materially improves the KV term on this configuration. The objective function's weighting in
               <a href="m-formal-core.html">Appendix M §M.4</a> stands as written.</td>
             </tr>
             <tr>
               <td><strong>B — dequantisation cancels the saving</strong></td>
               <td>Slope roughly doubles to <span class="mono">~35 ms/GiB</span></td>
               <td>Dequantisation cost cancels the byte saving. fp8 buys <strong>capacity but not
-              bandwidth</strong> on this hardware, and the compression-dominates-placement conclusion of
-              §L.5.1 needs qualifying by representation, not just by byte count.</td>
+              bandwidth</strong> on this hardware, and any claim that compression should be preferred over placement would remain unsupported; representation overhead must be measured separately.</td>
             </tr>
           </tbody>
         </table>
@@ -409,7 +406,7 @@
         </p>
       </div>
       <p>Distributed Endpoint Architecture for KV-Cache Offloading in LLM Inference</p>
-      <p style="margin-top: 0.5rem;">Technical Documentation v5.0 — August 2026</p>
+      <p style="margin-top: 0.5rem;">Technical Documentation v5.0.2 — August 2026</p>
     </footer>
   </div>
 </body>

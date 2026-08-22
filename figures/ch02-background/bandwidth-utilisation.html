@@ -98,9 +98,7 @@ weight stream and the KV stream are not the same stream.</p>
 contiguous KV for FlashAttention-2 with paged KV lifts the <b>weight</b> read from 64% to 87% &mdash; a 34%
 improvement &mdash; and leaves the <b>KV</b> read at a quarter. That is the same result the fitted slopes give
 in the previous figure, read off the bandwidths instead of the fits.
-<b>Reducing KV bytes is therefore worth about 3.4&times; the naive byte-accounting estimate</b>, because the
-bytes removed are the expensive ones &mdash; and moving KV bytes between tiers does nothing for this wall,
-which is an HBM-side property.</p>
+<b>The fitted model shows a large difference between effective KV-path and fixed-path byte costs on this GB10 configuration.</b> Reducing KV traffic is therefore a first-order opportunity. Compression, sparse selection and placement act on different terms; the measurement does not establish that one universally dominates the others.</p>
 <details class="vz-table"><summary>Show the data table</summary><div class="table-wrapper"><table><caption class='sr-only'>Achieved bandwidth per read stream, as measured and as a share of the achieved streaming figure.</caption><thead><tr><th scope="col">Stream</th><th scope="col">Framework</th><th scope="col">GB/s</th><th scope="col">% of 236.5 achieved</th></tr></thead><tbody><tr><td>Streaming copy</td><td>read + write, 4 GiB buffers</td><td>236.5</td><td>100%</td></tr><tr><td>Weight read</td><td>vLLM + FlashAttention-2</td><td>205.7</td><td>87%</td></tr><tr><td>Weight read</td><td>HuggingFace + SDPA</td><td>151.5</td><td>64%</td></tr><tr><td>KV read</td><td>HuggingFace + SDPA</td><td>65.7</td><td>28%</td></tr><tr><td>KV read</td><td>vLLM + FlashAttention-2</td><td>61.1</td><td>26%</td></tr></tbody></table></div></details>
 <p class="vz-foot">Measured &mdash; DGX Spark GB10, 19 Aug 2026, scripts/bw_wall.py</p>
 </main>

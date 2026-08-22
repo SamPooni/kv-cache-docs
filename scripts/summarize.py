@@ -1,5 +1,6 @@
 import json, numpy as np
-R=json.load(open("results_v2.json"))
+from pathlib import Path
+R=json.load(open(Path(__file__).parents[1]/"data"/"results_v2.json"))
 POL=["LRU","LFU","EMA a=0.15","EMA a=0.01"]
 g=lambda k: R[k]
 

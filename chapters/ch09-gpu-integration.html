@@ -3,20 +3,32 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chapter 9: GPU Integration — KV-Cache Offloading Architecture</title>
+  <title>Chapter 9: GPU and Controller Integration — KV-Cache Offloading Architecture</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
-  <div class="watermark">© 2025 Subramaniyam (Sam) Pooni<br>All Rights Reserved<br>Proprietary & Confidential</div>
+  <div class="watermark">© 2025–2026 Subramaniyam (Sam) Pooni<br>All Rights Reserved<br>Proprietary & Confidential</div>
 
   <nav class="nav">
     <div class="nav-inner">
       <a href="../index.html" class="nav-brand"><span class="nav-brand-icon">⚡</span> KV-Cache Architecture</a>
       <div class="nav-links">
         <a href="ch00-executive-summary.html" class="nav-link"><span class="nav-chapter-num">0</span> Summary</a>
-        <a href="ch09-gpu-integration.html" class="nav-link active"><span class="nav-chapter-num">9</span> GPU</a>
+        <a href="ch01-introduction.html" class="nav-link"><span class="nav-chapter-num">1</span> Intro</a>
+        <a href="ch02-background.html" class="nav-link"><span class="nav-chapter-num">2</span> Background</a>
+        <a href="ch03-architecture.html" class="nav-link"><span class="nav-chapter-num">3</span> Architecture</a>
+        <a href="ch04-latency.html" class="nav-link"><span class="nav-chapter-num">4</span> Latency</a>
+        <a href="ch05-bandwidth.html" class="nav-link"><span class="nav-chapter-num">5</span> Bandwidth</a>
+        <a href="ch06-preprocessing.html" class="nav-link"><span class="nav-chapter-num">6</span> Preprocessing</a>
+        <a href="ch07-kv-cache.html" class="nav-link"><span class="nav-chapter-num">7</span> KV-Cache</a>
+        <a href="ch08-moe.html" class="nav-link"><span class="nav-chapter-num">8</span> MoE</a>
+        <a href="ch09-gpu-integration.html" class="nav-link active"><span class="nav-chapter-num">9</span> GPU Integration</a>
+        <a href="ch10-market.html" class="nav-link"><span class="nav-chapter-num">10</span> Market</a>
+        <a href="ch11-performance.html" class="nav-link"><span class="nav-chapter-num">11</span> Performance</a>
+        <a href="ch12-implementation.html" class="nav-link"><span class="nav-chapter-num">12</span> Implementation</a>
+        <a href="ch13-conclusion.html" class="nav-link"><span class="nav-chapter-num">13</span> Conclusion</a>
         <a href="../figures/index.html" class="nav-link">📊 Figures</a>
       </div>
     </div>
@@ -26,42 +38,73 @@
     <div class="container">
       <header class="chapter-header">
         <div class="chapter-label">Chapter 9</div>
-        <h1 class="chapter-title">GPU Integration</h1>
-        <p class="chapter-subtitle">Memory mapping, hint interface, mailbox protocol, and fault handling.</p>
+        <h1 class="chapter-title">GPU and Controller Integration</h1>
+        <p class="chapter-subtitle">The integration design space and current vendor landscape for CXL-attached KV-cache tiers — not a measured or built integration.</p>
       </header>
 
-      <div class="stats-grid" style="margin-bottom: 3rem;">
-        <div class="stat-box"><div class="stat-value">7</div><div class="stat-label">Figures in Chapter</div></div>
-        <div class="stat-box"><div class="stat-value">CXL.mem</div><div class="stat-label">Protocol</div></div>
-        <div class="stat-box"><div class="stat-value">Direct</div><div class="stat-label">GPU Access</div></div>
+      <h2>9.1 The Practical Question</h2>
+      <p>A CXL-attached memory tier is only useful to an inference server if bytes actually move between GPU high-bandwidth memory and that tier, and if something decides which bytes move and when. Both halves of that statement are easy to state and non-trivial to build. This chapter lays out the design space for the "move bytes" and "decide what to move" problems, and grounds it in the CXL controller and switch silicon that exists in the market as of this writing. Nothing in this chapter was built, simulated, or benchmarked as part of this package — the performance chapters elsewhere in this document do not depend on any of the integration paths described here actually existing in a tested form.</p>
+
+      <h2>9.2 Three Integration Paths</h2>
+      <p>At a high level there are three places to put the logic that orchestrates a GPU-to-CXL data movement, and each trades off compatibility against hops and host involvement.</p>
+
+      <div class="table-wrap" style="overflow-x:auto; margin: 1.5rem 0;">
+        <table style="width:100%; border-collapse: collapse;">
+          <thead>
+            <tr>
+              <th style="text-align:left; padding:0.5rem; border-bottom:2px solid var(--border, #ccc);">Path</th>
+              <th style="text-align:left; padding:0.5rem; border-bottom:2px solid var(--border, #ccc);">Who orchestrates</th>
+              <th style="text-align:left; padding:0.5rem; border-bottom:2px solid var(--border, #ccc);">Tradeoffs</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="padding:0.5rem; border-bottom:1px solid var(--border, #eee);">(a) Host-CPU-mediated</td>
+              <td style="padding:0.5rem; border-bottom:1px solid var(--border, #eee);">Host CPU issues and tracks DMA between GPU and CXL memory</td>
+              <td style="padding:0.5rem; border-bottom:1px solid var(--border, #eee);">Broadest platform compatibility today; adds CPU involvement and an extra hop on the data path, with latency cost that depends on the specific DMA engine and driver stack</td>
+            </tr>
+            <tr>
+              <td style="padding:0.5rem; border-bottom:1px solid var(--border, #eee);">(b) Direct GPU-to-CXL access</td>
+              <td style="padding:0.5rem; border-bottom:1px solid var(--border, #eee);">GPU initiates transfers directly against CXL-mapped memory, where the platform allows it</td>
+              <td style="padding:0.5rem; border-bottom:1px solid var(--border, #eee);">Fewer hops in principle, but availability depends on host platform, root complex, and driver/firmware support that varies by vendor and generation — not quantified here and not assumed to be uniformly available</td>
+            </tr>
+            <tr>
+              <td style="padding:0.5rem;">(c) Fabric-resident controller</td>
+              <td style="padding:0.5rem;">A controller or accelerator sitting on the CXL fabric participates in eviction and metadata decisions, not just raw transport</td>
+              <td style="padding:0.5rem;">Closest to a "device owns mechanism" split (Ch. 3); requires controller logic beyond a passive memory expander and is not demonstrated on real silicon in this package</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
-      <h2>9.1 GPU-CXL Integration</h2>
+      <p>Path (a) is the safe default: it works on essentially any platform that exposes CXL memory as host-attached and lets the existing GPU driver stack handle transfers the way it already handles host-memory staging. Path (b) is attractive on paper but its practicality is platform-specific — some host CPU and GPU combinations support more direct paths between accelerator and CXL-attached memory than others, and that support surface is still evolving generation to generation. This package does not claim a specific hop-count or latency reduction for path (b) because it was not measured on any platform here. Path (c) is the most architecturally interesting and the least proven; it is discussed further in Section 9.4.</p>
 
-      <div class="figure-embed" style="margin: 2rem 0;">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figures 9.1-9.4 — GPU Integration Architecture</span>
-          <a href="../figures/ch09-gpu-integration/gpu-integration.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
-        </div>
-        <iframe src="../figures/ch09-gpu-integration/gpu-integration.html" style="width:100%;height:700px;border:none;"></iframe>
-      </div>
+      <h2>9.3 The Current Controller and Switch Landscape</h2>
+      <p>For grounding, it is worth naming the silicon that actually exists in the CXL controller and switch space as of 2026, without attributing any performance figures in this package to that hardware — none of it was tested as part of this work.</p>
+      <ul>
+        <li><strong>Astera Labs</strong> ships a CXL product line that includes the Leo memory controller platform (CXL memory expansion), the Scorpio switch (CXL/PCIe fabric switching for pooled and disaggregated memory), the Aries retimer, and the Taurus cable module for signal integrity over longer physical runs. These are the building blocks for constructing a CXL memory tier and, for a switch-based topology, for connecting multiple hosts and memory devices on a shared fabric.</li>
+        <li><strong>Marvell</strong> has its Structera line: Structera X memory expanders, which per Marvell's own FMS 2026 announcements are shipping to hyperscale customers, and Structera S, a CXL switch aimed at rack-scale memory pooling.</li>
+        <li><strong>Samsung and SK hynix</strong> both have CXL memory expansion products in their CMM-D family. As of 2026 these are reported to be largely allocated to hyperscaler customers rather than broadly available on the open market. This availability picture changes quickly and should be verified against current vendor and distributor information at the time this chapter is read, rather than treated as a fixed fact.</li>
+      </ul>
+      <p>None of these products were benchmarked, integrated, or otherwise tested in the preparation of this package. They are named here as evidence that CXL memory-expansion and switching silicon is a real, shipping category — which is a feasibility signal for the general approach — not as a source of the latency or bandwidth numbers used elsewhere in this document. Those numbers, where cited, come from the sources identified in their respective chapters, not from any hardware named here.</p>
 
-      <h2>9.2 GPU-CXL KV-Cache Flow</h2>
+      <h2>9.4 What "Device Owns Mechanism" Could Mean Here</h2>
+      <p>Chapter 3 introduced a policy split: the host decides what belongs in the KV-cache working set and when to evict or re-admit an entry, while the mechanism that actually carries out storage, retrieval, and identity tracking can live closer to the device. Path (c) above — a fabric-resident controller — is the concrete shape that split could take in a CXL deployment.</p>
+      <p>One illustrative example, not built here: a controller that preserves identity-keyed metadata for a KV-cache block across an eviction and later re-admission cycle, without requiring the host to resend the identity key or recompute it from scratch on every access. If a controller could hold that association itself, the host would issue a coarser-grained instruction — "this identity is wanted again" — and the controller would resolve it to a physical location using state it already maintained, rather than the host reconstructing that mapping through its own bookkeeping. That is one way "mechanism" could move onto the device side of the split.</p>
+      <p>This remains a design proposal. Nothing in the package instantiates such a controller, and no real CXL silicon — including the products named in Section 9.3 — was configured, programmed, or tested to perform identity-keyed metadata retention of this kind. Whether a given vendor's controller firmware could be extended to support it is an open question for actual hardware evaluation, not something this document answers.</p>
 
-      <div class="figure-embed" style="margin: 2rem 0;">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figures 9.5-9.7 — GPU-CXL KV-Cache</span>
-          <a href="../figures/ch09-gpu-integration/gpu-cxl-kvcache.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
-        </div>
-        <iframe src="../figures/ch09-gpu-integration/gpu-cxl-kvcache.html" style="width:100%;height:700px;border:none;"></iframe>
-      </div>
+      <h2>9.5 Summary</h2>
+      <p>This chapter described the integration design space for connecting GPU memory to a CXL-attached KV-cache tier — host-mediated DMA, direct GPU access where platforms support it, and a fabric-resident controller that could participate in policy mechanics — and named the CXL controller and switch vendors shipping real product as of 2026 as a maturity signal for the category. No GPU-to-CXL-controller integration was measured, simulated, or built as part of this package. Readers should treat this chapter as a survey of what is architecturally possible and who is building the underlying silicon, not as evidence supporting any specific latency, bandwidth, or throughput figure claimed elsewhere in this document.</p>
 
       <div class="chapter-nav">
         <a href="ch08-moe.html" class="chapter-nav-btn prev"><span class="chapter-nav-label">← Previous</span><span class="chapter-nav-title">MoE Routing</span></a>
-        <a href="ch10-market.html" class="chapter-nav-btn next"><span class="chapter-nav-label">Next →</span><span class="chapter-nav-title">Market Landscape</span></a>
+        <a href="ch10-market.html" class="chapter-nav-btn next"><span class="chapter-nav-label">Next →</span><span class="chapter-nav-title">Market</span></a>
       </div>
     </div>
-    <footer class="footer"><p style="font-size: 0.8rem; color: var(--text-muted);">© 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.</p></footer>
+    <footer class="footer">
+      <p style="font-size: 0.8rem; color: var(--text-muted);">© 2025–2026 Subramaniyam (Sam) Pooni. All Rights Reserved.</p>
+      <p style="font-size: 0.8rem; color: var(--text-muted);">KV-Cache Offloading Architecture — v6.0 — August 2026</p>
+    </footer>
   </div>
 </body>
 </html>

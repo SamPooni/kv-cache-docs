@@ -3,56 +3,21 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chapter 4: Effective Latency Analysis — KV-Cache Offloading</title>
+  <title>Chapter 4: Hardware Measurement Methodology and Results — KV-Cache Offloading Architecture</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/style.css">
-  <style>
-    .figure-embed {
-      background: var(--bg-card);
-      border: 1px solid var(--border-primary);
-      border-radius: 12px;
-      margin: 2rem 0;
-      overflow: hidden;
-    }
-    .figure-embed-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 1rem 1.5rem;
-      background: var(--bg-tertiary);
-      border-bottom: 1px solid var(--border-primary);
-    }
-    .figure-embed-label {
-      font-family: var(--font-mono);
-      font-size: 0.9rem;
-      color: var(--accent-cyan);
-    }
-    .figure-embed-link {
-      font-size: 0.85rem;
-      color: var(--accent-purple);
-      text-decoration: none;
-    }
-    .figure-embed-link:hover { text-decoration: underline; }
-    .figure-embed iframe {
-      width: 100%;
-      height: 550px;
-      border: none;
-      background: #fff;
-    }
-    .figure-embed.tall iframe { height: 700px; }
-  </style>
 </head>
 <body>
-  <div class="watermark">© 2025 Subramaniyam (Sam) Pooni<br>All Rights Reserved<br>Proprietary & Confidential</div>
+  <div class="watermark">© 2025–2026 Subramaniyam (Sam) Pooni<br>All Rights Reserved<br>Proprietary & Confidential</div>
 
   <nav class="nav">
     <div class="nav-inner">
       <a href="../index.html" class="nav-brand"><span class="nav-brand-icon">⚡</span> KV-Cache Architecture</a>
       <div class="nav-links">
         <a href="ch00-executive-summary.html" class="nav-link"><span class="nav-chapter-num">0</span> Summary</a>
-        <a href="ch03-architecture.html" class="nav-link"><span class="nav-chapter-num">3</span> Architecture</a>
-        <a href="ch04-latency.html" class="nav-link active"><span class="nav-chapter-num">4</span> Latency</a>
+        <a href="ch04-latency.html" class="nav-link active"><span class="nav-chapter-num">4</span> Measurement</a>
+        <a href="ch05-bandwidth.html" class="nav-link"><span class="nav-chapter-num">5</span> Bandwidth</a>
         <a href="../figures/index.html" class="nav-link">📊 Figures</a>
         <a href="../appendix/index.html" class="nav-link">Appendix</a>
       </div>
@@ -63,102 +28,57 @@
     <div class="container">
       <header class="chapter-header">
         <div class="chapter-label">Chapter 4</div>
-        <h1 class="chapter-title">Effective Latency Analysis</h1>
-        <p class="chapter-subtitle">Two-tier cache model, CXL vs PCIe comparison, and the 65× latency improvement.</p>
+        <h1 class="chapter-title">Hardware Measurement Methodology and Results</h1>
+        <p class="chapter-subtitle">Direct measurement on DGX Spark (GB10 Grace Blackwell), 19 August 2026: streaming bandwidth, two-term decode latency fits, and two bugs caught before they became published numbers.</p>
       </header>
 
       <div class="stats-grid" style="margin-bottom: 3rem;">
-        <div class="stat-box"><div class="stat-value">9</div><div class="stat-label">Figures in Chapter</div></div>
-        <div class="stat-box"><div class="stat-value">250 ns</div><div class="stat-label">CXL.mem</div></div>
-        <div class="stat-box"><div class="stat-value">16 μs</div><div class="stat-label">PCIe DMA</div></div>
-        <div class="stat-box"><div class="stat-value">65×</div><div class="stat-label">Improvement</div></div>
+        <div class="stat-box"><div class="stat-value">236.5 GB/s</div><div class="stat-label">Achieved streaming bandwidth</div></div>
+        <div class="stat-box"><div class="stat-value">87%</div><div class="stat-label">Of 273 GB/s spec figure</div></div>
+        <div class="stat-box"><div class="stat-value">3.4×</div><div class="stat-label">Inferred KV-path cost vs. fixed path</div></div>
+        <div class="stat-box"><div class="stat-value">2</div><div class="stat-label">Bugs found and fixed pre-publication</div></div>
       </div>
 
-      <!-- Section 4.1: Two-Tier Model -->
-      <h2>4.1 Two-Tier Cache Model</h2>
-      
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr><th>Tier</th><th>Media</th><th>Latency</th><th>Capacity</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>Tier 1</td><td>Endpoint DDR5</td><td class="mono highlight">250 ns</td><td class="mono">1 TB</td></tr>
-            <tr><td>Tier 2</td><td>Endpoint NVMe</td><td class="mono warning">25 μs</td><td class="mono">16 TB</td></tr>
-            <tr><td>Fallback</td><td>Recompute</td><td class="mono danger">50 ms</td><td class="mono">∞</td></tr>
-          </tbody>
-        </table>
+      <h2>4.1 Platform and Method</h2>
+      <p>All numbers in this chapter come from a single machine: an NVIDIA DGX Spark with a GB10 Grace Blackwell superchip and 128 GiB of coherent unified LPDDR5X memory, spec-rated at 273 GB/s. The model under test was Qwen2.5-7B-Instruct in fp16 — 28 layers, 4 KV heads, head dimension 128, giving 56 KiB of KV-cache per token. Weights load at 15.2 GB (14.16 GiB). Measurements were taken 19 August 2026 using two scripts, <code>bw_wall.py</code> for raw streaming bandwidth and <code>vllm_slope.py</code> for the batch × context decode-latency sweep. Nothing here is simulated or extrapolated from vendor datasheets; every number in the tables below is a measured fit or a direct read+write streaming copy.</p>
+
+      <h2>4.2 Achieved Bandwidth</h2>
+      <p>The streaming bandwidth test ran a read+write copy over 4 GiB buffers, median of 20 runs, and landed at <strong>236.5 GB/s</strong>, 87% of the 273 GB/s spec figure. This result retires an assumption carried in earlier internal drafts of this document, which had discounted spec bandwidth by roughly 50% as an "effective bandwidth" haircut. That haircut was never measured — it was a guess, and the guess was wrong in the pessimistic direction by a wide margin. Unified memory on this platform delivers far closer to its rated bandwidth than the earlier planning assumption credited it for, and every downstream estimate in this document that depends on achievable bandwidth uses 236.5 GB/s, not spec, and not the old 50% haircut.</p>
+
+      <h2>4.3 Decode Latency: Two-Term Fits</h2>
+      <p>Decode latency was modeled as a two-term linear fit, t = a + b·KV_GiB, across a sweep of batch sizes and context lengths, for two separate inference stacks: HuggingFace with SDPA attention (unpaged), and vLLM 0.20.1 with FlashAttention-2 (paged). The intercept a is interpreted as the fixed per-step cost dominated by weight traffic; the slope b is the marginal cost per GiB of KV-cache read.</p>
+
+      <div style="overflow-x: auto;">
+      <table>
+        <thead>
+          <tr><th>Stack</th><th>Fit (ms)</th><th>n</th><th>R²</th><th>Inferred fixed-path BW</th><th>Inferred KV BW</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>HuggingFace + SDPA (unpaged)</td><td>t = 100.3 + 16.34·KV_GiB</td><td>7</td><td>0.991</td><td>151.5 GB/s</td><td>65.7 GB/s</td></tr>
+          <tr><td>vLLM 0.20.1 + FlashAttention-2 (paged)</td><td>t = 73.9 + 17.58·KV_GiB</td><td>9</td><td>0.945</td><td>205.7 GB/s</td><td>61.1 GB/s</td></tr>
+        </tbody>
+      </table>
       </div>
 
-      <!-- Section 4.2: Effective Latency -->
-      <h2>4.2 Effective Latency Formula</h2>
-      
-      <div class="equation">
-        L<sub>eff</sub> = α × L<sub>dram</sub> + β × L<sub>flash</sub> + γ × L<sub>recompute</sub>
-        <span class="equation-label">Weighted average across cache tiers</span>
-      </div>
+      <p>Expressed against the 236.5 GB/s actually achieved on this hardware, the fixed (weight) path uses 64% of achievable bandwidth on HuggingFace and 87% on vLLM; the KV path uses 28% on HuggingFace and 26% on vLLM. The inferred effective KV path is roughly <strong>3.4× more costly per byte</strong> than the fixed path (205.7 ÷ 61.1 = 3.37, using the vLLM fit). This ratio must be read for what it is: a quantity derived from two intercept/slope regressions, not a direct per-byte hardware measurement of two separate memory paths. No experiment in this chapter isolated KV traffic from weight traffic at the memory-controller level; the ratio is a model artifact of the latency fit, and should be cited as such.</p>
 
-      <p>With 85% DRAM hit rate, 14% flash hit, 1% miss:</p>
-      
-      <div class="derivation">
-        <div class="derivation-step">
-          <div class="step-num">Calculate:</div>
-          <div class="step-content">
-            <div class="step-eq">L<sub>eff</sub> = 0.85 × 250 ns + 0.14 × 25 μs + 0.01 × 50 ms</div>
-            <div class="step-eq">= 212.5 ns + 3.5 μs + 500 μs = <strong>504 μs ≈ 0.5 ms</strong></div>
-          </div>
-        </div>
-      </div>
+      <h2>4.4 Kernel Substitution Does Not Remove the KV Slope</h2>
+      <p>Switching from HuggingFace/SDPA to vLLM/FlashAttention-2 changed the fixed-path bandwidth substantially — a 34% improvement, from 151.5 to 205.7 GB/s — but left the KV slope almost untouched: 16.34 ms/GiB versus 17.58 ms/GiB, within 8% of each other. Whatever is limiting KV-cache read throughput on this hardware, it was not eliminated by moving to a faster attention kernel with paged memory. This finding is scoped strictly to the two stacks actually tested here. It is not evidence that "the kernel never matters" in general — only that these two kernels, on this hardware, with this model, produced materially different fixed-path performance and materially similar KV-path performance.</p>
 
-      <div class="figure-embed tall">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figure 4.1 — Effective Latency Analysis</span>
-          <a href="../figures/ch04-latency/effective-latency-analysis.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
-        </div>
-        <iframe src="../figures/ch04-latency/effective-latency-analysis.html"></iframe>
-      </div>
+      <h2>4.5 Capacity Was Never the Constraint</h2>
+      <p>Across every batch × context configuration tested, the 128 GiB unified memory pool had headroom to spare — nothing was evicted, and capacity was not the binding constraint in any run. Throughput fell from 150 tok/s at batch 16 × 4K context to 46 tok/s at batch 16 × 16K context purely as a function of the growing KV-cache read cost per decode step, with memory utilization well under the ceiling the whole time. The bottleneck in these measurements is bandwidth, not capacity.</p>
 
-      <!-- Section 4.3: CXL vs PCIe -->
-      <h2>4.3 CXL.mem vs PCIe DMA Path Comparison</h2>
-      
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr><th>Component</th><th>CXL.mem</th><th>PCIe DMA</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>CPU involvement</td><td class="mono highlight">None</td><td class="mono danger">Required (interrupt)</td></tr>
-            <tr><td>Protocol overhead</td><td class="mono">100 ns</td><td class="mono">2-5 μs</td></tr>
-            <tr><td>Memory access</td><td class="mono">100 ns</td><td class="mono">100 ns</td></tr>
-            <tr><td>TLB management</td><td class="mono highlight">Hardware</td><td class="mono danger">Software (1-2 μs)</td></tr>
-            <tr style="background: rgba(63,185,80,0.1);"><td><strong>Total</strong></td><td class="mono highlight"><strong>~250 ns</strong></td><td class="mono danger"><strong>5-16 μs</strong></td></tr>
-          </tbody>
-        </table>
-      </div>
+      <h2>4.6 Two Bugs Found During Measurement</h2>
+      <p>Both bugs below were caught before any number derived from them was published, and both are included here because catching them is a methodology strength worth showing, not a lapse worth hiding.</p>
 
-      <div class="figure-embed tall">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figure 4.2 — Latency Path Comparison</span>
-          <a href="../figures/ch04-latency/diagram-latency-path-html.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
-        </div>
-        <iframe src="../figures/ch04-latency/diagram-latency-path-html.html"></iframe>
-      </div>
+      <h3>4.6.1 Silent dtype fallback → fp32 OOM</h3>
+      <p>The loading script originally passed <code>torch_dtype=</code> to the model constructor. That argument is deprecated in current transformers releases and was silently ignored rather than erroring, which caused the 7B model to load in fp32 — 28.4 GiB of resident weights instead of the expected fp16 footprint. On unified memory, a CUDA-side allocation failure of this kind does not surface as a clean CUDA OOM; it surfaces as a Linux OOM kill, which obscured the actual cause for longer than it should have. The fix was to switch to the current <code>dtype=</code> argument, and the script now prints resident weight bytes and dtype on load so a silent fallback of this kind is visible immediately rather than discovered after a crash.</p>
 
-      <!-- Section 4.4: Waterfall -->
-      <h2>4.4 Access Timeline (Waterfall)</h2>
+      <h3>4.6.2 Shared prefix cache inflated the KV x-axis</h3>
+      <p>An early version of the batch × context sweep used identical token ids across every sequence in a batch for simplicity. vLLM's prefix cache correctly recognized the batch as one shared prefix and stored a single copy of the KV-cache instead of one copy per sequence — which meant the actual KV bytes read at each measured point were a factor of B (the batch size) smaller than the script believed, inflating the effective x-axis and producing an apparent KV bandwidth of 342.9 GB/s. That number is above the 273 GB/s physical memory bus on this hardware, which is the tell: no configuration on this machine can exceed its physical bus. The rule this bug produced is worth stating plainly and applying everywhere in this document: <strong>any measured bandwidth above the physical bus is a bug, always.</strong> Also worth stating plainly: this bug produced a better-looking, more exciting wrong number — a bandwidth figure that would have made the KV path look cheap rather than expensive — and it was not caught by code review or inspection. It was caught by a physical impossibility check against the memory bus spec. That is the check that matters, and it is now run against every bandwidth figure in this document before it is written down.</p>
 
-      <div class="figure-embed">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figure 4.3 — Latency Waterfall Diagram</span>
-          <a href="../figures/ch04-latency/figure-2-5-latency-waterfall.html" target="_blank" class="figure-embed-link">View TSX Source ↗</a>
-        </div>
-        <iframe src="../figures/ch04-latency/figure-2-5-latency-waterfall.html" style="background: #1a1a2e;"></iframe>
-      </div>
-
-      <div class="callout insight">
-        <div class="callout-title">🚀 65× Latency Improvement</div>
-        <p style="margin-bottom: 0;">CXL.mem eliminates CPU interrupt handling, explicit DMA setup, and software TLB management. Result: <strong>250 ns vs 16+ μs = 65× faster</strong></p>
-      </div>
+      <h2>4.7 Limits of This Measurement</h2>
+      <p>Stated plainly, so nothing here is oversold: this is one model, one size, one machine. Batches were fixed-length and uniform, with no continuous batching. The vLLM fit is noisier than the HuggingFace fit (R² = 0.945 vs. 0.991), and one point — batch 16 at 16,384-token context — sits 26 ms above the fit line and needs a repeat run before it should be trusted at face value. No thermal log was captured during the sweep, so thermal throttling as a confound cannot be ruled out or ruled in. The attention kernel tested was FlashAttention-2, not FlashAttention-3. And fp8 KV-cache was not measured at all in this pass — it is named here as the next experiment, since it is the direct test of whether cache compression changes the byte-cost ratio described in Section 4.3, rather than just shrinking the KV-cache footprint at a fixed cost per byte.</p>
 
       <!-- Chapter Navigation -->
       <div class="chapter-nav">
@@ -176,11 +96,11 @@
     <footer class="footer">
       <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-primary);">
         <p style="font-size: 0.8rem; color: var(--text-muted);">
-          © 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.<br>
+          © 2025–2026 Subramaniyam (Sam) Pooni. All Rights Reserved.<br>
           This document contains proprietary and confidential information.
         </p>
       </div>
-      <p>KV-Cache Offloading Architecture — v3.0</p>
+      <p>KV-Cache Offloading Architecture — v6.0 — August 2026</p>
     </footer>
   </div>
 </body>

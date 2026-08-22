@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
-  <div class="watermark">© 2025 Subramaniyam (Sam) Pooni<br>All Rights Reserved<br>Proprietary & Confidential</div>
+  <div class="watermark">© 2025–2026 Subramaniyam (Sam) Pooni<br>All Rights Reserved<br>Proprietary & Confidential</div>
 
   <nav class="nav">
     <div class="nav-inner">
@@ -27,48 +27,44 @@
       <header class="chapter-header">
         <div class="chapter-label">Chapter 13</div>
         <h1 class="chapter-title">Conclusion</h1>
-        <p class="chapter-subtitle">Summary of contributions and key takeaways.</p>
+        <p class="chapter-subtitle">What this package shows, what it doesn't, and what remains to be tested.</p>
       </header>
 
-      <div class="stats-grid" style="margin-bottom: 3rem;">
-        <div class="stat-box"><div class="stat-value">6×</div><div class="stat-label">Memory Expansion</div></div>
-        <div class="stat-box"><div class="stat-value">8×</div><div class="stat-label">User Capacity</div></div>
-        <div class="stat-box"><div class="stat-value">95%</div><div class="stat-label">HBM Hit Rate</div></div>
-        <div class="stat-box"><div class="stat-value">36%</div><div class="stat-label">Cost Reduction</div></div>
-      </div>
+      <h2>13.1 The wall doesn't go away — it changes shape</h2>
+      <p>
+        The idea running through this whole document is simple enough to state once more, plainly, as a closing point rather than an opening one: adding a memory tier to a KV-cache system does not eliminate the memory wall that decode-heavy inference runs into. It relocates it. Before a tier exists, the wall is a capacity wall — a context grows, the cache grows with it, and eventually there is nowhere left to put it. A tier relieves that problem directly; that part is not in question. What replaces it is not nothing. HBM-side bandwidth on the host is unchanged by the presence of a tier — on the one platform we measured end to end, a DGX Spark GB10, sustained bandwidth topped out at 236.5 GB/s, 87% of the platform's rated spec, regardless of whether a tier sits behind it. And two problems appear that did not exist before: how fast data can cross into the tier, and how much latency each individual transfer costs. Those are not restatements of the capacity problem. They are new, independent constraints, and a design that only reasons about capacity will walk straight into them. Four constraints, not one, is the frame this package has argued for throughout — capacity, HBM bandwidth, tier-ingress bandwidth, and per-transfer latency — and restating it here, for the last time, is deliberate: it is the actual intellectual contribution of the document, more than any single number in it.
+      </p>
 
-      <h2>Final Summary</h2>
+      <h2>13.2 What is actually being claimed</h2>
+      <p>
+        It is worth being precise about this in a conclusion, because it is easy to overstate. The eviction-scoring method used throughout — a decayed-frequency, exponential-moving-average score — is not new work. It is LRFU, published by Lee et al. at SIGMETRICS in 1999, and it is credited as such here again, plainly, without hedging. The contribution this package makes is not an algorithm. It is a protocol-level claim: that eviction-policy metadata, keyed to block identity, should be treated as a migratable object that persists across tier boundaries rather than something that resets when a block moves. The evidence for that claim is a simulated result — provisional, and described as such throughout — showing a 34.15 percentage-point hit-rate improvement for LFU under a 32 GiB HBM budget when metadata persists across a tier boundary versus when it resets. That number carries a useful property: it doesn't require any CXL hardware to test, because the question it answers is about what state a controller chooses to preserve, not about the physical characteristics of the tier the state lives on. That distinction is why the claim can be made with more confidence than anything else in the package that depends on hardware we did not have.
+      </p>
 
-      <div class="figure-embed" style="margin: 2rem 0;">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figures 13.1-13.3 — Conclusion & Key Takeaways</span>
-          <a href="../figures/ch13-conclusion/cover-page.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
-        </div>
-        <iframe src="../figures/ch13-conclusion/cover-page.html" style="width:100%;height:700px;border:none;"></iframe>
-      </div>
+      <h2>13.3 What this package is, and is not</h2>
+      <p>
+        Said directly: this is a hardware-measured decomposition of decode-phase bandwidth into weight and KV components, taken on one real platform, paired with a corrected simulation of how eviction policies behave under tier-crossing conditions. That is a real, bounded contribution. It is not a validated CXL memory-tier system. No CXL device was in the loop at any point — the tiering behavior is simulated, not measured on the interconnect it is meant to describe. And the persistent-metadata result, despite being the strongest piece of evidence in the package, is still a simulation result, and it is provisional for a specific, disclosed reason: an earlier revision of this work contained a simulation defect that inverted four of five headline findings, and that history is part of why every number here is labeled by how it was produced rather than presented as settled fact.
+      </p>
 
-      <h2>Key Contributions</h2>
-      
-      <div class="card" style="margin: 2rem 0; padding: 2rem;">
-        <h3 style="color: var(--accent-cyan); margin-top: 0;">1. Distributed Endpoint Architecture</h3>
-        <p>CXL 3.0 computational storage endpoints with controller-resident intelligence for autonomous cache management.</p>
-        
-        <h3 style="color: var(--accent-green);">2. Intelligent KV-Cache Management</h3>
-        <p>Per-head importance tracking, EMA-based scoring, and RoPE-aware prefetching achieving 95% HBM hit rate.</p>
-        
-        <h3 style="color: var(--accent-purple);">3. 65× Latency Improvement</h3>
-        <p>CXL.mem load/store semantics eliminate CPU interrupt handling for 250 ns vs 16 μs access.</p>
-        
-        <h3 style="color: var(--accent-orange);">4. Economic Impact</h3>
-        <p>36% infrastructure cost reduction, 8× more concurrent users per GPU, enabling profitable long-context serving.</p>
-      </div>
+      <h2>13.4 What's still open</h2>
+      <p>
+        A short list of what would need to happen before any of this graduates from provisional to validated. First, fp8 KV-cache measurement: compression changes the byte cost of every transfer, and it's an open question whether it changes the ratio between weight and KV bandwidth demand or just scales both proportionally. Second, repeating the bandwidth decomposition on a mixture-of-experts model, where the weight-access pattern is structurally different from the dense models measured here. Third, testing the persistent-metadata result against real workload traces instead of the synthetic Zipfian, scan, and loop access patterns used in this round of simulation — synthetic patterns are useful for isolating a mechanism, but they are not a substitute for production traffic. And fourth, the one item on this list that actually requires physical CXL hardware rather than more simulation: confirming that policy metadata survives a real eviction and re-admission round trip on an actual device, not just in a model of one.
+      </p>
+
+      <h2>13.5 A note on what "done well" means here</h2>
+      <p>
+        There isn't a bigger claim to reach for at the end of this. Work like this is done well when it states what it found plainly, tags every number by the kind of evidence that produced it — measured on real hardware, simulated and provisional, or borrowed from prior published work — and lets the findings that don't hold up be dropped rather than defended. That was the discipline this revision tried to hold to, after an earlier one didn't. It is not a dramatic note to end on, and it isn't meant to be. It's just the one that leaves the fewest debts for whoever picks this work up next.
+      </p>
 
       <div class="chapter-nav">
         <a href="ch12-implementation.html" class="chapter-nav-btn prev"><span class="chapter-nav-label">← Previous</span><span class="chapter-nav-title">Implementation</span></a>
-        <a href="../index.html" class="chapter-nav-btn next"><span class="chapter-nav-label">Back to →</span><span class="chapter-nav-title">Home</span></a>
+        <a href="../index.html" class="chapter-nav-btn next"><span class="chapter-nav-label">Back to →</span><span class="chapter-nav-title">Index</span></a>
       </div>
     </div>
-    <footer class="footer"><p style="font-size: 0.8rem; color: var(--text-muted);">© 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.</p></footer>
   </div>
+
+  <footer class="footer">
+    <p>© 2025–2026 Subramaniyam (Sam) Pooni. All Rights Reserved.</p>
+    <p>KV-Cache Offloading Architecture — v6.0 — August 2026</p>
+  </footer>
 </body>
 </html>

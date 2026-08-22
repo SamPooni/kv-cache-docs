@@ -42,8 +42,7 @@ weight read   HF   64%          KV read   HF   28%
 
 ### The result
 
-> **KV is read at roughly a quarter of achievable memory bandwidth, and changing the
-> attention kernel does not fix it.**
+> **KV is read at roughly a quarter of achievable memory bandwidth in the measured GB10 runs, and substituting between the two tested attention stacks did not eliminate that slope.**
 
 Two independent frameworks — different attention implementations, paged versus unpaged KV
 layout — produce KV slopes **within 8% of each other** (16.34 vs 17.58 ms/GiB). Over the
@@ -52,20 +51,15 @@ achievable bandwidth.
 
 vLLM extracts near-peak bandwidth on weights and a quarter of it on KV.
 
-**On GB10, a KV byte costs 3.4× a weight byte** (205.7 / 61.1).
+**Under the two-term GB10 fit, the inferred effective KV path has ~3.4× higher per-byte cost than the fixed path** (205.7 / 61.1). This ratio is model-derived, not a direct byte-level hardware measurement.
 
 ---
 
 ## 3. What this settles
 
-**Compression dominates placement.** Reducing KV bytes is worth ~3.4× the naive
-byte-accounting estimate, because the bytes removed are the expensive ones. Moving KV bytes
-between tiers does nothing for this wall — it is an HBM-side property, unaffected by what
-sits behind HBM.
+**KV traffic reduction is the first-order opportunity exposed by this measurement.** Compression reduces bytes per KV element; sparse or hierarchical selection can reduce the number of KV elements consumed. Placement remains necessary for capacity, reuse, and movement. The relative end-to-end benefit of these mechanisms has not yet been established.
 
-**The kernel is not the lever.** The obvious hypothesis — that a better attention kernel
-would close the gap — is refuted by measurement. FlashAttention-2 with paged KV performs the
-same as SDPA with contiguous KV on the KV term.
+**Kernel substitution alone did not eliminate the measured KV slope.** FlashAttention-2 with paged KV and SDPA with contiguous KV produced similar slopes on this GB10/Qwen2.5-7B test. This does not rule out gains from other kernels, GPU architectures, models, page sizes, or decode regimes.
 
 **Capacity was never the binding constraint here.** Every configuration measured fit
 comfortably in 128 GiB. Throughput still collapsed: 150 tok/s at batch 16 × 4K falls to

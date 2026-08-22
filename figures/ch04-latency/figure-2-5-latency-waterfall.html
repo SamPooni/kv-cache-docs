@@ -27,8 +27,9 @@ function LatencyWaterfall() {
     { name: 'PCIe Transfer (4KB)', time: 125, color: '#3b82f6' },
     { name: 'GPU TLB Shootdown', time: 1500, color: '#ef4444' }
   ];
-  // Note: Source table adds to 5-10μs, but text claims 65× (requires ~16μs)
-  // Showing table values; actual system latency may be higher due to additional overhead
+  // The 65× headline this figure once carried is RETRACTED (CANONICAL-NUMBERS.md §7):
+  // it compared a hypothetical load/store path against a driver-mediated DMA path, and no
+// CXL hardware was measured. Table values shown; treat as mechanism, not magnitude.
   const cxlTotal = cxlSteps.reduce((a, b) => a + b.time, 0);
   const pcieTotal = pcieSteps.reduce((a, b) => a + b.time, 0);
   const styles = {
@@ -59,8 +60,8 @@ function LatencyWaterfall() {
         </div>
       </div>
       <div style={styles.compare}>
-        <div style={styles.big}>~65× faster*</div>
-        <div style={{color: '#94a3b8'}}>CXL eliminates CPU involvement, DMA setup, TLB management</div>
+        <div style={styles.big}>Mechanism, not a measured multiple*</div>
+        <div style={{color: '#94a3b8'}}>Memory-semantic access can reduce software-managed I/O steps; platform dependent and unmeasured here</div>
         <div style={{color: '#64748b', fontSize: '0.75rem', marginTop: '0.5rem'}}>*Real-world includes additional OS/driver overhead beyond table values</div>
       </div>
     </div>

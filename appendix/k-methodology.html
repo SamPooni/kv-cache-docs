@@ -320,7 +320,7 @@
             <tr><td>Decode model, HuggingFace + SDPA</td><td class="mono">100.3 + 16.34·KV_GiB ms (R² 0.991)</td><td><a href="l-measurements.html">L §L.3</a></td></tr>
             <tr><td>Decode model, vLLM + FlashAttention-2</td><td class="mono">73.9 + 17.58·KV_GiB ms (R² 0.945)</td><td><a href="l-measurements.html">L §L.3</a></td></tr>
             <tr><td>KV read as a fraction of achieved bandwidth</td><td class="mono">26–28%</td><td><a href="l-measurements.html">L §L.3.1</a></td></tr>
-            <tr><td>Per-byte penalty on KV against weights</td><td class="mono"><strong>3.4×</strong></td><td><a href="l-measurements.html">L §L.4</a></td></tr>
+            <tr><td>Model-derived effective KV/fixed-path ratio</td><td class="mono"><strong>~3.4×</strong></td><td><a href="l-measurements.html">L §L.4</a></td></tr>
           </tbody>
         </table>
       </div>
@@ -328,7 +328,7 @@
       <p>Two consequences reach back into this appendix. First, the <strong>~50% effective-bandwidth
       haircut</strong> used in earlier drafts is retired — it was wrong, and wrong in the pessimistic
       direction, which is what removes the floor from under the 15.6× TTFT derivation. Second,
-      <strong>the kernel is not the lever</strong>: two frameworks with different attention implementations
+      <strong>kernel substitution alone did not eliminate the measured KV slope</strong>: two tested frameworks with different attention implementations
       land within 8% on the KV term, so no assumption in §K.7 about kernel-level improvement can be used to
       rescue a bandwidth argument.</p>
 
@@ -393,7 +393,7 @@
           <tbody>
             <tr>
               <td><strong>The GB10 measurement generalises in direction, if not in magnitude.</strong> KV is read at roughly a quarter of achievable bandwidth, and this is a property of the attention read pattern rather than of one part.</td>
-              <td>The <span class="mono">3.4×</span> per-byte penalty becomes a GB10-specific number. "Compression dominates placement" (<a href="l-measurements.html">L §L.5.1</a>) narrows to a claim about LPDDR5X-class unified memory, and the argument would need re-running on an HBM part before it could be stated generally. This is the single most consequential open question in the package, and closing it needs one afternoon on a borrowed H100.</td>
+              <td>The <span class="mono">~3.4×</span> effective-path ratio remains GB10-specific. The traffic-reduction conclusion (<a href="l-measurements.html">L §L.5.1</a>) narrows to a claim about LPDDR5X-class unified memory, and the argument would need re-running on an HBM part before it could be stated generally. This is the single most consequential open question in the package, and closing it needs one afternoon on a borrowed H100.</td>
             </tr>
             <tr>
               <td><strong>fp8 KV halves KV bytes without doubling the slope</strong> — outcome A of <a href="l-measurements.html">L §L.10</a>.</td>
@@ -823,7 +823,7 @@
         run, and <strong>the architecture's headline claims did not survive it</strong> — not because the
         arithmetic was wrong, but because the inputs were constructed rather than observed.</p>
         <p>What v5.0 has instead is smaller and firmer: <strong>a measured cost model on one machine</strong>
-        showing a 3.4× per-byte penalty on KV that no attention kernel fixes; <strong>a formal
+        showing a ~3.4× model-derived effective-path ratio on GB10 that the two tested attention stacks did not eliminate; <strong>a formal
         specification</strong> precise enough that its open questions are experiments rather than arguments;
         and <strong>a provisional simulation</strong> whose most interesting result — that persistent
         identity-keyed policy state is worth more than the choice of policy — is a protocol claim testable
@@ -845,7 +845,7 @@
         </p>
       </div>
       <p>Distributed Endpoint Architecture for KV-Cache Offloading in LLM Inference</p>
-      <p style="margin-top: 0.5rem;">Technical Documentation v5.0 — August 2026</p>
+      <p style="margin-top: 0.5rem;">Technical Documentation v5.0.2 — August 2026</p>
     </footer>
   </div>
 </body>

@@ -1,5 +1,6 @@
 import numpy as np, importlib.util
-spec = importlib.util.spec_from_file_location("m","kv_tiering_sim.py")
+from pathlib import Path
+spec = importlib.util.spec_from_file_location("m", Path(__file__).with_name("kv_tiering_sim_rev1_retained_for_audit.py"))
 m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
 GIB, BPB = m.GIB, m.BYTES_PER_BLOCK
 

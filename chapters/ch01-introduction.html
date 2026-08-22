@@ -9,7 +9,7 @@
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
-  <div class="watermark">© 2025 Subramaniyam (Sam) Pooni<br>All Rights Reserved<br>Proprietary & Confidential</div>
+  <div class="watermark">© 2025–2026 Subramaniyam (Sam) Pooni<br>All Rights Reserved<br>Proprietary & Confidential</div>
 
   <nav class="nav">
     <div class="nav-inner">
@@ -17,7 +17,18 @@
       <div class="nav-links">
         <a href="ch00-executive-summary.html" class="nav-link"><span class="nav-chapter-num">0</span> Summary</a>
         <a href="ch01-introduction.html" class="nav-link active"><span class="nav-chapter-num">1</span> Introduction</a>
+        <a href="ch02-background.html" class="nav-link"><span class="nav-chapter-num">2</span> Background</a>
+        <a href="ch03-architecture.html" class="nav-link"><span class="nav-chapter-num">3</span> Architecture</a>
+        <a href="ch04-latency.html" class="nav-link"><span class="nav-chapter-num">4</span> Latency</a>
+        <a href="ch05-bandwidth.html" class="nav-link"><span class="nav-chapter-num">5</span> Bandwidth</a>
+        <a href="ch06-preprocessing.html" class="nav-link"><span class="nav-chapter-num">6</span> Preprocessing</a>
         <a href="ch07-kv-cache.html" class="nav-link"><span class="nav-chapter-num">7</span> KV-Cache</a>
+        <a href="ch08-moe.html" class="nav-link"><span class="nav-chapter-num">8</span> MoE</a>
+        <a href="ch09-gpu-integration.html" class="nav-link"><span class="nav-chapter-num">9</span> GPU Integration</a>
+        <a href="ch10-market.html" class="nav-link"><span class="nav-chapter-num">10</span> Market</a>
+        <a href="ch11-performance.html" class="nav-link"><span class="nav-chapter-num">11</span> Performance</a>
+        <a href="ch12-implementation.html" class="nav-link"><span class="nav-chapter-num">12</span> Implementation</a>
+        <a href="ch13-conclusion.html" class="nav-link"><span class="nav-chapter-num">13</span> Conclusion</a>
         <a href="../figures/index.html" class="nav-link">📊 Figures</a>
       </div>
     </div>
@@ -27,53 +38,54 @@
     <div class="container">
       <header class="chapter-header">
         <div class="chapter-label">Chapter 1</div>
-        <h1 class="chapter-title">Introduction: The Memory Wall Problem</h1>
-        <p class="chapter-subtitle">Why KV-cache is the critical bottleneck in LLM inference and what it costs the industry.</p>
+        <h1 class="chapter-title">Introduction</h1>
+        <p class="chapter-subtitle">Why the key/value cache has become a first-class resource problem, and how this document tries to talk about it honestly.</p>
       </header>
 
-      <div class="stats-grid" style="margin-bottom: 3rem;">
-        <div class="stat-box"><div class="stat-value">5</div><div class="stat-label">Figures in Chapter</div></div>
-        <div class="stat-box"><div class="stat-value">41 GB</div><div class="stat-label">KV-Cache @ 128K</div></div>
-        <div class="stat-box"><div class="stat-value">320 KB</div><div class="stat-label">Per Token</div></div>
-      </div>
+      <h2>1.1 The Problem in One Sentence</h2>
+      <p>As context windows have grown from a few thousand tokens to hundreds of thousands, the attention mechanism's key/value (KV) cache has grown with them — linearly, and without the option to shrink back down mid-generation. Model weights are fixed once a checkpoint is loaded; the KV cache is not. It accumulates one token at a time for the life of a sequence, and at long context lengths it stops being a minor bookkeeping cost and starts being the dominant consumer of accelerator memory. This document is about what happens when that growth outruns the memory tier it was originally designed to live in, and about one specific way of responding to that: adding a second, larger, slower memory tier beneath high-bandwidth memory (HBM) rather than trying to make the KV cache smaller.</p>
 
-      <h2>1.1 The Memory Wall</h2>
-      <p>Modern LLMs face a fundamental constraint: the KV-cache grows linearly with context length, rapidly exhausting GPU memory.</p>
+      <h2>1.2 A Concrete Illustration</h2>
+      <p>The numbers are easiest to reason about with a specific model. Llama-3 70B uses grouped-query attention (GQA) with 8 KV heads, which keeps its per-token KV footprint smaller than a full multi-head design would — 320 KiB per token, across all layers, in bf16. That per-token cost is small. It is the multiplication by sequence length that changes the picture:</p>
 
-      <div class="figure-embed" style="margin: 2rem 0;">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Visual Appendix — Introduction Figures</span>
-          <a href="../figures/ch01-introduction/visual-appendix.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
-        </div>
-        <iframe src="../figures/ch01-introduction/visual-appendix.html" style="width:100%;height:700px;border:none;"></iframe>
-      </div>
+      <table class="data-table" style="margin: 1.5rem 0; width: 100%; border-collapse: collapse;">
+        <thead>
+          <tr>
+            <th style="text-align:left; padding: 0.5rem; border-bottom: 2px solid currentColor;">Context length</th>
+            <th style="text-align:left; padding: 0.5rem; border-bottom: 2px solid currentColor;">KV cache size (1 sequence)</th>
+            <th style="text-align:left; padding: 0.5rem; border-bottom: 2px solid currentColor;">% of model weights (130.4 GiB)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td style="padding: 0.5rem;">8K tokens</td><td style="padding: 0.5rem;">2.5 GiB</td><td style="padding: 0.5rem;">~1.9%</td></tr>
+          <tr><td style="padding: 0.5rem;">32K tokens</td><td style="padding: 0.5rem;">10.0 GiB</td><td style="padding: 0.5rem;">~7.7%</td></tr>
+          <tr><td style="padding: 0.5rem;">128K tokens</td><td style="padding: 0.5rem;">40.0 GiB</td><td style="padding: 0.5rem;">~31%</td></tr>
+        </tbody>
+      </table>
 
-      <h2>1.2 Distributed Endpoint Solution</h2>
+      <p>At 128K context, a single sequence's KV cache is already equivalent to nearly a third of the entire 70-billion-parameter model's weight footprint (140 GB in bf16, or 130.4 GiB). Extend the same arithmetic further and the KV cache overtakes the weights entirely at roughly 427,000 tokens for a single sequence — a context length that is no longer exotic for document-scale and agentic workloads. None of this accounts for batching multiple sequences concurrently, which multiplies the KV footprint directly. The conclusion is unremarkable but easy to underweight: at long context and realistic batch sizes, KV cache is not a secondary cost sitting alongside the model — for large fractions of real deployments, it is comparable to the model.</p>
 
-      <div class="figure-embed" style="margin: 2rem 0;">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figure 1.4-1.5 — Distributed Endpoint Architecture</span>
-          <a href="../figures/ch01-introduction/distributed-endpoint-diagrams.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
-        </div>
-        <iframe src="../figures/ch01-introduction/distributed-endpoint-diagrams.html" style="width:100%;height:600px;border:none;"></iframe>
-      </div>
+      <h2>1.3 Why "Just Add More Memory" Is Not the Whole Answer</h2>
+      <p>The obvious response to a capacity problem is more capacity, and CXL-attached memory — sitting below HBM in the hierarchy but above local SSD or network storage — is a reasonable way to get it: large pools, attached with load/store semantics rather than a storage-style I/O path. This package evaluates exactly that kind of tier. But the central argument running through it is that adding a tier changes the shape of the KV memory problem rather than removing it.</p>
+      <p>Capacity pressure is genuinely relieved — that is what the tier is for, and it is not a small effect. What does not change is HBM-side bandwidth: attention still has to re-read the active portion of the KV cache out of HBM on every decode step, regardless of which tier the cold portion of that cache lives in at rest. And two problems appear that a single-tier system never had to solve: getting KV data across the tier boundary fast enough to keep up with the model's consumption rate (tier-ingress bandwidth), and completing any individual transfer before the compute pipeline stalls waiting on it (per-transfer latency). These are not the same problem wearing two names — a link can have plenty of aggregate bandwidth and still cause stalls if individual transfers are too slow relative to the compute budget between them, and the reverse is also possible. In short: a memory tier turns a capacity wall into a data-movement wall. That reframing is the organizing claim of this entire document, and the chapters that follow are built around examining each side of it — bandwidth, latency, and the eviction and placement decisions that determine what has to move and when.</p>
 
-      <h2>1.3 KV-Cache Mathematics</h2>
+      <h2>1.4 How This Document Handles Evidence</h2>
+      <p>A document that argues numbers matter should be careful about where its own numbers come from. Three different kinds of claim appear throughout this package, and they are tagged as such rather than left to blend together: <strong>Measured</strong> results come from runs on real hardware, specifically a DGX Spark GB10 system; <strong>Simulated</strong> results come from models of hardware behavior that were not directly run on the target platform, and are marked provisional accordingly; and <strong>Analytical</strong> results are derived from first-principles arithmetic — like the KV-size table above — without a corresponding hardware or simulation run. Where a chapter mixes these, the tags stay attached to the specific numbers they cover rather than to the chapter as a whole. This is not a hedge added for its own sake; it is a response to how easily offloading and memory-tiering claims get stated in the strong form ("solves," "eliminates") when the underlying support is a model or a back-of-envelope estimate. Readers should be able to tell, claim by claim, how much weight a given number can bear.</p>
 
-      <div class="figure-embed" style="margin: 2rem 0;">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Interactive KV-Cache Size Calculator</span>
-          <a href="../figures/ch01-introduction/kv-cache-math-explainer.html" target="_blank" class="figure-embed-link">View Source ↗</a>
-        </div>
-        <iframe src="../figures/ch01-introduction/kv-cache-math-explainer.html" style="width:100%;height:500px;border:none;background:#1a1a2e;"></iframe>
-      </div>
+      <h2>1.5 What This Document Actually Proposes</h2>
+      <p>It is worth being explicit about scope, because it is narrower than "a faster offloading system." This package does not propose a new eviction-scoring algorithm — deciding which tokens' KV entries are least likely to be needed again is a well-studied problem, and existing policies are treated as inputs here, not as something being replaced. The contribution under test is at the protocol level: when KV data migrates across a tier boundary, the metadata an eviction policy has accumulated about that data — recency, access counts, whatever the policy tracks — should migrate with it as a well-defined, portable object, rather than being discarded and rebuilt from scratch on the other side. That claim is evaluated independent of whether CXL hardware is present in the test environment, because the protocol question — does the metadata survive the boundary crossing correctly and usefully — is separable from the performance question of what a specific interconnect can deliver.</p>
+      <p>The chapters ahead work through this in order: background on inference and why KV caches exist at all (Chapter 2), the architecture under study (Chapter 3), latency and bandwidth characterization on real hardware (Chapters 4–5), and the preprocessing, eviction-metadata, and integration work that follows from the tier-boundary problem stated here (Chapters 6 onward). None of it is presented as a finished, deployed system. It is presented as a set of measurements and one narrow, testable claim, with the evidence for each kept visibly separate from the arithmetic.</p>
 
       <div class="chapter-nav">
         <a href="ch00-executive-summary.html" class="chapter-nav-btn prev"><span class="chapter-nav-label">← Previous</span><span class="chapter-nav-title">Executive Summary</span></a>
         <a href="ch02-background.html" class="chapter-nav-btn next"><span class="chapter-nav-label">Next →</span><span class="chapter-nav-title">Chapter 2: Background</span></a>
       </div>
     </div>
-    <footer class="footer"><p style="font-size: 0.8rem; color: var(--text-muted);">© 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.</p></footer>
   </div>
+
+  <footer class="footer">
+    <p>© 2025–2026 Subramaniyam (Sam) Pooni. All Rights Reserved.</p>
+    <p>KV-Cache Offloading Architecture — v6.0 — August 2026</p>
+  </footer>
 </body>
 </html>

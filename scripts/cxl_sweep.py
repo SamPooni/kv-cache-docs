@@ -1,5 +1,5 @@
 import numpy as np, json, importlib.util
-spec=importlib.util.spec_from_file_location("m","kv_tiering_sim.py")
+spec=importlib.util.spec_from_file_location("m", Path(__file__).with_name("kv_tiering_sim_rev1_retained_for_audit.py"))
 m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
 sh,bl,tu=m.build_workload(1)
 cfgs=[("LRU","lru",{}),("LFU","lfu",{}),("EMA a=0.15","ema",{"alpha":0.15}),("EMA a=0.01","ema",{"alpha":0.01})]
@@ -23,4 +23,4 @@ print(f"{'config':>44} {'KiB/tok':>9} {'8K GiB':>8} {'128K GiB':>9}")
 for n,L,h,d,b in rows:
     t=kv(L,h,d,b)
     print(f"{n:>44} {t/1024:>9.1f} {t*8192/GIB:>8.2f} {t*131072/GIB:>9.1f}")
-json.dump({k:{kk:round(vv,3) if isinstance(vv,float) else vv for kk,vv in v.items()} for k,v in res.items()},open("cxl_sweep.json","w"),indent=1)
+json.dump({k:{kk:round(vv,3) if isinstance(vv,float) else vv for kk,vv in v.items()} for k,v in res.items()},open(Path(__file__).parents[1]/"data"/"cxl_sweep.json","w"),indent=1)

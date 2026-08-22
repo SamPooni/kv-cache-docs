@@ -319,7 +319,7 @@ All are obtainable on host-DRAM-over-PCIe before any CXL hardware is procured.
 
 **Now measured (was assumed):** the decode cost model. §3.4's objective assumed a single
 memory bandwidth. Measurement on GB10 shows two, with KV read at ~26% of achievable bandwidth
-against 87% for weights — a **3.4× per-byte penalty on KV**, stable across two frameworks and
+against 87% for weights — a **~3.4× model-derived effective-path ratio**, with similar KV slopes across two tested frameworks and
 two attention kernels. The objective's byte-counting terms should therefore be weighted: a KV
 byte is not interchangeable with a weight byte. See `measured_results.md`.
 

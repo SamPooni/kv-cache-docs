@@ -3,21 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chapter 6: Preprocessing Offload — KV-Cache Offloading Architecture</title>
+  <title>Chapter 6: Preprocessing and Prefill Considerations — KV-Cache Offloading Architecture</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
-  <div class="watermark">© 2025 Subramaniyam (Sam) Pooni<br>All Rights Reserved<br>Proprietary & Confidential</div>
+  <div class="watermark">© 2025–2026 Subramaniyam (Sam) Pooni<br>All Rights Reserved<br>Proprietary & Confidential</div>
 
   <nav class="nav">
     <div class="nav-inner">
       <a href="../index.html" class="nav-brand"><span class="nav-brand-icon">⚡</span> KV-Cache Architecture</a>
       <div class="nav-links">
         <a href="ch00-executive-summary.html" class="nav-link"><span class="nav-chapter-num">0</span> Summary</a>
+        <a href="ch01-introduction.html" class="nav-link"><span class="nav-chapter-num">1</span> Introduction</a>
+        <a href="ch02-background.html" class="nav-link"><span class="nav-chapter-num">2</span> Background</a>
+        <a href="ch03-architecture.html" class="nav-link"><span class="nav-chapter-num">3</span> Architecture</a>
+        <a href="ch04-latency.html" class="nav-link"><span class="nav-chapter-num">4</span> Measurement</a>
+        <a href="ch05-bandwidth.html" class="nav-link"><span class="nav-chapter-num">5</span> Bandwidth</a>
         <a href="ch06-preprocessing.html" class="nav-link active"><span class="nav-chapter-num">6</span> Preprocessing</a>
+        <a href="ch07-kv-cache.html" class="nav-link"><span class="nav-chapter-num">7</span> KV Cache</a>
+        <a href="ch08-moe.html" class="nav-link"><span class="nav-chapter-num">8</span> MoE</a>
+        <a href="ch09-gpu-integration.html" class="nav-link"><span class="nav-chapter-num">9</span> GPU Integration</a>
+        <a href="ch10-market.html" class="nav-link"><span class="nav-chapter-num">10</span> Market</a>
+        <a href="ch11-performance.html" class="nav-link"><span class="nav-chapter-num">11</span> Performance</a>
+        <a href="ch12-implementation.html" class="nav-link"><span class="nav-chapter-num">12</span> Implementation</a>
+        <a href="ch13-conclusion.html" class="nav-link"><span class="nav-chapter-num">13</span> Conclusion</a>
         <a href="../figures/index.html" class="nav-link">📊 Figures</a>
+        <a href="../appendix/index.html" class="nav-link">Appendix</a>
       </div>
     </div>
   </nav>
@@ -26,32 +39,34 @@
     <div class="container">
       <header class="chapter-header">
         <div class="chapter-label">Chapter 6</div>
-        <h1 class="chapter-title">Preprocessing Offload</h1>
-        <p class="chapter-subtitle">Moving CPU-bound preprocessing to ARM cores on the endpoint.</p>
+        <h1 class="chapter-title">Preprocessing and Prefill Considerations</h1>
+        <p class="chapter-subtitle">Where prefill fits relative to the decode-phase measurements in Chapter 4, why prefill produces the KV cache that decode then reuses, and an honest scoping of what this package does and does not cover on the preprocessing side.</p>
       </header>
 
-      <div class="stats-grid" style="margin-bottom: 3rem;">
-        <div class="stat-box"><div class="stat-value">3</div><div class="stat-label">Figures in Chapter</div></div>
-        <div class="stat-box"><div class="stat-value">ARM A78</div><div class="stat-label">Processor</div></div>
-        <div class="stat-box"><div class="stat-value">0</div><div class="stat-label">CPU Overhead</div></div>
-      </div>
+      <p><strong>A note on scope before anything else:</strong> this chapter is background and scoping, not a new measurement. The hardware-measured results in this package, reported in Chapter 4, are entirely about decode-phase KV bandwidth on a DGX Spark. Nothing in this chapter has been measured or simulated. Where a figure appears below, it is described as an estimate or a design target, never as a validated result.</p>
 
-      <h2>6.1 Preprocessing Architecture</h2>
+      <h2>6.1 Prefill Versus Decode</h2>
+      <p>Autoregressive LLM inference runs in two phases with very different performance characteristics. <strong>Prefill</strong> processes the input prompt: every token the user (or the application) supplied is run through the model in a single forward pass, computing attention over the full prompt at once. Because prefill operates on many tokens simultaneously, it maps onto large, dense matrix multiplications, and modern accelerators execute those efficiently. Prefill is generally compute-bound — throughput is limited by how fast the GPU can do matmuls, not by how fast it can move data.</p>
+      <p><strong>Decode</strong> is the opposite. After prefill, the model generates output one token at a time, and each step depends on the token generated before it. Each decode step reads the entire KV cache accumulated so far — for every prior token in the sequence — to compute attention for the single new token being produced. This is the operation that is memory-bandwidth-bound rather than compute-bound: the arithmetic per step is small, but the volume of KV data that must be read from memory grows with sequence length. Decode-phase KV bandwidth is the entire subject of Chapter 4's measurements and the reason this package exists.</p>
+      <p>The practical consequence is that these two phases stress different parts of the system and are usually reasoned about separately. A platform can be excellent at prefill and mediocre at decode, or vice versa, and the two do not trade off cleanly against each other in a single number.</p>
 
-      <div class="figure-embed" style="margin: 2rem 0;">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figures 6.1-6.3 — Preprocessing Offload</span>
-          <a href="../figures/ch06-preprocessing/preprocessing-offload.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
-        </div>
-        <iframe src="../figures/ch06-preprocessing/preprocessing-offload.html" style="width:100%;height:700px;border:none;"></iframe>
-      </div>
+      <h2>6.2 Prefill Produces the KV Cache That Decode Reuses</h2>
+      <p>Prefill is not just "the compute-bound phase" — it is also where the KV cache begins. As the prompt is processed, the model computes a key and value vector for every attention head, at every layer, for every prompt token. Those key/value pairs are written into the KV cache once, during prefill, and then read back — not recomputed — at every subsequent decode step for the rest of the sequence. The KV cache that Chapters 3 through 5 discuss moving across memory tiers is, at its origin, a byproduct of prefill.</p>
+      <p>This "compute once, read many times" property is exactly why <strong>prefix caching</strong> is valuable: when two requests share an identical prompt prefix — a system prompt, a few-shot template, the shared opening of a longer document — the KV cache computed for that prefix during one request's prefill can be reused directly by another request, skipping prefill recomputation for the shared portion entirely. This is a well-established technique at the inference-framework level; vLLM's automatic prefix caching and SGLang's RadixAttention are two widely used examples of systems that implement it. Both are general-purpose framework capabilities, not something evaluated or reproduced in this package — they are mentioned here only to place prefill and the KV cache it produces in context.</p>
 
-      <div class="chapter-nav">
-        <a href="ch05-bandwidth.html" class="chapter-nav-btn prev"><span class="chapter-nav-label">← Previous</span><span class="chapter-nav-title">Bandwidth</span></a>
-        <a href="ch07-kv-cache.html" class="chapter-nav-btn next"><span class="chapter-nav-label">Next →</span><span class="chapter-nav-title">KV-Cache Management</span></a>
-      </div>
+      <h2>6.3 Preprocessing Offload: A Design Target, Not a Result</h2>
+      <p>Beyond prefill itself, a broader class of preprocessing work sits in front of the model: tokenizing raw text, and for multimodal inputs, encoding images or audio into the embeddings the model consumes. One architectural idea explored early in this project's thinking was running some of that preprocessing on endpoint- or controller-side compute — silicon closer to where the CXL-attached memory tier lives — rather than on the main GPU, on the theory that keeping the GPU focused on prefill and decode compute while a separate component handles tokenization and encoding could reduce GPU-side overhead.</p>
+      <p>That idea remains exactly that: a design target. No such endpoint silicon exists in any system evaluated in this package, and nothing about its performance has been measured, simulated, or benchmarked here. An earlier version of this documentation attached a specific speedup figure to this idea; that figure was an early, unvalidated estimate and is not restated as a claim anywhere in this package. Readers should treat preprocessing offload as an open architectural direction worth further investigation, not as a capability with demonstrated performance.</p>
+
+      <h2>6.4 What This Package Does and Does Not Cover</h2>
+      <p>To state the scope plainly: the measurement work in Chapter 4 is entirely about decode-phase KV cache bandwidth — reading previously computed KV data from GPU memory during token-by-token generation. Prefill-phase compute costs, prefill latency, tokenization and multimodal encoding costs, and any form of preprocessing offload are outside that measured evidence base. Nothing in Chapters 3, 5, 7, or elsewhere in this package that mentions prefill or preprocessing should be read as validated by the Chapter 4 hardware results — those results speak to decode bandwidth alone, and this chapter's purpose is to keep that boundary clear.</p>
+
     </div>
-    <footer class="footer"><p style="font-size: 0.8rem; color: var(--text-muted);">© 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.</p></footer>
   </div>
+
+  <footer class="footer">
+    <p>© 2025–2026 Subramaniyam (Sam) Pooni. All Rights Reserved.</p>
+    <p>KV-Cache Offloading Architecture — v6.0 — August 2026</p>
+  </footer>
 </body>
 </html>

@@ -1,8 +1,9 @@
 import json, numpy as np, importlib.util, itertools
+from pathlib import Path
 from concurrent.futures import ProcessPoolExecutor
 
 def load():
-    spec=importlib.util.spec_from_file_location("m","kv_tiering_sim_v2.py")
+    spec=importlib.util.spec_from_file_location("m", Path(__file__).with_name("kv_tiering_sim_v2.py"))
     m=importlib.util.module_from_spec(spec); spec.loader.exec_module(m); return m
 
 def job(args):
@@ -43,5 +44,5 @@ with ProcessPoolExecutor(max_workers=14) as ex:
     for i,(tag,r) in enumerate(ex.map(job,jobs),1):
         res[tag]=r
         if i%20==0: print(f"  {i}/{len(jobs)}",flush=True)
-json.dump(res,open("results_v2.json","w"),indent=1,default=float)
+json.dump(res,open(Path(__file__).parents[1]/"data"/"results_v2.json","w"),indent=1,default=float)
 print("done",len(res))

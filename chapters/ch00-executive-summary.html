@@ -1,116 +1,152 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Executive Summary — KV-Cache Offloading Architecture</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Executive Summary — KV-Cache Offloading Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
-  <div class="watermark">© 2025 Subramaniyam (Sam) Pooni<br>All Rights Reserved<br>Proprietary & Confidential</div>
 
-  <nav class="nav">
-    <div class="nav-inner">
-      <a href="../index.html" class="nav-brand"><span class="nav-brand-icon">⚡</span> KV-Cache Architecture</a>
-      <div class="nav-links">
-        <a href="ch00-executive-summary.html" class="nav-link active"><span class="nav-chapter-num">0</span> Summary</a>
-        <a href="ch03-architecture.html" class="nav-link"><span class="nav-chapter-num">3</span> Architecture</a>
-        <a href="ch07-kv-cache.html" class="nav-link"><span class="nav-chapter-num">7</span> KV-Cache</a>
-        <a href="../figures/index.html" class="nav-link">📊 Figures</a>
-        <a href="../appendix/index.html" class="nav-link">Appendix</a>
-      </div>
+<nav class="nav">
+  <a href="../index.html">Home</a>
+  <a href="ch00-executive-summary.html" class="active">00. Executive Summary</a>
+  <a href="ch01-introduction.html">01. Introduction</a>
+  <a href="ch02-background.html">02. Background</a>
+  <a href="ch03-architecture.html">03. Control Plane</a>
+  <a href="ch04-latency.html">04. Measurement</a>
+  <a href="ch05-bandwidth.html">05. Bandwidth</a>
+  <a href="ch06-preprocessing.html">06. Preprocessing</a>
+  <a href="ch07-kv-cache.html">07. Residency Case Study</a>
+  <a href="ch08-moe.html">08. MoE</a>
+  <a href="ch09-gpu-integration.html">09. GPU Integration</a>
+  <a href="ch10-market.html">10. Landscape</a>
+  <a href="ch11-performance.html">11. Results Summary</a>
+  <a href="ch12-implementation.html">12. Decision Procedure</a>
+  <a href="ch13-conclusion.html">13. Conclusion</a>
+</nav>
+
+<main class="chapter">
+  <header class="chapter-header">
+    <p class="chapter-kicker">Chapter 00</p>
+    <h1>Executive Summary</h1>
+    <p class="chapter-subtitle">Distributed Endpoint Architecture for KV-Cache Offloading in LLM Inference</p>
+    <p class="chapter-byline">Sam Pooni · v6.0 · August 2026</p>
+  </header>
+
+  <section class="stats-grid">
+    <div class="stat-box">
+      <div class="stat-number">3.4×</div>
+      <div class="stat-label">Model-derived KV path cost per byte, vs. fixed decode path</div>
+      <div class="stat-tag">Measured-derived</div>
     </div>
-  </nav>
-
-  <div class="page-wrapper">
-    <div class="container">
-      <header class="chapter-header">
-        <div class="chapter-label">Executive Summary</div>
-        <h1 class="chapter-title">The Memory Crisis in LLM Inference—and How to Solve It</h1>
-        <p class="chapter-subtitle">A distributed endpoint architecture that expands GPU memory capacity 6×, serves 16× more concurrent users, and reduces infrastructure costs by 36%.</p>
-      </header>
-
-      <div class="stats-grid" style="margin-bottom: 3rem;">
-        <div class="stat-box"><div class="stat-value">6×</div><div class="stat-label">Memory Expansion</div></div>
-        <div class="stat-box"><div class="stat-value">16×</div><div class="stat-label">User Capacity</div></div>
-        <div class="stat-box"><div class="stat-value">97%</div><div class="stat-label">HBM Hit Rate</div></div>
-        <div class="stat-box"><div class="stat-value">36%</div><div class="stat-label">Cost Reduction</div></div>
-      </div>
-
-      <h2>Why This Matters: The Innovation Gap</h2>
-      <p style="margin-bottom: 1rem;">No existing solution combines per-KV-head tracking, attention-aware eviction, RoPE-aware prefetch, and CXL controller intelligence. <a href="ch10-market.html" style="color: #7c3aed; font-weight: 600;">See the full competitive landscape →</a></p>
-
-      <div class="figure-embed" style="margin: 2rem 0;">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Competitive Landscape — What Nobody Has Yet</span>
-          <a href="../figures/ch10-market/competitive-landscape.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
-        </div>
-        <iframe src="../figures/ch10-market/competitive-landscape.html" style="width:100%;height:800px;border:none;"></iframe>
-      </div>
-
-      <h2>Complete Visual Overview (14 Figures)</h2>
-      <p>This comprehensive visual appendix covers the entire architecture from transformer fundamentals through final performance results.</p>
-
-      <div class="figure-embed" style="margin: 2rem 0;">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Visual Appendix — All 14 Executive Summary Figures</span>
-          <a href="../figures/ch00-executive-summary/visual-appendix.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
-        </div>
-        <iframe src="../figures/ch00-executive-summary/visual-appendix.html" style="width:100%;height:800px;border:none;"></iframe>
-      </div>
-
-      <h2>Key Component Diagrams</h2>
-
-      <div class="figure-embed" style="margin: 2rem 0;">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figure 0.5 — Inference Phases (Prefill vs Decode)</span>
-          <a href="../figures/ch00-executive-summary/figure-2-1-inference-phases.html" target="_blank" class="figure-embed-link">View Source ↗</a>
-        </div>
-        <iframe src="../figures/ch00-executive-summary/figure-2-1-inference-phases.html" style="width:100%;height:500px;border:none;background:#1a1a2e;"></iframe>
-      </div>
-
-      <div class="figure-embed" style="margin: 2rem 0;">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figure 0.6 — KV-Cache Size Growth</span>
-          <a href="../figures/ch00-executive-summary/figure-2-2-kv-cache-growth.html" target="_blank" class="figure-embed-link">View Source ↗</a>
-        </div>
-        <iframe src="../figures/ch00-executive-summary/figure-2-2-kv-cache-growth.html" style="width:100%;height:500px;border:none;background:#1a1a2e;"></iframe>
-      </div>
-
-      <div class="figure-embed" style="margin: 2rem 0;">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figure 0.10 — Attention Locality Patterns</span>
-          <a href="../figures/ch00-executive-summary/figure-3-3-attention-locality.html" target="_blank" class="figure-embed-link">View Source ↗</a>
-        </div>
-        <iframe src="../figures/ch00-executive-summary/figure-3-3-attention-locality.html" style="width:100%;height:500px;border:none;background:#1a1a2e;"></iframe>
-      </div>
-
-      <div class="figure-embed" style="margin: 2rem 0;">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figure 0.9 — GQA Structure</span>
-          <a href="../figures/ch00-executive-summary/figure-3-4-gqa-structure.html" target="_blank" class="figure-embed-link">View Source ↗</a>
-        </div>
-        <iframe src="../figures/ch00-executive-summary/figure-3-4-gqa-structure.html" style="width:100%;height:500px;border:none;background:#1a1a2e;"></iframe>
-      </div>
-
-      <div class="figure-embed" style="margin: 2rem 0;">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figure 0.12 — EMA Eviction Policy</span>
-          <a href="../figures/ch00-executive-summary/figure-4-2-ema-eviction.html" target="_blank" class="figure-embed-link">View Source ↗</a>
-        </div>
-        <iframe src="../figures/ch00-executive-summary/figure-4-2-ema-eviction.html" style="width:100%;height:500px;border:none;background:#1a1a2e;"></iframe>
-      </div>
-
-      <div class="chapter-nav">
-        <a href="../index.html" class="chapter-nav-btn prev"><span class="chapter-nav-label">← Back to</span><span class="chapter-nav-title">Home</span></a>
-        <a href="ch01-introduction.html" class="chapter-nav-btn next"><span class="chapter-nav-label">Next →</span><span class="chapter-nav-title">Chapter 1: Introduction</span></a>
-      </div>
+    <div class="stat-box">
+      <div class="stat-number">87%</div>
+      <div class="stat-label">Of spec bandwidth achieved in streaming reads (236.5 of 273 GB/s)</div>
+      <div class="stat-tag">Measured</div>
     </div>
-    <footer class="footer">
-      <p style="font-size: 0.8rem; color: var(--text-muted);">© 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.</p>
-    </footer>
-  </div>
+    <div class="stat-box">
+      <div class="stat-number">+34.15 pts</div>
+      <div class="stat-label">LFU hit-rate gain from policy state surviving eviction, at 32 GiB HBM</div>
+      <div class="stat-tag">Simulated, provisional</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-number">6×</div>
+      <div class="stat-label">Memory expansion from KV cache under GQA at long context</div>
+      <div class="stat-tag">Analytical</div>
+    </div>
+  </section>
+
+  <section class="chapter-body">
+    <h2>What this package establishes</h2>
+    <p>
+      Adding a memory tier — CXL-attached capacity behind HBM — does not eliminate the KV memory wall
+      in LLM inference. It changes its shape. Without a tier, the wall is a capacity wall: contexts grow
+      until KV state no longer fits in HBM. With a tier, capacity is relieved, but two problems appear
+      in its place: the bandwidth into the tier is a new, narrower pipe, and every transfer across it
+      carries a per-request latency the accelerator did not previously pay. This package treats those as
+      the real constraints and evaluates each with the evidence that is actually available today, without
+      waiting on CXL memory hardware that is only now reaching production systems.
+    </p>
+
+    <h2>What was measured</h2>
+    <p>
+      On a DGX Spark (GB10 Grace Blackwell, 128 GiB unified LPDDR5X, 273 GB/s spec bandwidth), serving
+      Qwen2.5-7B-Instruct in fp16, streaming reads sustained 236.5 GB/s — 87% of spec (Measured). Decode
+      latency was fit as a two-term model, fixed cost plus a KV-proportional term: HuggingFace with SDPA
+      gave 100.3 + 16.34·KV_GiB ms (R²=0.991); vLLM 0.20.1 with FlashAttention-2 gave 73.9 + 17.58·KV_GiB
+      ms (R²=0.945). Inverting each fit's slope and intercept against known transfer volumes gives an
+      inferred fixed-path bandwidth of 151.5 GB/s (HuggingFace) and 205.7 GB/s (vLLM), against an inferred
+      KV-path bandwidth of 65.7 and 61.1 GB/s respectively. The ratio of fixed-path to KV-path bandwidth
+      under the stronger stack is 3.4× (Measured-derived) — a statement about what the fitted model implies,
+      not a direct byte-level hardware measurement. Notably, the KV-path slope moved only 8% between the two
+      stacks while fixed-path bandwidth improved 34%: kernel substitution did not touch the KV cost in these
+      two tested stacks, though this should not be read as a claim about kernels generally. Across every
+      configuration run, capacity itself was never the binding constraint — everything fit in 128 GiB — while
+      throughput still fell from 150 tok/s (batch 16, 4K context) to 46 tok/s (batch 16, 16K context) with
+      memory to spare. Taken together, this is the strongest measured finding in the package: resident KV
+      decode cost scales steeply with KV volume on the tested platform, evidenced by the two-term decode
+      fit (R²=0.991 for HF+SDPA, R²=0.945 for vLLM+FlashAttention-2), the ~3.4× model-derived KV-vs-fixed-path
+      byte cost ratio, and the 236.5 GB/s (87% of spec) achieved streaming bandwidth (Measured).
+    </p>
+
+    <h2>What was simulated</h2>
+    <p>
+      A trace-driven simulator (Revision 2, corrected after an erratum in Revision 1; results below are
+      provisional) isolates one variable: whether an eviction policy's scoring state survives a round trip
+      out of HBM and back, keyed by block identity rather than reconstructed from scratch after every
+      eviction. At 32 GiB HBM, LFU improves from 15.56% to 49.71% hit rate (+34.15 points) and EMA (α=0.01)
+      improves from 31.54% to 56.39% (+24.85 points) when metadata persists. No single policy dominates
+      across the zipf, scan, and loop workloads tested. This is the strongest provisional architectural
+      finding in the package — identity-keyed policy state can materially improve simulated residency
+      behavior when it survives eviction and re-admission (Simulated, provisional) — and it is deliberately
+      framed as a protocol claim: it requires no CXL hardware to test, only a correct trace and a correct
+      simulator. It is a separate claim, on separate evidence, from the strongest measured finding below,
+      and the two should not be conflated.
+    </p>
+
+    <h2>What was derived analytically</h2>
+    <p>
+      For Llama-3 70B under GQA (8 KV heads), KV state costs 320 KiB per token, or 5.00 MiB per 16-token
+      block (Analytical). At long context this yields roughly 6× memory expansion relative to weights —
+      simple capacity arithmetic, independent of any hit rate. Separately, moving a resident block between
+      tiers is two to three orders of magnitude cheaper than regenerating it by recomputation — stated as
+      an order of magnitude, not a precise multiple, since no CXL hardware was measured directly in this
+      package.
+    </p>
+
+    <h2>The actual contribution</h2>
+    <p>
+      The scoring function itself is not new: a decayed-frequency score is LRFU (Lee et al., SIGMETRICS
+      1999), and this package does not claim otherwise. The contribution is architectural: this package
+      proposes a KV-state control plane (Chapter 3) — relevance and reuse signals feeding a SELECT/PLACE/MOVE
+      control plane that governs ATTEND and OBSERVE, built on two orthogonal hierarchies, an information
+      hierarchy and a physical hierarchy. The evidence base assembled here — hardware-measured decode
+      bandwidth decomposition (Chapter 4) plus a provisional simulation showing that residency-state
+      persistence matters (Chapter 7) — currently validates one mechanism inside that architecture, the
+      PLACE/residency stage, not the architecture as a whole. The remaining stages, and the control plane's
+      integrated behavior under real CXL hardware, are not yet validated and should not be read as such.
+    </p>
+
+    <h2>Landscape, briefly</h2>
+    <p>
+      As of August 2026, CXL memory hardware is shipping to hyperscalers — Marvell's Structera X expanders
+      among them — with switch fabrics such as Structera S advertising pooling up to 48 TB behind one switch,
+      4 TB/s aggregate, sub-460ns round trip (vendor-published figures, not independently verified here).
+      Samsung's CMM-D KV-cache offloading white paper (June 2026) reports system-level bandwidth in the
+      35–47 GB/s range without decomposing KV traffic from weight traffic — a related but different
+      measurement from the per-byte KV/weight decomposition this package performs.
+    </p>
+  </section>
+
+  <footer class="footer">
+    <p>© 2025–2026 Subramaniyam (Sam) Pooni. All Rights Reserved.</p>
+    <p>KV-Cache Offloading Architecture — v6.0 — August 2026</p>
+  </footer>
+</main>
+
 </body>
 </html>

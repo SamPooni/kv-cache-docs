@@ -1062,7 +1062,7 @@ tr:hover td {
 
 /* Diagonal watermark across page */
 body::before {
-  content: "CONFIDENTIAL • © 2025 SUBRAMANIYAM (SAM) POONI • PROPRIETARY";
+  content: "CONFIDENTIAL • © 2025–2026 SUBRAMANIYAM (SAM) POONI • PROPRIETARY";
   position: fixed;
   top: 50%;
   left: 50%;

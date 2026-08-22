@@ -3,59 +3,51 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chapter 7: Intelligent KV-Cache Management — KV-Cache Offloading Architecture</title>
+  <title>Chapter 7: Residency and Policy State — A Case Study — KV-Cache Offloading Architecture</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/style.css">
   <style>
-    .figure-embed {
-      background: var(--bg-card);
-      border: 1px solid var(--border-primary);
-      border-radius: 12px;
-      margin: 2rem 0;
-      overflow: hidden;
-    }
-    .figure-embed-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 1rem 1.5rem;
-      background: var(--bg-tertiary);
-      border-bottom: 1px solid var(--border-primary);
-    }
-    .figure-embed-label {
-      font-family: var(--font-mono);
-      font-size: 0.9rem;
-      color: var(--accent-cyan);
-    }
-    .figure-embed-link {
-      font-size: 0.85rem;
-      color: var(--accent-purple);
-      text-decoration: none;
-    }
-    .figure-embed-link:hover { text-decoration: underline; }
-    .figure-embed iframe {
-      width: 100%;
-      height: 500px;
-      border: none;
-      background: #fff;
-    }
-    .figure-embed.tall iframe { height: 700px; }
-    .figure-embed.short iframe { height: 400px; }
+    .kv-table { width: 100%; border-collapse: collapse; margin: 1.25rem 0 2rem; font-size: 0.92rem; }
+    .kv-table caption { text-align: left; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 0.5rem; font-style: italic; }
+    .kv-table th, .kv-table td { padding: 0.55rem 0.9rem; border: 1px solid var(--border, #33383f); text-align: right; }
+    .kv-table th:first-child, .kv-table td:first-child { text-align: left; }
+    .kv-table thead th { background: var(--surface-alt, rgba(127,127,127,0.08)); font-weight: 600; }
+    .kv-table tbody tr:hover { background: var(--surface-alt, rgba(127,127,127,0.05)); }
+    .kv-table td.hi { font-weight: 700; }
+    .callout { border-left: 4px solid #c9860a; background: rgba(201,134,10,0.08); padding: 0.9rem 1.2rem; margin: 1.5rem 0; border-radius: 4px; font-size: 0.95rem; }
+    .callout-title { font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.78rem; margin-bottom: 0.35rem; color: #c9860a; }
+    .callout.protocol { border-left-color: #2f8f4e; background: rgba(47,143,78,0.08); }
+    .callout.protocol .callout-title { color: #2f8f4e; }
+    .callout.open { border-left-color: #7a5fc4; background: rgba(122,95,196,0.08); }
+    .callout.open .callout-title { color: #7a5fc4; }
+    .callout.scope { border-left-color: #3b6ea5; background: rgba(59,110,165,0.08); }
+    .callout.scope .callout-title { color: #3b6ea5; }
+    .stat-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin: 1.75rem 0 2.25rem; }
+    .stat-tile { border: 1px solid var(--border, #33383f); border-radius: 8px; padding: 1.1rem 1.2rem; }
+    .stat-tile .tv { font-family: 'IBM Plex Mono', monospace; font-size: 1.9rem; font-weight: 600; line-height: 1.1; }
+    .stat-tile .tv.big { color: #2f8f4e; }
+    .stat-tile .tl { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.4rem; }
+    .falsify-grid { display: grid; grid-template-columns: 1fr; gap: 0.75rem; margin: 1.5rem 0 2rem; }
+    .falsify-item { border: 1px solid var(--border, #33383f); border-radius: 6px; padding: 0.85rem 1.1rem; display: flex; gap: 0.9rem; align-items: baseline; }
+    .falsify-item .fn { font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 0.85rem; color: var(--text-muted); min-width: 1.6rem; }
+    .falsify-item.hw { border-color: #2f8f4e; }
+    .falsify-item .badge { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.03em; padding: 0.15rem 0.5rem; border-radius: 3px; margin-left: auto; white-space: nowrap; }
+    .falsify-item.hw .badge { background: rgba(47,143,78,0.15); color: #2f8f4e; }
+    .falsify-item:not(.hw) .badge { background: rgba(127,127,127,0.15); color: var(--text-muted); }
   </style>
 </head>
 <body>
-  <div class="watermark">© 2025 Subramaniyam (Sam) Pooni<br>All Rights Reserved<br>Proprietary & Confidential</div>
+  <div class="watermark">© 2025–2026 Subramaniyam (Sam) Pooni<br>All Rights Reserved<br>Proprietary & Confidential</div>
 
   <nav class="nav">
     <div class="nav-inner">
       <a href="../index.html" class="nav-brand"><span class="nav-brand-icon">⚡</span> KV-Cache Architecture</a>
       <div class="nav-links">
         <a href="ch00-executive-summary.html" class="nav-link"><span class="nav-chapter-num">0</span> Summary</a>
-        <a href="ch03-architecture.html" class="nav-link"><span class="nav-chapter-num">3</span> Architecture</a>
-        <a href="ch07-kv-cache.html" class="nav-link active"><span class="nav-chapter-num">7</span> KV-Cache</a>
+        <a href="ch03-architecture.html" class="nav-link"><span class="nav-chapter-num">3</span> Control Plane</a>
+        <a href="ch07-kv-cache.html" class="nav-link active"><span class="nav-chapter-num">7</span> Residency Case Study</a>
         <a href="../figures/index.html" class="nav-link">📊 Figures</a>
-        <a href="../appendix/index.html" class="nav-link">Appendix</a>
       </div>
     </div>
   </nav>
@@ -64,234 +56,161 @@
     <div class="container">
       <header class="chapter-header">
         <div class="chapter-label">Chapter 7</div>
-        <h1 class="chapter-title">Intelligent KV-Cache Management</h1>
-        <p class="chapter-subtitle">Per-head tracking, EMA-based scoring, and RoPE-aware prefetching — the core algorithmic innovations that achieve 95% HBM hit rate.</p>
+        <h1 class="chapter-title">Residency and Policy State — A Case Study</h1>
+        <p class="chapter-subtitle">A case study of one mechanism inside the PLACE stage of the control-plane architecture (Chapter 3). Trace-driven simulation, provisional and not settled — but the argument it supports does not depend on the simulator being right about everything.</p>
       </header>
 
-      <div class="stats-grid" style="margin-bottom: 3rem;">
-        <div class="stat-box"><div class="stat-value">27</div><div class="stat-label">Figures in Chapter</div></div>
-        <div class="stat-box"><div class="stat-value">95%</div><div class="stat-label">HBM Hit Rate</div></div>
-        <div class="stat-box"><div class="stat-value">+25%</div><div class="stat-label">vs LRU Baseline</div></div>
-        <div class="stat-box"><div class="stat-value">7.5%</div><div class="stat-label">Latency Overhead</div></div>
+      <div class="callout scope">
+        <div class="callout-title">Scope of this chapter</div>
+        This chapter is a case study in one mechanism inside the PLACE stage of the control-plane architecture described in Chapter 3: does residency state — eviction-policy metadata — survive tier movement across the physical hierarchy (HBM → CXL DRAM → NVMe/remote), and does that matter for hit rate? It intentionally tests only <strong>past-only signals</strong>: recency, frequency, and decayed-frequency (EMA/LRFU-style) scores. It does not test the <strong>predictive-signal</strong> direction described in Chapter 3 — agent/tool-call state, reuse history, attention signals — which is a separate, unaddressed question, taken up by systems like CacheWise in Chapter 10. Readers looking for the architecture's SELECT and MOVE stages, or for the information-hierarchy vs. physical-hierarchy framing, should start at Chapter 3; this chapter narrows in on one PLACE-stage residency-policy question and reports what a simulator says about it.
       </div>
 
-      <!-- Section 7.1: The Memory Wall -->
-      <h2>7.1 The Memory Wall Problem</h2>
-      
-      <p>KV-cache grows linearly with context length. At 128K tokens, Llama-70B requires <strong>41 GB per user</strong>—exceeding single-GPU capacity for multi-user scenarios.</p>
-
-      <div class="figure-embed">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figure 7.1 — Memory Wall Visualization</span>
-          <a href="../figures/ch07-kv-cache/diagram-memory-wall-html.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
-        </div>
-        <iframe src="../figures/ch07-kv-cache/diagram-memory-wall-html.html"></iframe>
+      <div class="callout">
+        <div class="callout-title">Status of the evidence in this chapter</div>
+        All numeric results below come from <code>kv_tiering_sim_v2.py</code> against <code>results_v2.json</code> — Revision 2 of a trace-driven simulation. Revision 1 shipped with a data-structure defect in the eviction-metadata bookkeeping that inverted four of its five headline findings; Revision 2 is the corrected rebuild. Treat every number here as <strong>provisional, not settled</strong>: it has not been validated against a real CXL memory pool, and it is a second revision of a simulator, not a third-party-audited result. The chapter's central claim is stated so that it does not depend on any single number in these tables surviving further correction — see §7.5.
       </div>
 
-      <!-- Section 7.2: Head Specialization -->
-      <h2>7.2 Attention Head Specialization</h2>
-      
-      <p>Research reveals that attention heads specialize into distinct functional roles. Treating them uniformly wastes optimization potential.</p>
+      <h2>7.1 What is actually being claimed</h2>
+      <p>
+        It is tempting to read this chapter as pitching a new eviction-scoring function. It is not, and being precise about that matters. The scoring function used throughout — an exponential moving average of access recency and frequency, with a decay constant α that interpolates between recency-only and frequency-only behavior — is <strong>LRFU</strong>, published by Lee, Kim, Noh, Min, Cho, and Kim at SIGMETRICS 1999. The α knob's role as an LRU↔LFU interpolation parameter is documented in that paper, not discovered here. Nothing in this chapter claims novelty for the scoring function itself. EMA, LRU, and LFU are used here strictly as <strong>past-only signal baselines</strong> — one instance of the broader signal taxonomy Chapter 3 lays out for the PLACE stage — not as the architecture's central mechanism. The architecture does not depend on any one of them; it depends on whether the signal a residency policy chooses, whatever that signal is, keeps its state across a tier crossing.
+      </p>
+      <p>
+        The actual claim is about <em>where policy state lives and what happens to it when a block leaves HBM</em>. In a conventional tiered-KV design, a block evicted from HBM is simply gone as far as the eviction policy is concerned; when it (or its logical successor — the same session, the same prefix position) comes back, the controller has no record of it and admits it as if newly created, with a fresh recency/frequency score starting from zero. This chapter's contribution is to treat the KV state <em>and its control metadata</em> — recency/frequency score, identity key — as one migratable object, so that identity-keyed policy state survives the round trip between HBM and a slower tier instead of being reset on every eviction. The host owns the policy (what score a block has, when it should be evicted); the device owns the mechanism (moving bytes, honoring the eviction decision). That division, and the persistence of policy state across the tier boundary, is the PLACE-stage mechanism the rest of this chapter defends — a narrower claim than "the architecture," and one that says nothing about SELECT (what enters candidacy) or MOVE (how bytes cross the physical hierarchy).
+      </p>
 
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr><th>Head Type</th><th>% of Heads</th><th>Attention Pattern</th><th>Cache Strategy</th></tr>
-          </thead>
-          <tbody>
-            <tr><td style="color: var(--accent-cyan);"><strong>Recency</strong></td><td>~40%</td><td>Last 50-200 tokens</td><td>Keep recent context hot</td></tr>
-            <tr><td style="color: var(--accent-green);"><strong>Anchor</strong></td><td>~15%</td><td>Positions 0-100 (system prompt)</td><td>Pin permanently</td></tr>
-            <tr><td style="color: var(--accent-purple);"><strong>Retrieval</strong></td><td>~25%</td><td>Content-based lookup</td><td>Use EMA scoring</td></tr>
-            <tr><td style="color: var(--accent-orange);"><strong>Syntactic</strong></td><td>~20%</td><td>Grammar patterns</td><td>Sparse, pattern-based</td></tr>
-          </tbody>
-        </table>
+      <h2>7.2 Simulation setup</h2>
+      <p>
+        Results below are drawn from a single simulation configuration unless a table says otherwise: Llama-3 70B under grouped-query attention, 16-token KV blocks (5.00 MiB/block), 200 synthetic sessions with Zipf(1.1)-distributed return frequency, context lengths from 1K to 12K tokens sharing a 2048-token common prefix, run for 2500 turns, for a total working-set footprint of 421 GiB against an HBM tier sized from 8 to 128 GiB backed by a 512 GiB CXL tier. Each configuration was run across 2–3 seeds; seed counts are noted per table since they differ between the α-sweep and the other experiments.
+      </p>
+
+      <h2>7.3 Baseline comparison: hit rate vs. HBM budget</h2>
+      <p>
+        With no persistent metadata across eviction (the conventional case), EMA scoring at α=0.15 beats plain LRU and LFU at four of five HBM budgets tested, with EMA α=0.01 taking the largest budget. LFU degrades badly under decode-driven growth: freshly written blocks with a count of one are evicted in favor of stale blocks that accumulated high counts earlier in the session.
+      </p>
+      <table class="kv-table">
+        <caption>Experiment e1, 2 seeds. Hit rate (%) vs. HBM budget, no persistent metadata.</caption>
+        <thead><tr><th>HBM budget</th><th>LRU</th><th>LFU</th><th>EMA α=0.15</th><th>EMA α=0.01</th></tr></thead>
+        <tbody>
+          <tr><td>8 GiB</td><td>8.52</td><td>8.76</td><td class="hi">12.35</td><td>12.12</td></tr>
+          <tr><td>16 GiB</td><td>17.87</td><td>12.70</td><td class="hi">22.58</td><td>18.70</td></tr>
+          <tr><td>32 GiB</td><td>38.34</td><td>16.09</td><td class="hi">44.18</td><td>35.91</td></tr>
+          <tr><td>64 GiB</td><td>67.12</td><td>23.00</td><td class="hi">69.65</td><td>66.83</td></tr>
+          <tr><td>128 GiB</td><td>88.01</td><td>32.70</td><td>88.14</td><td class="hi">91.59</td></tr>
+        </tbody>
+      </table>
+      <p>EMA's margin over LRU ranges from +2.5 to +5.8 points across this sweep — a real but modest edge, and one entirely consistent with LRFU's known behavior in the literature. Nothing here is the headline result of this chapter.</p>
+
+      <h2>7.4 The α sweep: a non-monotonic, interior optimum</h2>
+      <p>
+        A separate experiment (e2, different baseline set from §7.3 — do not read these rows against Result 1's rows) fixed HBM at 32 GiB and swept α across seven values plus pure LRU and LFU endpoints.
+      </p>
+      <table class="kv-table">
+        <caption>Experiment e2, 1 seed. Hit rate (%) at 32 GiB HBM across the α grid.</caption>
+        <thead><tr><th>Policy</th><th>Hit rate</th></tr></thead>
+        <tbody>
+          <tr><td>LFU</td><td>15.56</td></tr>
+          <tr><td>EMA α=0.5</td><td>37.20</td></tr>
+          <tr><td>LRU</td><td>36.85</td></tr>
+          <tr><td>EMA α=0.3</td><td>38.84</td></tr>
+          <tr><td>EMA α=0.15</td><td>44.33</td></tr>
+          <tr><td>EMA α=0.05</td><td class="hi">55.96 (optimum)</td></tr>
+          <tr><td>EMA α=0.01</td><td>31.54</td></tr>
+          <tr><td>EMA α=0.003</td><td>25.47</td></tr>
+          <tr><td>EMA α=0.001</td><td>24.44</td></tr>
+        </tbody>
+      </table>
+      <p>
+        α≈0.05 is the optimum, +19.1 points over LRU — but the curve is not monotonic and does not converge onto LFU as α shrinks toward zero. If EMA were simply "LFU with a knob," hit rate should climb steadily as α→0. Instead it peaks at α≈0.05 and then collapses through α=0.01, 0.003, 0.001, ending up worse than LRU. Section 7.5 explains why: the collapse at small α is not a property of the scoring function, it is an artifact of resetting metadata on every eviction.
+      </p>
+
+      <h2>7.5 The headline result: persistence beats policy</h2>
+      <p>
+        The single most important experiment in this chapter holds the scoring function fixed and varies only whether identity-keyed policy state survives eviction from HBM, versus being reset — i.e., the block re-admitted as though newly created — every time it re-enters HBM. This is the one result in this case study that speaks directly to the PLACE-stage residency question posed in the scope note above.
+      </p>
+      <div class="stat-tiles">
+        <div class="stat-tile"><div class="tv big">+34.15 pts</div><div class="tl">LFU hit rate gain, metadata reset → persists, 32 GiB</div></div>
+        <div class="stat-tile"><div class="tv">+24.85 pts</div><div class="tl">EMA α=0.01 gain from persistence</div></div>
+        <div class="stat-tile"><div class="tv">−0.21 pts</div><div class="tl">EMA α=0.15 — persistence is a wash here</div></div>
+      </div>
+      <table class="kv-table">
+        <caption>32 GiB HBM. Hit rate (%) with metadata reset on eviction vs. metadata persisting across the tier boundary.</caption>
+        <thead><tr><th>Policy</th><th>Metadata reset on eviction</th><th>Metadata persists</th><th>Δ</th></tr></thead>
+        <tbody>
+          <tr><td>LFU</td><td>15.56</td><td>49.71</td><td class="hi">+34.15</td></tr>
+          <tr><td>EMA α=0.01</td><td>31.54</td><td>56.39</td><td class="hi">+24.85</td></tr>
+          <tr><td>EMA α=0.15</td><td>44.33</td><td>44.12</td><td>−0.21</td></tr>
+        </tbody>
+      </table>
+      <div class="callout">
+        <div class="callout-title">Provisional, not settled</div>
+        This is the table the rest of the chapter's argument leans on, and it deserves the same caveat as everything else here: Revision 1 of this simulator got this comparison wrong in a way that inverted its conclusion. Revision 2's numbers should be read as the current best estimate, not a settled result.
+      </div>
+      <p>
+        Read plainly: the gain from letting policy state survive eviction (+34.15 points for LFU) exceeds the <em>entire spread between different eviction policies</em> at any HBM budget tested in §7.3 — where the best-to-worst gap between LRU, LFU, and EMA topped out around 45 points at the low end and was often under 10. Persistence is worth more than the choice of policy. This also resolves the small-α collapse from §7.4: LFU and low-α EMA are precisely the policies that depend most on long-run accumulated counts, so resetting that history on every eviction punishes them hardest — the collapse at α=0.01 and below was a metadata-reset artifact, not evidence that small α is a bad interpolation setting.
+      </p>
+      <p>
+        This is also, specifically, a <strong>protocol</strong> result, in Chapter 3's terms: it requires no CXL hardware to produce, because it is a claim about what state a tiering controller chooses to preserve across an eviction event, not about the physical medium the evicted block lands on. That distinction is the subject of §7.7. It is also, currently, the <strong>only</strong> piece of the Chapter 3 control-plane architecture that has simulated evidence behind it at all — SELECT (which candidate regions and blocks are worth considering for movement) and MOVE (how bytes actually cross HBM → CXL DRAM → NVMe/remote) remain unvalidated design proposals in Chapter 3, not results this chapter or any other in this package has tested.
+      </p>
+
+      <h2>7.6 Workload dependence — no policy dominates</h2>
+      <p>
+        Held at 32 GiB HBM across three seeds, the same four policies were run against three workload shapes: returning sessions (Zipf), a one-shot flood of new sessions with no returns (scan), and a cyclic sweep that revisits the same sessions in a fixed rotation (loop).
+      </p>
+      <table class="kv-table">
+        <caption>32 GiB HBM, 3 seeds. Hit rate (%) by workload shape.</caption>
+        <thead><tr><th>Workload</th><th>LRU</th><th>LFU</th><th>EMA α=0.15</th><th>EMA α=0.01</th></tr></thead>
+        <tbody>
+          <tr><td>zipf (returning sessions)</td><td>39.08</td><td>15.12</td><td class="hi">44.44</td><td>38.87</td></tr>
+          <tr><td>scan (one-shot flood)</td><td>31.51</td><td>12.52</td><td>32.57</td><td class="hi">36.26</td></tr>
+          <tr><td>loop (cyclic sweep)</td><td>9.83</td><td class="hi">22.06</td><td>9.83</td><td>9.83</td></tr>
+        </tbody>
+      </table>
+      <p>
+        Under the cyclic sweep, LFU is the only policy of the four that does meaningfully better than the others — recency-based signals are actively wrong when the access pattern is a fixed rotation, since the least-recently-used block is exactly the one about to be reused. No single past-only-signal policy dominates across all three shapes tested. This is a second reason the persistence result in §7.5 matters more than any specific policy recommendation: whichever past-only scoring function a deployment picks, or switches to per workload, the gain from letting its state survive eviction appears to hold independent of that choice.
+      </p>
+
+      <h2>7.7 Falsifiability: only one of four sub-claims needs CXL hardware</h2>
+      <p>
+        The residency question this case study is built around — should policy state persist across a tier crossing rather than being reset — decomposes into four separable, falsifiable sub-claims. Being explicit about which of these actually requires physical hardware to test, and which do not, is a strength of this chapter's argument, not a hedge on it.
+      </p>
+      <div class="falsify-grid">
+        <div class="falsify-item"><span class="fn">1</span><span>Decayed-frequency (LRFU/EMA) scoring outperforms plain LRU or LFU at realistic HBM budgets under this workload family.</span><span class="badge">Simulator-only</span></div>
+        <div class="falsify-item"><span class="fn">2</span><span>The optimal α is workload-dependent and non-monotonic — there is no universal "best" decay constant.</span><span class="badge">Simulator-only</span></div>
+        <div class="falsify-item hw"><span class="fn">3</span><span>Identity-keyed policy state persisting across the HBM↔slower-tier boundary materially outperforms resetting it on every eviction.</span><span class="badge">Needs CXL hardware</span></div>
+        <div class="falsify-item"><span class="fn">4</span><span>Under realistic transfer/compute overlap, recompute avoidance — not fetch latency — is the dominant term in turn stall time.</span><span class="badge">Simulator-only</span></div>
+      </div>
+      <p>
+        Sub-claims 1, 2, and 4 can be tested, and are tested in this chapter, entirely in simulation: they are statements about scoring behavior and about where time goes in a turn, not about a physical transport. Only sub-claim 3 — whether persisting policy state across a real tier boundary produces the same gain observed in §7.5 on hardware with real transfer latency, real controller overhead, and a real device-side eviction path — actually requires a CXL memory pool to test. If sub-claims 1, 2, and 4 fail to hold up under further scrutiny, the contribution of this work is still the PLACE-stage mechanism described in §7.1: making KV state and its control metadata a single migratable object with policy state that survives the round trip. CXL is one place that mechanism could run. It is not the point of the claim, and it is not a claim about SELECT or MOVE.
+      </p>
+
+      <h2>7.8 Recompute vs. fetch: where turn stall actually goes</h2>
+      <p>
+        Across the budget and policy sweep, recompute — regenerating a block's KV state from scratch because it missed the cache — accounts for 44–89% of turn stall time, not a single fixed figure; the share moves with HBM budget and policy. Under an idealized model where transfer and compute are fully overlapped, fetch time for a resident block falls to 0.35–1.25 ms per turn, and recompute's share of stall rises to over 99%. Once data movement is hidden behind compute, recompute avoidance is the only term left that matters — which is another way of stating why hit rate, and specifically the persistence result in §7.5, is the quantity this case study is trying to move.
+      </p>
+
+      <div class="callout open">
+        <div class="callout-title">Open question — not yet measured</div>
+        The payload overhead of carrying 64 bytes of identity-keyed policy metadata alongside a 5.00 MiB KV block is negligible on its face — 0.0012% of the block. What has <em>not</em> been measured is the processing and lookup overhead at the controller: the cost of maintaining, looking up, and updating identity-keyed state for every block on every eviction and re-admission. That cost could be trivial or it could erode part of the §7.5 gain at scale; it has to be measured on real hardware before the persistence result can be called anything more than provisional.
       </div>
 
-      <div class="figure-embed">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figure 7.2 — Attention Locality Patterns</span>
-          <a href="../figures/ch07-kv-cache/figure-3-3-attention-locality.html" target="_blank" class="figure-embed-link">View TSX Source ↗</a>
-        </div>
-        <iframe src="../figures/ch07-kv-cache/figure-3-3-attention-locality.html" style="background: #1a1a2e;"></iframe>
-      </div>
+      <h2>7.9 What this chapter does not test</h2>
+      <p>
+        This chapter is scoped narrowly, and it is worth being explicit about the boundary. Everything above uses <strong>past-only signals</strong> — recency, frequency, decayed-frequency scores — to decide what stays resident and what gets evicted. It does not test <strong>predictive signals</strong>: agent or tool-call state, cross-turn reuse history, attention patterns, or any other forward-looking indicator of which regions and blocks are about to matter, the direction Chapter 3 lays out for the PLACE stage and that systems like CacheWise (Chapter 10) attempt to exploit. Whether predictive, agent-aware residency policies beat the past-only baselines measured here — and whether persistence of policy state across a tier boundary matters as much for predictive signals as it does for the past-only ones in §7.5 — is open work for the SELECT stage of the architecture, not something this chapter's simulator was built to answer. Readers should not read the +34.15-point result in §7.5 as evidence about predictive-signal residency policies; it is evidence about past-only ones only.
+      </p>
 
-      <!-- Section 7.3: GQA Structure -->
-      <h2>7.3 Grouped Query Attention (GQA)</h2>
-      
-      <p>Modern models like Llama use GQA where multiple query heads share KV heads. Llama-70B has 64 query heads sharing 8 KV heads—an 8× reduction in KV-cache size.</p>
+      <h2>7.10 Summary</h2>
+      <p>
+        This chapter does not claim a better eviction-scoring function, and it does not claim to be the architecture's conceptual core — it is a case study of one PLACE-stage mechanism from Chapter 3. EMA/LRFU scoring is 1999-vintage published work, used here strictly as a past-only signal baseline, and its α parameter's LRU↔LFU interpolation role is documented, not new here. What it argues, and what the persistence experiment in §7.5 supports, is that treating KV state and its control metadata as a single object whose identity-keyed policy state survives the HBM↔slower-tier round trip is worth more than the choice of past-only eviction policy running on top of it — testable independent of the physical medium, of which only one falsifiable component (§7.7, sub-claim 3) actually requires CXL hardware to confirm. It is currently the only piece of the Chapter 3 control-plane architecture with simulated evidence behind it; SELECT and MOVE remain unvalidated design proposals, and the predictive-signal direction (§7.9) remains untested here entirely. Everything in this chapter is Revision 2 of a trace-driven simulator, provisional, and awaiting hardware validation and a measurement of controller-side processing overhead before any of it should be treated as settled.
+      </p>
 
-      <div class="figure-embed">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figure 7.3 — GQA Structure Explained</span>
-          <a href="../figures/ch07-kv-cache/gqa-explainer.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
-        </div>
-        <iframe src="../figures/ch07-kv-cache/gqa-explainer.html"></iframe>
-      </div>
-
-      <div class="figure-embed">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figure 7.4 — GQA Tracking Diagram</span>
-          <a href="../figures/ch07-kv-cache/gqa-tracking-diagram.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
-        </div>
-        <iframe src="../figures/ch07-kv-cache/gqa-tracking-diagram.html"></iframe>
-      </div>
-
-      <!-- Section 7.4: Per-Head Tracking -->
-      <h2>7.4 Per-Head Importance Tracking</h2>
-      
-      <p>A token might be cold for recency heads (position 5000) but hot for retrieval heads (contains key information). Token-level eviction would incorrectly evict this token. <strong>Per-head tracking preserves it.</strong></p>
-
-      <div class="equation">
-        P<sub>aggregate</sub>(position) = max<sub>h∈heads</sub>(P<sub>h</sub>(position))
-        <span class="equation-label">Position survives if ANY head needs it</span>
-      </div>
-
-      <div class="figure-embed tall">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figure 7.5 — Per-Head Tracking Visualization</span>
-          <a href="../figures/ch07-kv-cache/diagram-per-head-html.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
-        </div>
-        <iframe src="../figures/ch07-kv-cache/diagram-per-head-html.html"></iframe>
-      </div>
-
-      <div class="figure-embed">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figure 7.6 — Per-Head Score Matrix</span>
-          <a href="../figures/ch07-kv-cache/per-head-tracking.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
-        </div>
-        <iframe src="../figures/ch07-kv-cache/per-head-tracking.html"></iframe>
-      </div>
-
-      <!-- Section 7.5: EMA Scoring -->
-      <h2>7.5 EMA-Based Attention Scoring</h2>
-      
-      <p>Simple LRU fails because important tokens (system prompts) may not be recently accessed but are critical. We use Exponential Moving Average to capture sustained importance:</p>
-
-      <div class="equation">
-        score<sub>t</sub>(p) = α × attention<sub>t</sub>(p) + (1 - α) × score<sub>t-1</sub>(p)
-        <span class="equation-label">α = 0.1 recommended (half-life ≈ 7 decode steps)</span>
-      </div>
-
-      <div class="callout insight">
-        <div class="callout-title">💡 Why EMA Beats LRU</div>
-        <p style="margin-bottom: 0;"><strong>System prompt at position 5</strong> receiving 4% attention every step: LRU evicts after ~100 steps (hasn't been "accessed recently"). EMA maintains stable score of 0.04, <strong>never evicted</strong>.</p>
-      </div>
-
-      <div class="figure-embed tall">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figure 7.7 — EMA Scoring Algorithm</span>
-          <a href="../figures/ch07-kv-cache/diagram-ema-scoring-html.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
-        </div>
-        <iframe src="../figures/ch07-kv-cache/diagram-ema-scoring-html.html"></iframe>
-      </div>
-
-      <div class="figure-embed">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figure 7.8 — EMA Step-by-Step Calculation</span>
-          <a href="../figures/ch07-kv-cache/ema-calculation.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
-        </div>
-        <iframe src="../figures/ch07-kv-cache/ema-calculation.html"></iframe>
-      </div>
-
-      <div class="figure-embed">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figure 7.9 — EMA Eviction Policy</span>
-          <a href="../figures/ch07-kv-cache/ema-eviction.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
-        </div>
-        <iframe src="../figures/ch07-kv-cache/ema-eviction.html"></iframe>
-      </div>
-
-      <!-- Section 7.6: RoPE-Aware Prefetch -->
-      <h2>7.6 RoPE-Aware Prefetching</h2>
-      
-      <p>Rotary Position Embeddings (RoPE) create distance-dependent attention decay. Attention naturally concentrates on nearby positions:</p>
-
-      <div class="equation">
-        Attention(q<sub>m</sub>, k<sub>n</sub>) ∝ cos((m-n)θ)
-        <span class="equation-label">Attention decays with position distance |m-n|</span>
-      </div>
-
-      <div class="figure-embed">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figure 7.10 — RoPE Distance Decay</span>
-          <a href="../figures/ch07-kv-cache/rope-prefetch.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
-        </div>
-        <iframe src="../figures/ch07-kv-cache/rope-prefetch.html"></iframe>
-      </div>
-
-      <div class="figure-embed">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figure 7.11 — RoPE Prefetch Example</span>
-          <a href="../figures/ch07-kv-cache/rope-prefetch-example.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
-        </div>
-        <iframe src="../figures/ch07-kv-cache/rope-prefetch-example.html"></iframe>
-      </div>
-
-      <!-- Section 7.7: Combined Results -->
-      <h2>7.7 Combined Hit Rate Results</h2>
-      
-      <p>Each algorithmic improvement contributes to the final 95% HBM hit rate:</p>
-
-      <div class="bar-chart">
-        <div class="bar-row">
-          <span class="bar-label">LRU baseline</span>
-          <div class="bar-container">
-            <div class="bar-fill" style="width: 70%; background: var(--accent-red);">70%</div>
-          </div>
-        </div>
-        <div class="bar-row">
-          <span class="bar-label">+ Anchor pinning</span>
-          <div class="bar-container">
-            <div class="bar-fill" style="width: 78%; background: var(--accent-orange);">78% (+8%)</div>
-          </div>
-        </div>
-        <div class="bar-row">
-          <span class="bar-label">+ EMA scoring</span>
-          <div class="bar-container">
-            <div class="bar-fill" style="width: 85%; background: var(--accent-yellow);">85% (+7%)</div>
-          </div>
-        </div>
-        <div class="bar-row">
-          <span class="bar-label">+ Per-head tracking</span>
-          <div class="bar-container">
-            <div class="bar-fill" style="width: 91%; background: var(--accent-cyan);">91% (+6%)</div>
-          </div>
-        </div>
-        <div class="bar-row">
-          <span class="bar-label">+ RoPE prefetch</span>
-          <div class="bar-container">
-            <div class="bar-fill" style="width: 95%; background: var(--accent-green);">95% (+4%)</div>
-          </div>
-        </div>
-      </div>
-
-      <div class="stats-grid">
-        <div class="stat-box"><div class="stat-value">95%</div><div class="stat-label">Final Hit Rate</div></div>
-        <div class="stat-box"><div class="stat-value">+25%</div><div class="stat-label">vs LRU</div></div>
-        <div class="stat-box"><div class="stat-value">7.5%</div><div class="stat-label">Latency Overhead</div></div>
-      </div>
-
-      <!-- Chapter Navigation -->
       <div class="chapter-nav">
-        <a href="ch06-preprocessing.html" class="chapter-nav-btn prev">
-          <span class="chapter-nav-label">← Previous</span>
-          <span class="chapter-nav-title">Chapter 6: Preprocessing</span>
-        </a>
-        <a href="ch08-moe.html" class="chapter-nav-btn next">
-          <span class="chapter-nav-label">Next →</span>
-          <span class="chapter-nav-title">Chapter 8: MoE Routing</span>
-        </a>
+        <a href="ch06-preprocessing.html" class="chapter-nav-btn prev"><span class="chapter-nav-label">← Previous</span><span class="chapter-nav-title">Preprocessing Offload</span></a>
+        <a href="ch08-moe.html" class="chapter-nav-btn next"><span class="chapter-nav-label">Next →</span><span class="chapter-nav-title">MoE</span></a>
       </div>
     </div>
-
     <footer class="footer">
-      <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-primary);">
-        <p style="font-size: 0.8rem; color: var(--text-muted);">
-          © 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.<br>
-          This document contains proprietary and confidential information.
-        </p>
-      </div>
-      <p>KV-Cache Offloading Architecture — v3.0</p>
+      <p style="font-size: 0.8rem; color: var(--text-muted);">© 2025–2026 Subramaniyam (Sam) Pooni. All Rights Reserved.</p>
+      <p style="font-size: 0.75rem; color: var(--text-muted);">KV-Cache Offloading Architecture — v6.0 — August 2026</p>
     </footer>
   </div>
 </body>

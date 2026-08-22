@@ -1,227 +1,193 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chapter 3: Distributed Endpoint Architecture — KV-Cache Offloading</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../css/style.css">
-  <style>
-    .figure-embed {
-      background: var(--bg-card);
-      border: 1px solid var(--border-primary);
-      border-radius: 12px;
-      margin: 2rem 0;
-      overflow: hidden;
-    }
-    .figure-embed-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 1rem 1.5rem;
-      background: var(--bg-tertiary);
-      border-bottom: 1px solid var(--border-primary);
-    }
-    .figure-embed-label {
-      font-family: var(--font-mono);
-      font-size: 0.9rem;
-      color: var(--accent-cyan);
-    }
-    .figure-embed-link {
-      font-size: 0.85rem;
-      color: var(--accent-purple);
-      text-decoration: none;
-    }
-    .figure-embed-link:hover { text-decoration: underline; }
-    .figure-embed iframe {
-      width: 100%;
-      height: 550px;
-      border: none;
-      background: #fff;
-    }
-    .figure-embed.tall iframe { height: 700px; }
-  </style>
-</head>
-<body>
-  <div class="watermark">© 2025 Subramaniyam (Sam) Pooni<br>All Rights Reserved<br>Proprietary & Confidential</div>
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Chapter 3: The KV-State Control Plane — KV-Cache Offloading Architecture</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet"><link rel="stylesheet" href="../css/style.css">
+<style>
+  .hier-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin: 1.5rem 0 2rem; }
+  @media (max-width: 720px) { .hier-grid { grid-template-columns: 1fr; } }
+  .hier-col { border: 1px solid var(--border, #33383f); border-radius: 8px; padding: 1rem 1.1rem; }
+  .hier-col h4 { margin: 0 0 0.6rem; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-muted); }
+  .hier-chain { display: flex; flex-direction: column; gap: 0.4rem; }
+  .hier-chain .hnode { border: 1px solid var(--border, #33383f); border-radius: 6px; padding: 0.5rem 0.7rem; font-size: 0.85rem; font-family: 'IBM Plex Mono', monospace; }
+  .hier-chain .harrow { text-align: center; color: var(--text-muted); font-size: 0.85rem; }
+  .hier-col.info .hnode { border-color: #7a5fc4; color: #7a5fc4; }
+  .hier-col.phys .hnode { border-color: #2f8f4e; color: #2f8f4e; }
 
-  <nav class="nav">
-    <div class="nav-inner">
-      <a href="../index.html" class="nav-brand"><span class="nav-brand-icon">⚡</span> KV-Cache Architecture</a>
-      <div class="nav-links">
-        <a href="ch00-executive-summary.html" class="nav-link"><span class="nav-chapter-num">0</span> Summary</a>
-        <a href="ch03-architecture.html" class="nav-link active"><span class="nav-chapter-num">3</span> Architecture</a>
-        <a href="ch07-kv-cache.html" class="nav-link"><span class="nav-chapter-num">7</span> KV-Cache</a>
-        <a href="../figures/index.html" class="nav-link">📊 Figures</a>
-        <a href="../appendix/index.html" class="nav-link">Appendix</a>
-      </div>
-    </div>
-  </nav>
+  .cp-pipeline { display: flex; flex-wrap: wrap; align-items: stretch; gap: 0.6rem; margin: 1.75rem 0 0.5rem; }
+  .cp-pipeline .cstep { flex: 1 1 150px; border: 1px solid var(--border, #33383f); border-radius: 8px; padding: 0.8rem 0.9rem; }
+  .cp-pipeline .cstep .cn { font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 0.85rem; }
+  .cp-pipeline .cstep .cd { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.3rem; line-height: 1.35; }
+  .cp-pipeline .cstep.plane { border-color: #7a5fc4; }
+  .cp-pipeline .cstep.plane .cn { color: #7a5fc4; }
+  .cp-pipeline .carrow { align-self: center; color: var(--text-muted); font-size: 1.1rem; }
+  .cp-feedback { margin-top: 0.6rem; text-align: center; font-size: 0.78rem; color: var(--text-muted); font-family: 'IBM Plex Mono', monospace; border: 1px dashed var(--border, #33383f); border-radius: 6px; padding: 0.5rem; }
 
-  <div class="page-wrapper">
-    <div class="container">
-      <header class="chapter-header">
-        <div class="chapter-label">Chapter 3</div>
-        <h1 class="chapter-title">Distributed Endpoint Architecture</h1>
-        <p class="chapter-subtitle">CXL 3.0 computational storage endpoints with controller-resident intelligence for autonomous KV-cache management.</p>
-      </header>
+  .callout { border-left: 4px solid #c9860a; background: rgba(201,134,10,0.08); padding: 0.9rem 1.2rem; margin: 1.5rem 0; border-radius: 4px; font-size: 0.95rem; }
+  .callout-title { font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.78rem; margin-bottom: 0.35rem; color: #c9860a; }
+  .callout.protocol { border-left-color: #2f8f4e; background: rgba(47,143,78,0.08); }
+  .callout.protocol .callout-title { color: #2f8f4e; }
+  .callout.open { border-left-color: #7a5fc4; background: rgba(122,95,196,0.08); }
+  .callout.open .callout-title { color: #7a5fc4; }
 
-      <div class="stats-grid" style="margin-bottom: 3rem;">
-        <div class="stat-box"><div class="stat-value">11</div><div class="stat-label">Figures in Chapter</div></div>
-        <div class="stat-box"><div class="stat-value">250 ns</div><div class="stat-label">CXL Latency</div></div>
-        <div class="stat-box"><div class="stat-value">65×</div><div class="stat-label">vs PCIe DMA</div></div>
-        <div class="stat-box"><div class="stat-value">1 TB</div><div class="stat-label">DRAM Capacity</div></div>
-      </div>
+  .ev-table { width: 100%; border-collapse: collapse; margin: 1.25rem 0 2rem; font-size: 0.92rem; }
+  .ev-table th, .ev-table td { padding: 0.55rem 0.9rem; border: 1px solid var(--border, #33383f); text-align: left; vertical-align: top; }
+  .ev-table thead th { background: var(--surface-alt, rgba(127,127,127,0.08)); font-weight: 600; }
+  .ev-table td.status-yes { color: #2f8f4e; font-weight: 600; }
+  .ev-table td.status-no { color: #7a5fc4; font-weight: 600; }
 
-      <!-- Section 3.1: Core Concept -->
-      <h2>3.1 Controller Offloading Concept</h2>
-      
-      <p>Instead of passive memory managed by CPU, we deploy <strong>intelligent computational storage endpoints</strong> with their own ARM processors that autonomously manage cache placement, eviction, and prefetching.</p>
+  .sig-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin: 1.5rem 0 2rem; }
+  @media (max-width: 720px) { .sig-grid { grid-template-columns: 1fr; } }
+  .sig-col { border: 1px solid var(--border, #33383f); border-radius: 8px; padding: 1rem 1.1rem; }
+  .sig-col h4 { margin: 0 0 0.5rem; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  .sig-col.past h4 { color: #2f8f4e; }
+  .sig-col.pred h4 { color: #7a5fc4; }
+  .sig-col ul { margin: 0; padding-left: 1.1rem; font-size: 0.88rem; }
+  .sig-col li { margin-bottom: 0.35rem; }
+</style>
+</head><body><div class="watermark">© 2025–2026 Subramaniyam (Sam) Pooni<br>All Rights Reserved<br>Proprietary & Confidential</div><nav class="nav">
+<a href="../index.html">Home</a>
+<a href="ch00-executive-summary.html">Ch 0</a>
+<a href="ch01-introduction.html">Ch 1</a>
+<a href="ch02-background.html">Ch 2</a>
+<a href="ch03-architecture.html" class="active">Ch 3</a>
+<a href="ch04-latency.html">Ch 4</a>
+<a href="ch05-bandwidth.html">Ch 5</a>
+<a href="ch06-preprocessing.html">Ch 6</a>
+<a href="ch07-kv-cache.html">Ch 7</a>
+<a href="ch08-moe.html">Ch 8</a>
+<a href="ch09-gpu-integration.html">Ch 9</a>
+<a href="ch10-market.html">Ch 10</a>
+<a href="ch11-performance.html">Ch 11</a>
+<a href="ch12-implementation.html">Ch 12</a>
+<a href="ch13-conclusion.html">Ch 13</a>
+</nav><div class="page-wrapper"><div class="container">
 
-      <div class="comparison-grid">
-        <div class="card" style="border-color: var(--accent-red);">
-          <h4 style="color: var(--accent-red); margin-top: 0;">❌ Traditional: CPU-Managed</h4>
-          <ul style="font-size: 0.9rem; margin-bottom: 0;">
-            <li>CPU in critical path</li>
-            <li>5-10 μs latency</li>
-            <li>No predictive prefetch</li>
-            <li>System RAM contention</li>
-          </ul>
-        </div>
-        <div class="card" style="border-color: var(--accent-green);">
-          <h4 style="color: var(--accent-green); margin-top: 0;">✓ Our Approach: Endpoint-Managed</h4>
-          <ul style="font-size: 0.9rem; margin-bottom: 0;">
-            <li>Direct GPU ↔ Endpoint</li>
-            <li>250 ns latency (40× faster)</li>
-            <li>Autonomous prefetch</li>
-            <li>Dedicated memory pool</li>
-          </ul>
-        </div>
-      </div>
+<h1>Chapter 3: The KV-State Control Plane</h1>
 
-      <div class="figure-embed tall">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figure 3.1 — Complete System Architecture</span>
-          <a href="../figures/ch03-architecture/diagram-architecture-html.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
-        </div>
-        <iframe src="../figures/ch03-architecture/diagram-architecture-html.html"></iframe>
-      </div>
+<p class="lead">This chapter is the architectural center of this package. It replaces the v5 framing — a single eviction-policy mechanism, headlined by "host owns policy; device owns mechanism" — with a control plane that separates two questions v5 had collapsed into one: what is worth keeping in consideration, and where should it physically live. Everything downstream in this package, including Chapter 7's simulation and Chapter 10's landscape survey, refers back to the architecture defined here.</p>
 
-      <!-- Section 3.2: Endpoint Architecture -->
-      <h2>3.2 Endpoint Internal Architecture</h2>
-      
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr><th>Component</th><th>Specification</th><th>Purpose</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>Controller</td><td class="mono">ARM Cortex-A78 (4-8 cores)</td><td>Cache management intelligence</td></tr>
-            <tr><td>DRAM</td><td class="mono">256 GB DDR5-5600</td><td>Hot KV-cache tier</td></tr>
-            <tr><td>Flash</td><td class="mono">4 TB NVMe Gen5</td><td>Cold tier + overflow</td></tr>
-            <tr><td>CXL Controller</td><td class="mono">Type-3 Device</td><td>GPU memory access</td></tr>
-            <tr><td>Uplink</td><td class="mono">×16 PCIe Gen5 (64 GB/s)</td><td>Host connection</td></tr>
-          </tbody>
-        </table>
-      </div>
+<div class="callout protocol">
+<div class="callout-title">What this chapter is claiming</div>
+This is a <strong>proposed architecture</strong>. It is not yet experimentally validated as a complete system — architecture is a design artifact, and measurement validates performance claims, not whether something qualifies as an architecture. A structure can be fully and precisely specified, as this chapter specifies it, while most of its components remain unvalidated. Section 3.5 states plainly which pieces have evidence behind them and which do not; nothing here should be read as claiming more than that table supports.
+</div>
 
-      <div class="figure-embed">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figure 3.2 — Endpoint Internal Components</span>
-          <a href="../figures/ch03-architecture/endpoint-diagram.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
-        </div>
-        <iframe src="../figures/ch03-architecture/endpoint-diagram.html"></iframe>
-      </div>
+<h2>3.1 Two orthogonal hierarchies</h2>
 
-      <!-- Section 3.3: CXL Architecture -->
-      <h2>3.3 CXL 3.0 Architecture</h2>
-      
-      <p>CXL (Compute Express Link) provides cache-coherent memory access with load/store semantics—no explicit DMA required.</p>
+<p>v5's limitation was structural, not just a matter of degree: it treated "what to keep" and "where to put it" as a single eviction-policy decision, scored once per block and acted on once per block. That conflation is the thing this chapter fixes. A KV block's position in two separate hierarchies determines what happens to it, and the two hierarchies answer different questions and can move independently of each other.</p>
 
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr><th>Protocol</th><th>Direction</th><th>Purpose</th></tr>
-          </thead>
-          <tbody>
-            <tr><td><strong>CXL.io</strong></td><td>Bidirectional</td><td>PCIe-equivalent I/O, config, interrupts</td></tr>
-            <tr><td><strong>CXL.cache</strong></td><td>Device → Host</td><td>Device caches host memory</td></tr>
-            <tr><td style="color: var(--accent-cyan);"><strong>CXL.mem</strong></td><td>Host → Device</td><td>Host accesses device memory (our primary)</td></tr>
-          </tbody>
-        </table>
-      </div>
+<p>The <strong>information hierarchy</strong> answers "what is worth considering?" — a question about relevance and likely reuse, independent of physical location:</p>
 
-      <div class="figure-embed tall">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figure 3.3 — CXL Architecture Diagram</span>
-          <a href="../figures/ch03-architecture/cxl-architecture-diagram.html" target="_blank" class="figure-embed-link">View TSX Source ↗</a>
-        </div>
-        <iframe src="../figures/ch03-architecture/cxl-architecture-diagram.html" style="background: #1a1a2e;"></iframe>
-      </div>
+<p>The <strong>physical hierarchy</strong> answers "where should it live?" — a question about tier placement and transfer, independent of whether the content is currently useful:</p>
 
-      <!-- Section 3.4: Memory Hierarchy -->
-      <h2>3.4 Three-Tier Memory Hierarchy</h2>
-      
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr><th>Tier</th><th>Media</th><th>Capacity</th><th>Latency</th><th>Contents</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>Tier 0</td><td>GPU HBM (Pinned)</td><td class="mono">~5 GB</td><td class="mono highlight">100 ns</td><td>Model weights, active layer</td></tr>
-            <tr><td>Tier 1</td><td>GPU HBM (Evictable)</td><td class="mono">~37 GB</td><td class="mono highlight">100 ns</td><td>Hot KV-cache entries</td></tr>
-            <tr><td>Tier 2</td><td>CXL DRAM</td><td class="mono">1 TB</td><td class="mono">250 ns</td><td>Warm KV-cache entries</td></tr>
-            <tr><td>Tier 3</td><td>NVMe Flash</td><td class="mono">16 TB</td><td class="mono warning">25 μs</td><td>Cold entries, overflow</td></tr>
-          </tbody>
-        </table>
-      </div>
+<div class="hier-grid">
+<div class="hier-col info">
+<h4>Information hierarchy — what is worth considering?</h4>
+<div class="hier-chain">
+<div class="hnode">Agent / model state</div>
+<div class="harrow">↓</div>
+<div class="hnode">Context-region summaries</div>
+<div class="harrow">↓</div>
+<div class="hnode">Candidate regions</div>
+<div class="harrow">↓</div>
+<div class="hnode">KV blocks</div>
+<div class="harrow">↓</div>
+<div class="hnode">Token-level KV</div>
+</div>
+</div>
+<div class="hier-col phys">
+<h4>Physical hierarchy — where should it live?</h4>
+<div class="hier-chain">
+<div class="hnode">HBM</div>
+<div class="harrow">↓</div>
+<div class="hnode">Host / CXL DRAM</div>
+<div class="harrow">↓</div>
+<div class="hnode">NVMe / remote storage</div>
+</div>
+</div>
+</div>
 
-      <div class="figure-embed">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figure 3.4 — Memory Hierarchy Visualization</span>
-          <a href="../figures/ch03-architecture/figure-3-2-memory-hierarchy.html" target="_blank" class="figure-embed-link">View TSX Source ↗</a>
-        </div>
-        <iframe src="../figures/ch03-architecture/figure-3-2-memory-hierarchy.html" style="background: #1a1a2e;"></iframe>
-      </div>
+<p>These two hierarchies are <strong>orthogonal</strong>. A block's rank in the information hierarchy — how relevant it is, how likely it is to be reused soon — is a separate question from its rank in the physical hierarchy — which tier currently holds it. A highly relevant block can sit cold in NVMe waiting to be fetched; a block of marginal relevance can sit resident in HBM simply because it was placed there recently and nothing has evicted it yet. v5's single eviction score conflated these: a block's one "keep or evict" number was implicitly answering both "is this worth keeping around" and "should this occupy the expensive tier," as though a positive answer to one settled the other. It does not. Separating relevance/selection from placement/movement is the change this chapter makes to the architecture, and it is what makes a joint control plane — rather than one flat scoring function — the right shape for the problem.</p>
 
-      <!-- Section 3.5: Topology -->
-      <h2>3.5 System Topology (4 Endpoints)</h2>
+<h2>3.2 The control plane: SELECT, PLACE, MOVE</h2>
 
-      <div class="callout insight">
-        <div class="callout-title">💡 Why 4 Endpoints?</div>
-        <p style="margin-bottom: 0;">4 endpoints provide optimal cost/performance balance: <strong>1 TB DRAM</strong>, <strong>256 GB/s aggregate bandwidth</strong>, and <strong>~$5K cost</strong>. Adding more endpoints yields diminishing returns due to switch overhead.</p>
-      </div>
+<p>The control plane sits between the two hierarchies. It consumes relevance and reuse signals from model/agent state and resolves them into three joint but distinct concerns, each answering a different sub-question, before the model actually attends to anything resident:</p>
 
-      <div class="stats-grid">
-        <div class="stat-box"><div class="stat-value">1.2 TB</div><div class="stat-label">Total Capacity</div></div>
-        <div class="stat-box"><div class="stat-value">256 GB/s</div><div class="stat-label">Aggregate BW</div></div>
-        <div class="stat-box"><div class="stat-value">250 ns</div><div class="stat-label">DRAM Latency</div></div>
-        <div class="stat-box"><div class="stat-value">~$5K</div><div class="stat-label">Per Endpoint</div></div>
-      </div>
+<div class="cp-pipeline">
+  <div class="cstep"><div class="cn">MODEL / AGENT STATE</div><div class="cd">relevance signals, reuse/deadline signals</div></div>
+  <div class="carrow">→</div>
+  <div class="cstep plane"><div class="cn">KV-STATE CONTROL PLANE</div><div class="cd">SELECT · PLACE · MOVE</div></div>
+  <div class="carrow">→</div>
+  <div class="cstep"><div class="cn">ATTEND</div><div class="cd">the model consumes what is resident</div></div>
+  <div class="carrow">→</div>
+  <div class="cstep"><div class="cn">OBSERVE</div><div class="cd">attention outcomes and reuse feed back into relevance/reuse signals</div></div>
+</div>
+<div class="cp-feedback">OBSERVE → feeds back into MODEL / AGENT STATE</div>
 
-      <!-- Chapter Navigation -->
-      <div class="chapter-nav">
-        <a href="ch02-background.html" class="chapter-nav-btn prev">
-          <span class="chapter-nav-label">← Previous</span>
-          <span class="chapter-nav-title">Chapter 2: Background</span>
-        </a>
-        <a href="ch04-latency.html" class="chapter-nav-btn next">
-          <span class="chapter-nav-label">Next →</span>
-          <span class="chapter-nav-title">Chapter 4: Latency Analysis</span>
-        </a>
-      </div>
-    </div>
+<p style="margin-top:1.75rem;">Unpacking the three concerns inside the control plane box:</p>
 
-    <footer class="footer">
-      <div style="margin-bottom: 1rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-primary);">
-        <p style="font-size: 0.8rem; color: var(--text-muted);">
-          © 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.<br>
-          This document contains proprietary and confidential information.
-        </p>
-      </div>
-      <p>KV-Cache Offloading Architecture — v3.0</p>
-    </footer>
-  </div>
-</body>
-</html>
+<table class="ev-table">
+<thead><tr><th>Stage</th><th>What it decides</th></tr></thead>
+<tbody>
+<tr><td><strong>SELECT</strong></td><td>Which candidate regions or blocks are relevant enough to keep considering at all. This is new relative to v5 — v5 had no explicit selection stage; it went straight to an eviction decision that bundled selection and placement together.</td></tr>
+<tr><td><strong>PLACE</strong></td><td>Which physical tier a block that survives SELECT should occupy — HBM, host/CXL DRAM, or NVMe/remote.</td></tr>
+<tr><td><strong>MOVE</strong></td><td>How and when to actually transfer a block between tiers, and whether that transfer can be hidden behind ongoing compute rather than stalling the turn.</td></tr>
+<tr><td><strong>ATTEND</strong></td><td>The model consumes whatever is currently resident in HBM. This stage does not query the control plane; it acts on the control plane's prior decisions.</td></tr>
+<tr><td><strong>OBSERVE</strong></td><td>What actually got attended to, and what got reused, is recorded and fed back as a relevance/reuse signal for the next round of SELECT.</td></tr>
+</tbody>
+</table>
+
+<p>SELECT is the genuinely new stage. Where v5 folded relevance and residency into one eviction score, this architecture asks first whether a block is worth considering at all — a question that can be answered from agent/model state before any tier-placement decision is made. PLACE and MOVE then operate only on what SELECT has already judged worth considering, and MOVE in particular carries the question of whether a transfer's latency can be overlapped with compute rather than incurred on the critical path.</p>
+
+<h2>3.3 What is validated and what is proposed</h2>
+
+<p>This package's strongest empirical result — identity-keyed policy state surviving eviction rather than being reset, +34.15 points, simulated and provisional, measured in Chapter 7 — is evidence for exactly one mechanism inside this larger architecture: the residency sub-question inside PLACE, specifically whether persisting policy state across a tier crossing beats resetting it. It shows that residency state can matter more than which eviction-scoring policy is chosen. It does not validate SELECT, it does not validate MOVE, and it does not validate the joint architecture — SELECT, PLACE, and MOVE acting together — as a system. Treating it as evidence for more than that would be an overclaim this chapter deliberately avoids.</p>
+
+<table class="ev-table">
+<thead><tr><th>Piece of the architecture</th><th>Status</th><th>Basis</th></tr></thead>
+<tbody>
+<tr><td>PLACE — residency persistence (metadata survives eviction vs. reset)</td><td class="status-yes">Has evidence</td><td>Simulated / provisional — Chapter 7, §7.5, +34.15 pts, Revision 2 of a trace-driven simulator</td></tr>
+<tr><td>SELECT — relevance/reuse-signal-driven candidate filtering</td><td class="status-no">Unvalidated proposed design</td><td>No simulation or hardware result in this package</td></tr>
+<tr><td>PLACE — deadline-aware tier assignment beyond the persistence mechanism</td><td class="status-no">Unvalidated proposed design</td><td>No simulation or hardware result in this package</td></tr>
+<tr><td>MOVE — transfer scheduling, hiding movement behind compute</td><td class="status-no">Unvalidated proposed design</td><td>Analytical only (Chapter 7, §7.8, idealized-overlap model)</td></tr>
+<tr><td>SELECT + PLACE + MOVE acting jointly, as one architecture</td><td class="status-no">Unvalidated proposed design</td><td>Not built or tested end to end anywhere in this package</td></tr>
+</tbody>
+</table>
+
+<h2>3.4 Signal taxonomy: past-only vs. predictive</h2>
+
+<p>The relevance and reuse signals that feed SELECT are not all the same kind of evidence, and this package's own evidence base covers only one kind of them. It is worth naming the distinction explicitly here, because Chapter 7 applies it directly and Chapter 10 uses it to place this package relative to the field.</p>
+
+<div class="sig-grid">
+<div class="sig-col past">
+<h4>Past-only signals</h4>
+<ul>
+<li>Recency</li>
+<li>Frequency</li>
+<li>EMA / LRFU-style decayed scores</li>
+</ul>
+<p style="font-size:0.85rem; margin-top:0.6rem;">This is exactly what v5's simulation tested (Chapter 7). All of it looks backward at what has already happened to a block; none of it uses information about what is about to happen.</p>
+</div>
+<div class="sig-col pred">
+<h4>Predictive signals</h4>
+<ul>
+<li>Agent / tool-call state</li>
+<li>Tool-return timing</li>
+<li>Prefix identity</li>
+<li>Reuse history</li>
+<li>Attention signals</li>
+</ul>
+<p style="font-size:0.85rem; margin-top:0.6rem;">This is the category CacheWise-class systems use, per Chapter 10 — reuse prediction informed by what the agent is doing, not just what a block's history looks like.</p>
+</div>
+</div>
+
+<p>This package's evidence base — the +34.15-point persistence result — covers past-only signals exclusively: the metadata being persisted is a recency/frequency-style score, and the workload driving it is trace-replay, not live agent state. Predictive signals for SELECT are an open, unvalidated direction. Nothing in this package has tested whether tool-call state, prefix identity, or attention signals make SELECT more accurate than a past-only score would; that remains proposed design, not measured result.</p>
+
+<h2>3.5 A narrower note: host owns policy, device owns mechanism</h2>
+
+<p>v5 made this split — decision logic stays with host/controller software, while a narrower device-side mechanism preserves metadata bytes and moves them atomically across tier crossings — its headline framing for the whole architecture. It is retained here, but demoted to its correct scope: it is a design note about who executes the residency-persistence operation inside PLACE and MOVE, not a description of the architecture as a whole. The host still decides what belongs where; the device-side mechanism still just carries metadata across a crossing without losing it. That division is real and specific, and it is one implementation detail of PLACE — not, as v5 had it, the chapter's thesis.</p>
+
+<h2>3.6 Summary</h2>
+
+<p>This chapter replaces a single conflated eviction-policy decision with a control plane that separates two orthogonal hierarchies — information (what is worth considering) and physical (where it should live) — into three explicit, jointly-reasoned stages: SELECT, PLACE, and MOVE, feeding ATTEND and closing the loop through OBSERVE. It is a proposed architecture, not a validated one; §3.3's table states exactly what has evidence (residency persistence inside PLACE, simulated and provisional) and what remains proposed design (SELECT, deadline-aware PLACE beyond persistence, MOVE, and the joint system). The signal taxonomy in §3.4 marks a second boundary of the same kind: this package's evidence covers past-only signals only, leaving predictive signals as future work. The chapters that follow — Chapter 7's simulation and Chapter 10's landscape survey — operate inside this frame and refer back to it rather than restating it.</p>
+
+</div></div><footer class="footer">
+<p>© 2025–2026 Subramaniyam (Sam) Pooni. All Rights Reserved.</p>
+<p>KV-Cache Offloading Architecture — v6.0 — August 2026</p>
+</footer></body></html>

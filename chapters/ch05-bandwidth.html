@@ -3,21 +3,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Chapter 5: Bandwidth Aggregation — KV-Cache Offloading Architecture</title>
+  <title>Chapter 5: Bandwidth and Tier Economics — KV-Cache Offloading Architecture</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
-  <div class="watermark">© 2025 Subramaniyam (Sam) Pooni<br>All Rights Reserved<br>Proprietary & Confidential</div>
+  <div class="watermark">© 2025–2026 Subramaniyam (Sam) Pooni<br>All Rights Reserved<br>Proprietary & Confidential</div>
 
   <nav class="nav">
     <div class="nav-inner">
       <a href="../index.html" class="nav-brand"><span class="nav-brand-icon">⚡</span> KV-Cache Architecture</a>
       <div class="nav-links">
         <a href="ch00-executive-summary.html" class="nav-link"><span class="nav-chapter-num">0</span> Summary</a>
+        <a href="ch01-introduction.html" class="nav-link"><span class="nav-chapter-num">1</span> Introduction</a>
+        <a href="ch02-background.html" class="nav-link"><span class="nav-chapter-num">2</span> Background</a>
+        <a href="ch03-architecture.html" class="nav-link"><span class="nav-chapter-num">3</span> Architecture</a>
+        <a href="ch04-latency.html" class="nav-link"><span class="nav-chapter-num">4</span> Measurement</a>
         <a href="ch05-bandwidth.html" class="nav-link active"><span class="nav-chapter-num">5</span> Bandwidth</a>
+        <a href="ch06-preprocessing.html" class="nav-link"><span class="nav-chapter-num">6</span> Preprocessing</a>
+        <a href="ch07-kv-cache.html" class="nav-link"><span class="nav-chapter-num">7</span> KV Cache</a>
+        <a href="ch08-moe.html" class="nav-link"><span class="nav-chapter-num">8</span> MoE</a>
+        <a href="ch09-gpu-integration.html" class="nav-link"><span class="nav-chapter-num">9</span> GPU Integration</a>
+        <a href="ch10-market.html" class="nav-link"><span class="nav-chapter-num">10</span> Market</a>
+        <a href="ch11-performance.html" class="nav-link"><span class="nav-chapter-num">11</span> Performance</a>
+        <a href="ch12-implementation.html" class="nav-link"><span class="nav-chapter-num">12</span> Implementation</a>
+        <a href="ch13-conclusion.html" class="nav-link"><span class="nav-chapter-num">13</span> Conclusion</a>
         <a href="../figures/index.html" class="nav-link">📊 Figures</a>
+        <a href="../appendix/index.html" class="nav-link">Appendix</a>
       </div>
     </div>
   </nav>
@@ -26,33 +39,94 @@
     <div class="container">
       <header class="chapter-header">
         <div class="chapter-label">Chapter 5</div>
-        <h1 class="chapter-title">Bandwidth Aggregation</h1>
-        <p class="chapter-subtitle">Multi-endpoint striping, layer prefetch pipelining, and achieving 256 GB/s aggregate bandwidth.</p>
+        <h1 class="chapter-title">Bandwidth and Tier Economics</h1>
+        <p class="chapter-subtitle">An analytical, unmeasured comparison of the cost of fetching a KV block across a slower memory tier versus regenerating it by re-running the forward pass — and what it means for capacity planning as context length grows.</p>
       </header>
 
       <div class="stats-grid" style="margin-bottom: 3rem;">
-        <div class="stat-box"><div class="stat-value">5</div><div class="stat-label">Figures in Chapter</div></div>
-        <div class="stat-box"><div class="stat-value">256 GB/s</div><div class="stat-label">Aggregate BW</div></div>
-        <div class="stat-box"><div class="stat-value">4</div><div class="stat-label">Endpoints</div></div>
+        <div class="stat-box"><div class="stat-value">43–164 µs</div><div class="stat-label">Analytical tier-fetch cost, one 5.00 MiB block</div></div>
+        <div class="stat-box"><div class="stat-value">9–18 ms</div><div class="stat-label">Forward-compute cost to regenerate that block</div></div>
+        <div class="stat-box"><div class="stat-value">2–3 orders of magnitude</div><div class="stat-label">Cheaper to move a block than to regenerate it</div></div>
+        <div class="stat-box"><div class="stat-value">~427K tokens</div><div class="stat-label">Single-sequence KV/weights capacity crossover</div></div>
       </div>
 
-      <h2>5.1 Bandwidth Aggregation Strategy</h2>
-      <p>A single endpoint provides 64 GB/s. By striping KV-cache across 4 endpoints with layer-aware prefetching, we achieve 256 GB/s aggregate bandwidth.</p>
+      <p><strong>A note on scope before anything else:</strong> every number in this chapter is analytical — derived from block sizes, published or assumed link bandwidths, and assumed GPU utilization figures. No CXL hardware was measured to produce any figure in this chapter. Chapter 4 reports the one hardware-measured bandwidth result in this document, 236.5 GB/s of on-GPU HBM/unified-memory streaming bandwidth on a DGX Spark. That is a different link, a different distance, and a different measurement method than anything discussed here, and the two should never be cited interchangeably. This chapter's job is to reason about the economics of a tier boundary — GPU memory to CXL-attached memory — using the best available assumptions, and to be explicit about which numbers are assumptions and which are arithmetic.</p>
 
-      <div class="figure-embed" style="margin: 2rem 0;">
-        <div class="figure-embed-header">
-          <span class="figure-embed-label">Figures 5.1-5.5 — Bandwidth Aggregation</span>
-          <a href="../figures/ch05-bandwidth/bandwidth-aggregation.html" target="_blank" class="figure-embed-link">Open Full Screen ↗</a>
-        </div>
-        <iframe src="../figures/ch05-bandwidth/bandwidth-aggregation.html" style="width:100%;height:700px;border:none;"></iframe>
+      <h2>5.1 The Block Under Analysis</h2>
+      <p>The unit of analysis throughout this chapter is a single KV block covering 16 tokens of Llama-3 70B under grouped-query attention (GQA). At 320 KiB of KV-cache per token, 16 tokens gives a block of exactly 5.00 MiB (16 × 320 KiB = 5,120 KiB = 5.00 MiB). This is a convenient, round unit — small enough to represent a realistic page-sized fetch granularity, large enough that fixed per-transfer overheads do not dominate the arithmetic.</p>
+
+      <h2>5.2 Tier-Fetch Cost: Three Bandwidth Assumptions</h2>
+      <p>Moving that 5.00 MiB block across a CXL-attached tier boundary takes a length of time set entirely by the bandwidth assumption fed into the arithmetic — none of these bandwidths were measured on real CXL hardware in this analysis. Three assumptions are carried through the rest of this document, spanning an optimistic theoretical ceiling down to a pessimistic real-world case:</p>
+
+      <div style="overflow-x: auto;">
+      <table>
+        <thead>
+          <tr><th>Bandwidth assumption</th><th>Basis</th><th>Fetch time, 5.00 MiB block</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>121 GB/s</td><td>CXL 3.0 x16 theoretical, one direction</td><td>43 µs</td></tr>
+          <tr><td>64 GB/s</td><td>Mid-range assumption — explicitly unmeasured</td><td>82 µs</td></tr>
+          <tr><td>32 GB/s</td><td>Pessimistic assumption (contention, protocol overhead)</td><td>164 µs</td></tr>
+        </tbody>
+      </table>
       </div>
 
-      <div class="chapter-nav">
-        <a href="ch04-latency.html" class="chapter-nav-btn prev"><span class="chapter-nav-label">← Previous</span><span class="chapter-nav-title">Latency</span></a>
-        <a href="ch06-preprocessing.html" class="chapter-nav-btn next"><span class="chapter-nav-label">Next →</span><span class="chapter-nav-title">Preprocessing</span></a>
+      <p>None of these three numbers is "the" CXL bandwidth for this system — they bracket a plausible range under different loading and protocol-overhead assumptions, and the 64 GB/s mid-range figure is the one used for illustrative comparisons later in this chapter unless stated otherwise. Anyone extending this analysis with a bandwidth number pulled from a vendor datasheet or a different platform's measurement should re-derive the fetch time from that number directly rather than reusing 43/82/164 µs.</p>
+
+      <h2>5.3 Regeneration Cost: Forward Compute</h2>
+      <p>The alternative to fetching a block from a slower tier is to discard it and regenerate the 16 tokens it represents by running them back through the model's forward pass. That cost depends on an assumption about achieved GPU utilization — model FLOPs utilization (MFU) — which nothing in this chapter measures directly:</p>
+
+      <div style="overflow-x: auto;">
+      <table>
+        <thead>
+          <tr><th>Assumed MFU</th><th>Forward-compute cost, 16 tokens</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>50% (optimistic)</td><td>9 ms</td></tr>
+          <tr><td>40% (typical)</td><td>11 ms</td></tr>
+          <tr><td>25% (conservative)</td><td>18 ms</td></tr>
+        </tbody>
+      </table>
       </div>
+
+      <p>These figures assume the block being regenerated is the most recently generated one — the tokens sit at the end of the sequence, so recomputing them is a straightforward forward pass over just those 16 positions using cached context already resident. That is the cheapest possible regeneration case, and it is already 9–18 ms against a 43–164 µs fetch.</p>
+
+      <h2>5.4 The Harder Case: Regenerating an Interior Block</h2>
+      <p>The comparison above understates the real cost whenever the evicted block sits in the interior of a sequence rather than at its tail. KV-cache is not an independently reproducible artifact per block — a hidden state at position <em>i</em> is a function, recursively, of every token from position 0 through <em>i</em>, propagated through every attention layer. Regenerating an interior block correctly does not mean recomputing 16 tokens' worth of forward pass in isolation; it means re-running the forward pass through the entire prefix that precedes the block, because there is no way to reconstruct layer-wise attention state for positions in the middle of a sequence without having the correct hidden states for everything upstream of them.</p>
+
+      <p>Concretely: evicting the most recent 16 tokens and regenerating them costs roughly the 9–18 ms shown above. Evicting a 16-token block sitting at, say, position 50,000 of a 100,000-token sequence and regenerating it correctly costs at minimum that same 9–18 ms — and in practice a great deal more, because the forward pass has to walk through everything between the start of context (or the nearest still-cached anchor point) and that block before it can reproduce the block's correct hidden states. The 9–18 ms figure is therefore a floor for interior blocks, not a representative estimate. This asymmetry — cheap, bounded, tier-independent fetch cost versus a regeneration cost that grows with sequence position — is the single strongest structural argument for tiering KV-cache rather than discarding and recomputing it.</p>
+
+      <h2>5.5 The Order-of-Magnitude Claim</h2>
+      <p>Putting the two sides together: moving a KV block across a slower tier is <strong>two to three orders of magnitude cheaper</strong> than regenerating it by forward compute. This is deliberately stated as a range of orders of magnitude, not a single precise multiple, because the two costs are not measurements of the same operation type and each carries its own uncertainty — tier-fetch cost depends on an unmeasured bandwidth assumption (32 to 121 GB/s above), and regeneration cost depends on an assumed GPU utilization figure (25% to 50% MFU above). Multiplying a specific numerator by a specific denominator from those ranges produces a specific ratio, but that ratio is an artifact of which two assumptions you happened to pick, not a fixed property of the system.</p>
+
+      <p>As one illustrative point within that broader range — and only as one point, not as the headline number — take the mid-range 64 GB/s tier-fetch time of 82 µs against the conservative 18 ms (25% MFU, rounded here to 17.9 ms before rounding) regeneration cost for a tail block: 17.9 ms ÷ 82 µs ≈ 218×. That is a real arithmetic result for those two specific inputs, and it sits comfortably inside the two-to-three-orders-of-magnitude range this chapter claims. It is not "the" ratio. Pick the optimistic ends of both ranges — 121 GB/s fetch, 50% MFU regeneration — and the ratio comes out closer to two orders of magnitude instead of three. Anyone citing this chapter should carry the range, or state which two specific assumptions produced whatever single number they quote. The claim worth remembering is the order of magnitude, not the digit.</p>
+
+      <h2>5.6 Capacity Crossover: When KV-Cache Rivals the Model Itself</h2>
+      <p>Tier economics matter operationally because KV-cache footprint grows with context length while model weight footprint is fixed, and at long enough context the two become comparable — which changes what "offload" even means, since the tier is now being asked to hold something on the scale of the model itself. For Llama-3 70B in bf16, weights occupy 140 GB (130.4 GiB). Two reference context lengths for a single sequence:</p>
+
+      <div style="overflow-x: auto;">
+      <table>
+        <thead>
+          <tr><th>Context length</th><th>KV-cache size (single sequence)</th><th>KV as % of weight footprint</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>32,768 tokens (32K)</td><td>10.0 GiB</td><td>8%</td></tr>
+          <tr><td>131,072 tokens (128K)</td><td>40.0 GiB</td><td>31%</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <p>Extrapolating the same per-token KV rate out further, a single sequence's KV-cache overtakes the entire 130.4 GiB weight footprint at roughly <strong>427,000 tokens</strong> of context. Beyond that crossover point, for that one sequence, the cache being tiered is larger than the model producing it — a useful sanity-check figure for anyone sizing a CXL tier against expected context-length distributions, and a reminder that "long context" is not a fixed-size add-on to a deployment's memory budget but a second, independently scaling consumer of it.</p>
+
+      <h2>5.7 Summary</h2>
+      <p>Every number in this chapter is analytical: three bandwidth assumptions for tier-fetch cost, three MFU assumptions for regeneration cost, and a linear extrapolation for the capacity crossover. None of it substitutes for the hardware-measured HBM bandwidth result in Chapter 4, and none of it should be quoted as if it were measured. What it does establish, robustly across the assumption ranges considered, is that fetching a KV block from a slower tier is two to three orders of magnitude cheaper than regenerating it, that the gap only widens for interior blocks because of KV-cache's recursive dependency on preceding context, and that KV-cache footprint is not a minor addendum to weight footprint once context length climbs into the hundreds of thousands of tokens.</p>
+
     </div>
-    <footer class="footer"><p style="font-size: 0.8rem; color: var(--text-muted);">© 2025 Subramaniyam (Sam) Pooni. All Rights Reserved.</p></footer>
   </div>
+
+  <footer class="footer">
+    <p>© 2025–2026 Subramaniyam (Sam) Pooni. All Rights Reserved.</p>
+    <p>KV-Cache Offloading Architecture — v6.0 — August 2026</p>
+  </footer>
 </body>
 </html>
