@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alpha Grid</title>
+<link rel="stylesheet" href="../../vendor/fonts.css">
+<link rel="stylesheet" href="../../css/style.css">
+<style>
+/* ---- figure shell: package tokens only, no external assets ---- */
+body{background:var(--bg-primary);color:var(--text-primary);font-family:var(--font-sans);
+     line-height:1.6;font-size:16px;}
+.vz{position:relative;z-index:1;max-width:1120px;margin:0 auto;padding:1.6rem 1.4rem 1.2rem;}
+.vz-eyebrow{font-family:var(--font-mono);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;
+     color:var(--accent-purple);margin:0 0 .4rem;}
+.vz h1{font-family:var(--font-sans);font-size:1.45rem;font-weight:600;line-height:1.25;
+     color:var(--text-primary);margin:0 0 .4rem;letter-spacing:-.01em;}
+.vz h2{font-family:var(--font-sans);font-size:1rem;font-weight:600;color:var(--text-primary);
+     margin:0 0 .5rem;padding:0;border:0;letter-spacing:0;}
+.vz h3{font-family:var(--font-sans);font-size:.86rem;font-weight:600;color:var(--text-secondary);
+     margin:1rem 0 .45rem;padding:0;border:0;letter-spacing:.02em;text-transform:uppercase;}
+.vz-sub{color:var(--text-secondary);font-size:.94rem;max-width:78ch;margin:0 0 1.1rem;}
+.vz-card{background:var(--bg-card);border:1px solid var(--border-primary);border-radius:14px;
+     padding:1.15rem 1.2rem;}
+.vz-card + .vz-card{margin-top:1.1rem;}
+.vz-plot{display:block;width:100%;height:auto;overflow:visible;}
+.vz-scroll{overflow-x:auto;}
+.vz-caveat{display:flex;gap:.7rem;align-items:flex-start;background:rgba(210,153,34,.09);
+     border:1px solid rgba(210,153,34,.4);border-left:4px solid var(--accent-orange);
+     border-radius:0 10px 10px 0;padding:.7rem .9rem;margin:0 0 1.1rem;font-size:.85rem;
+     color:var(--text-secondary);}
+.vz-caveat strong{color:var(--accent-orange);}
+.vz-caveat-icon{font-size:1rem;line-height:1.3;flex:0 0 auto;}
+.vz-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:.75rem;margin:1.1rem 0 0;}
+.vz-tile{background:var(--bg-tertiary);border:1px solid var(--border-primary);border-radius:12px;padding:.8rem .9rem;}
+.vz-tile-v{font-family:var(--font-sans);font-size:1.55rem;font-weight:650;color:var(--text-primary);
+     line-height:1.15;letter-spacing:-.02em;}
+.vz-tile-l{font-size:.775rem;color:var(--text-secondary);margin-top:.28rem;line-height:1.45;}
+.vz-legend{display:flex;flex-wrap:wrap;gap:.4rem 1.4rem;margin:.9rem 0 0;font-size:.85rem;
+     color:var(--text-secondary);}
+.vz-legend-item{display:flex;align-items:center;gap:.5rem;}
+.vz-key{flex:0 0 auto;}
+.vz-legend b{color:var(--text-primary);font-weight:600;}
+.vz-legend .vz-eq{font-family:var(--font-mono);font-size:.8rem;color:var(--text-secondary);}
+.vz-note{font-size:.83rem;color:var(--text-secondary);margin:.9rem 0 0;max-width:82ch;}
+.vz-note b{color:var(--text-primary);}
+.vz-note code{font-family:var(--font-mono);font-size:.79rem;color:var(--text-primary);
+     background:var(--bg-code);border:1px solid var(--border-secondary);border-radius:5px;padding:.05rem .3rem;}
+details.vz-table{margin:1.1rem 0 0;}
+details.vz-table>summary{cursor:pointer;font-size:.83rem;color:var(--accent-cyan);
+     font-family:var(--font-mono);list-style:none;display:inline-flex;align-items:center;gap:.4rem;
+     padding:.3rem .1rem;}
+details.vz-table>summary::-webkit-details-marker{display:none;}
+details.vz-table>summary::before{content:"\25B8";display:inline-block;transition:transform .15s ease;}
+details.vz-table[open]>summary::before{transform:rotate(90deg);}
+details.vz-table table{font-size:.85rem;border-collapse:collapse;width:100%;margin-top:.5rem;}
+details.vz-table td,details.vz-table th{padding:.5rem .7rem;border-bottom:1px solid var(--border-secondary);
+     text-align:left;}
+details.vz-table th{color:var(--text-primary);font-weight:600;font-size:.8rem;}
+details.vz-table td{font-family:var(--font-mono);color:var(--text-secondary);}
+details.vz-table td:first-child{font-family:var(--font-sans);color:var(--text-primary);}
+.vz-foot{margin:1.3rem 0 0;padding-top:.8rem;border-top:1px solid var(--border-secondary);
+     font-family:var(--font-mono);font-size:.74rem;color:var(--text-muted);letter-spacing:.01em;}
+.vz-grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;}
+@media (max-width:860px){.vz-grid2{grid-template-columns:1fr;}}
+/* axis + mark typography inside the SVGs */
+.ax{fill:var(--text-muted);font-family:var(--font-mono);font-size:11px;
+    font-variant-numeric:tabular-nums;}
+.ax-title{fill:var(--text-secondary);font-family:var(--font-sans);font-size:12px;font-weight:500;}
+.lbl{fill:var(--text-primary);font-family:var(--font-sans);font-size:12px;font-weight:600;}
+.lbl-2{fill:var(--text-secondary);font-family:var(--font-sans);font-size:11.5px;}
+.lbl-m{fill:var(--text-secondary);font-family:var(--font-mono);font-size:11px;
+    font-variant-numeric:tabular-nums;}
+.val{fill:var(--text-primary);font-family:var(--font-mono);font-size:11.5px;font-weight:600;
+    font-variant-numeric:tabular-nums;}
+.grid{stroke:var(--border-secondary);stroke-width:1;}
+.axis{stroke:var(--border-primary);stroke-width:1;}
+/* evidence badges */
+.vz-badge{flex:0 0 auto;font-family:var(--font-mono);font-size:.68rem;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;border:1px solid;border-radius:999px;padding:.15rem .5rem;white-space:nowrap;
+  display:inline-block;}
+.ev-sim{color:var(--accent-orange);border-color:var(--accent-orange);}
+.ev-des{color:var(--accent-purple);border-color:var(--accent-purple);}
+.ev-ana{color:var(--accent-cyan);border-color:var(--accent-cyan);}
+.ev-lit{color:var(--accent-teal);border-color:var(--accent-teal);}
+.ev-mea{color:var(--accent-green);border-color:var(--accent-green);}
+.vz-claim{margin:1.1rem 0 0;background:rgba(63,185,80,.07);border:1px solid rgba(63,185,80,.35);
+  border-left:4px solid var(--accent-green);border-radius:0 12px 12px 0;padding:.95rem 1.1rem;}
+.vz-claim p{margin:0;color:var(--text-secondary);font-size:.9rem;line-height:1.6;}
+.vz-claim b{color:var(--text-primary);}
+.vz-claim .vz-claim-h{display:block;color:var(--text-primary);font-size:1.02rem;font-weight:600;
+  margin-bottom:.35rem;line-height:1.45;}
+.vz-claim.neutral{background:rgba(88,166,255,.07);border-color:rgba(88,166,255,.35);
+  border-left-color:var(--accent-cyan);}
+.vz-claim.warn{background:rgba(248,81,73,.07);border-color:rgba(248,81,73,.35);
+  border-left-color:var(--accent-red);}
+.vz-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.6rem;}
+.vz-item{background:var(--bg-tertiary);border:1px solid var(--border-primary);border-radius:12px;
+  padding:.7rem .85rem;}
+.vz-item-top{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.3rem;
+  flex-wrap:wrap;}
+.vz-item-name{font-weight:600;color:var(--text-primary);font-size:.92rem;}
+.vz-item p{margin:0 0 .25rem;font-size:.84rem;color:var(--text-secondary);line-height:1.5;}
+.vz-item p:last-child{margin-bottom:0;}
+.vz-item p b{color:var(--text-primary);}
+.vz-code{font-family:var(--font-mono);font-size:.78rem;line-height:1.65;color:var(--text-primary);
+  background:var(--bg-code);border:1px solid var(--border-primary);border-radius:10px;
+  padding:.75rem .9rem;overflow-x:auto;white-space:pre;margin:.55rem 0 0;}
+.vz-eq{font-family:var(--font-mono);font-size:.9rem;color:var(--text-primary);
+  background:var(--bg-code);border:1px solid var(--border-primary);border-radius:10px;
+  padding:.6rem .8rem;margin:.5rem 0 0;overflow-x:auto;}
+.vz-inline{font-family:var(--font-mono);font-size:.79rem;color:var(--text-primary);
+  background:var(--bg-code);border:1px solid var(--border-secondary);border-radius:5px;
+  padding:.05rem .3rem;white-space:nowrap;}
+.vz-legend .vz-eq{background:none;border:0;padding:0;margin:0;display:inline;font-size:.8rem;}
+.vz-dt{width:100%;border-collapse:collapse;font-size:.84rem;margin:.6rem 0 0;}
+.vz-dt th,.vz-dt td{padding:.5rem .65rem;border-bottom:1px solid var(--border-secondary);
+  text-align:left;vertical-align:top;color:var(--text-secondary);}
+.vz-dt th{color:var(--text-primary);font-weight:600;font-size:.79rem;text-transform:uppercase;
+  letter-spacing:.05em;border-bottom:1px solid var(--border-primary);}
+.vz-dt td b{color:var(--text-primary);}
+.vz-dt td:first-child{color:var(--text-primary);}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;}}
+</style>
+</head>
+<body>
+<main class="vz" role="main">
+<p class="sr-only">Figure: a line chart of cache hit rate in per cent against the EMA decay constant alpha on a logarithmic x-axis decreasing to the right, at a 32 gibibyte HBM budget, experiment e2 with one seed. The seven plotted values are alpha 0.5 at 37.20 per cent, alpha 0.3 at 38.84, alpha 0.15 at 44.33, alpha 0.05 at 55.96, alpha 0.01 at 31.54, alpha 0.003 at 25.47 and alpha 0.001 at 24.44. Two horizontal reference lines mark LRU at 36.85 per cent, drawn long-dashed, and LFU at 15.56 per cent, drawn dotted. The curve has an interior optimum at alpha approximately 0.05, worth plus 19.1 points over LRU, and then falls away as alpha approaches zero, ending at 24.44 which is below LRU and still well above LFU. There is no convergence onto LFU as alpha approaches zero; the Revision 1 claim of monotonic convergence is withdrawn. Simulated and provisional: a single data-structure defect in Revision 1 inverted four of five findings.</p>
+<p class="vz-eyebrow">Figure 11.1 &middot; Simulated (provisional)</p>
+<h1>Hit rate against &alpha; at 32 GiB &mdash; an interior optimum, and no convergence onto LFU</h1>
+<p class="vz-sub">Experiment e2, one seed, 32 GiB HBM budget over a 512 GiB tier. Read this grid against its own baselines only; the e1 sweep in the budget table is a different experiment with different reference values.</p>
+<div class="vz-caveat"><span class="vz-caveat-icon" aria-hidden="true">&#9888;</span><div><strong>Standing caveat &mdash; simulated, provisional, not settled.</strong> A single data-structure defect in Revision&nbsp;1 of this simulator inverted four of five findings (99.6% wrong victims for EMA&nbsp;&alpha;=0.15). Revision&nbsp;2 is the corrected rebuild: no Belady bound, no bandwidth/queueing model, whole-context residency assumed, synthetic workload, 2&ndash;3 seeds, no hardware validation. CANONICAL-NUMBERS.md &sect;3.</div></div><div class="vz-card"><div class="vz-scroll"><svg class="vz-plot" viewBox="0 0 960 470" role="group" aria-label="Hit rate against the EMA decay constant alpha at a 32 gibibyte HBM budget, log x-axis, showing an interior optimum at alpha 0.05 and no convergence onto LFU as alpha approaches zero."><line class="grid" x1="88.0" y1="400.0" x2="820.0" y2="400.0"/><text class="ax" x="78.0" y="404.0" text-anchor="end">0</text><line class="grid" x1="88.0" y1="340.0" x2="820.0" y2="340.0"/><text class="ax" x="78.0" y="344.0" text-anchor="end">10</text><line class="grid" x1="88.0" y1="280.0" x2="820.0" y2="280.0"/><text class="ax" x="78.0" y="284.0" text-anchor="end">20</text><line class="grid" x1="88.0" y1="220.0" x2="820.0" y2="220.0"/><text class="ax" x="78.0" y="224.0" text-anchor="end">30</text><line class="grid" x1="88.0" y1="160.0" x2="820.0" y2="160.0"/><text class="ax" x="78.0" y="164.0" text-anchor="end">40</text><line class="grid" x1="88.0" y1="100.0" x2="820.0" y2="100.0"/><text class="ax" x="78.0" y="104.0" text-anchor="end">50</text><line class="grid" x1="88.0" y1="40.0" x2="820.0" y2="40.0"/><text class="ax" x="78.0" y="44.0" text-anchor="end">60</text><line class="axis" x1="88.0" y1="400.0" x2="820.0" y2="400.0"/><text class="ax-title" x="20" y="30">hit rate (%)</text><line class="grid" x1="113.5" y1="400.0" x2="113.5" y2="406.0" stroke-dasharray="2 4"/><text class="ax" x="113.5" y="422.0" text-anchor="middle">0.5</text><line class="grid" x1="169.5" y1="400.0" x2="169.5" y2="406.0" stroke-dasharray="2 4"/><text class="ax" x="169.5" y="422.0" text-anchor="middle">0.3</text><line class="grid" x1="245.5" y1="400.0" x2="245.5" y2="406.0" stroke-dasharray="2 4"/><text class="ax" x="245.5" y="422.0" text-anchor="middle">0.15</text><line class="grid" x1="365.9" y1="400.0" x2="365.9" y2="406.0" stroke-dasharray="2 4"/><text class="ax" x="365.9" y="422.0" text-anchor="middle">0.05</text><line class="grid" x1="542.3" y1="400.0" x2="542.3" y2="406.0" stroke-dasharray="2 4"/><text class="ax" x="542.3" y="422.0" text-anchor="middle">0.01</text><line class="grid" x1="674.3" y1="400.0" x2="674.3" y2="406.0" stroke-dasharray="2 4"/><text class="ax" x="674.3" y="422.0" text-anchor="middle">0.003</text><line class="grid" x1="794.8" y1="400.0" x2="794.8" y2="406.0" stroke-dasharray="2 4"/><text class="ax" x="794.8" y="422.0" text-anchor="middle">0.001</text><text class="ax-title" x="454.0" y="448.0" text-anchor="middle">EMA decay constant &alpha; &mdash; log scale, decreasing to the right</text><line x1="88.0" y1="178.9" x2="820.0" y2="178.9" stroke="var(--text-secondary)" stroke-width="1.5" stroke-dasharray="9 5"/><text class="lbl-m" x="828.0" y="174.9" fill="var(--text-primary)" style="font-size:10.5px;font-weight:600">LRU 36.85</text><line x1="88.0" y1="306.6" x2="820.0" y2="306.6" stroke="var(--text-secondary)" stroke-width="1.5" stroke-dasharray="2 4"/><text class="lbl-m" x="828.0" y="320.6" fill="var(--text-primary)" style="font-size:10.5px;font-weight:600">LFU 15.56</text><path d="M113.5,176.8 L169.5,167.0 L245.5,134.0 L365.9,64.2 L542.3,210.8 L674.3,247.2 L794.8,253.4" fill="none" stroke="#58a6ff" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/><g role="img" aria-label="alpha 0.5, hit rate 37.20 per cent"><title>&alpha; = 0.5 &middot; 37.20%</title><circle cx="113.5" cy="176.8" r="5" fill="#58a6ff" stroke="var(--bg-card)" stroke-width="2"/><text class="val" x="113.5" y="162.8" text-anchor="middle">37.20</text></g><g role="img" aria-label="alpha 0.3, hit rate 38.84 per cent"><title>&alpha; = 0.3 &middot; 38.84%</title><circle cx="169.5" cy="167.0" r="5" fill="#58a6ff" stroke="var(--bg-card)" stroke-width="2"/><text class="val" x="169.5" y="153.0" text-anchor="middle">38.84</text></g><g role="img" aria-label="alpha 0.15, hit rate 44.33 per cent"><title>&alpha; = 0.15 &middot; 44.33%</title><circle cx="245.5" cy="134.0" r="5" fill="#58a6ff" stroke="var(--bg-card)" stroke-width="2"/><text class="val" x="245.5" y="119.0" text-anchor="middle">44.33</text></g><g role="img" aria-label="alpha 0.05, hit rate 55.96 per cent, the interior optimum"><title>&alpha; = 0.05 &middot; 55.96%</title><circle cx="365.9" cy="64.2" r="7" fill="#3fb950" stroke="var(--bg-card)" stroke-width="2"/><circle cx="365.9" cy="64.2" r="12" fill="none" stroke="#3fb950" stroke-width="1.5"/></g><g role="img" aria-label="alpha 0.01, hit rate 31.54 per cent"><title>&alpha; = 0.01 &middot; 31.54%</title><circle cx="542.3" cy="210.8" r="5" fill="#58a6ff" stroke="var(--bg-card)" stroke-width="2"/><text class="val" x="542.3" y="194.8" text-anchor="middle">31.54</text></g><g role="img" aria-label="alpha 0.003, hit rate 25.47 per cent"><title>&alpha; = 0.003 &middot; 25.47%</title><circle cx="674.3" cy="247.2" r="5" fill="#58a6ff" stroke="var(--bg-card)" stroke-width="2"/><text class="val" x="674.3" y="232.2" text-anchor="middle">25.47</text></g><g role="img" aria-label="alpha 0.001, hit rate 24.44 per cent"><title>&alpha; = 0.001 &middot; 24.44%</title><circle cx="794.8" cy="253.4" r="5" fill="#58a6ff" stroke="var(--bg-card)" stroke-width="2"/><text class="val" x="794.8" y="238.4" text-anchor="middle">24.44</text></g><text class="lbl" x="385.9" y="60.2" style="font-size:12.5px" fill="#3fb950">&alpha; = 0.05 &middot; 55.96 &mdash; interior optimum</text><text class="lbl-2" x="385.9" y="78.2">+19.1 points over LRU</text><line x1="794.8" y1="263.4" x2="794.8" y2="300.6" stroke="#f85149" stroke-width="1.5" stroke-dasharray="3 3"/><text class="lbl" x="784.8" y="284.0" text-anchor="end" fill="#f85149" style="font-size:11.5px">no convergence onto LFU</text><text class="lbl-2" x="784.8" y="300.0" text-anchor="end" style="font-size:10.5px">as &alpha; &rarr; 0 the curve falls away from the optimum</text></svg></div><div class="vz-legend"><span class="vz-legend-item"><svg width="26" height="10" aria-hidden="true"><line x1="0" y1="5" x2="26" y2="5" stroke="#58a6ff" stroke-width="2.5"/><circle cx="13" cy="5" r="4" fill="#58a6ff"/></svg><span><b>EMA hit rate</b> at 32 GiB, experiment <span class="vz-eq">e2</span> (1 seed)</span></span><span class="vz-legend-item"><svg width="26" height="10" aria-hidden="true"><line x1="0" y1="5" x2="26" y2="5" stroke="#a2abb4" stroke-width="1.5" stroke-dasharray="9 5"/></svg><span><b>LRU 36.85</b> &mdash; long-dash reference line</span></span><span class="vz-legend-item"><svg width="26" height="10" aria-hidden="true"><line x1="0" y1="5" x2="26" y2="5" stroke="#a2abb4" stroke-width="1.5" stroke-dasharray="2 4"/></svg><span><b>LFU 15.56</b> &mdash; dotted reference line</span></span></div><details class="vz-table"><summary>Table view</summary><table><thead><tr><th>Policy</th><th>Hit rate (%)</th></tr></thead><tbody><tr><td>EMA &alpha; = 0.5</td><td>37.20</td></tr><tr><td>EMA &alpha; = 0.3</td><td>38.84</td></tr><tr><td>EMA &alpha; = 0.15</td><td>44.33</td></tr><tr><td>EMA &alpha; = 0.05</td><td>55.96</td></tr><tr><td>EMA &alpha; = 0.01</td><td>31.54</td></tr><tr><td>EMA &alpha; = 0.003</td><td>25.47</td></tr><tr><td>EMA &alpha; = 0.001</td><td>24.44</td></tr><tr><td>LRU</td><td>36.85</td></tr><tr><td>LFU</td><td>15.56</td></tr></tbody></table></details></div><div class="vz-grid2" style="margin-top:1.1rem"><div class="vz-claim"><p><span class="vz-claim-h">The shape is the point, not the peak.</span>Hit rate rises from &alpha; = 0.5 to an <b>interior optimum at &alpha; &asymp; 0.05</b> (55.96%, +19.1 points over LRU), then falls away through 0.01, 0.003 and 0.001, ending <b>below LRU</b>. A decayed-frequency score is not &ldquo;LFU with a knob&rdquo;: if it were, hit rate would climb steadily as &alpha; &rarr; 0.</p></div><div class="vz-claim warn"><p><span class="vz-claim-h">Withdrawn: monotone convergence onto LFU.</span>Revision&nbsp;1 claimed hit rate was monotone as &alpha; &rarr; 0 and converged exactly onto LFU. That claim is <b>withdrawn</b> &mdash; it was an artifact of the <code>_pick_victim()</code> defect. At &alpha; = 0.001 the curve reads 24.44 against LFU&rsquo;s 15.56, and it is descending, not converging. The collapse at small &alpha; is a metadata-reset artifact, not a property of the scoring function.</p></div></div>
+<p class="vz-foot">Simulated (provisional) &mdash; CANONICAL-NUMBERS.md &sect;3.2, experiment e2 in results_v2.json</p>
+</main>
+</body>
+</html>

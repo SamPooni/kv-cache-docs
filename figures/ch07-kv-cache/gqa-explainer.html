@@ -4,16 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Grouped Query Attention</title>
+<link rel="stylesheet" href="../../css/style.css">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
-  font-family: 'Segoe UI', system-ui, sans-serif;
-  background: #ffffff;
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
   min-height: 100vh;
-  color: #1a1a1a;
+  color: var(--text-primary);
   padding: 2rem;
 }
-.container { max-width: 1100px; margin: 0 auto; }
+.container { max-width: 1100px; margin: 0 auto; padding: 0; }
 h1 {
   text-align: center;
   font-size: 2.4rem;
@@ -22,7 +23,7 @@ h1 {
 }
 .subtitle {
   text-align: center;
-  color: #555;
+  color: var(--text-secondary);
   font-size: 1.2rem;
   margin-bottom: 2.5rem;
 }
@@ -33,15 +34,16 @@ h1 {
   margin-bottom: 2.5rem;
 }
 .method-card {
-  background: #fafafa;
+  background: var(--bg-card);
   border-radius: 16px;
   padding: 1.5rem;
-  border: 2px solid #e8e8e8;
+  border: 2px solid var(--border-primary);
   text-align: center;
 }
 .method-card.highlight {
-  border-color: #007bff;
-  background: #f0f7ff;
+  color: inherit;
+  border-color: var(--accent-cyan);
+  background: rgba(88, 166, 255, 0.10);
 }
 .method-name {
   font-size: 1.4rem;
@@ -50,7 +52,7 @@ h1 {
 }
 .method-full {
   font-size: 0.95rem;
-  color: #666;
+  color: var(--text-secondary);
   margin-bottom: 1.25rem;
 }
 .heads-visual {
@@ -69,7 +71,7 @@ h1 {
   font-size: 0.9rem;
   font-weight: 600;
   width: 30px;
-  color: #555;
+  color: var(--text-secondary);
 }
 .head {
   width: 36px;
@@ -80,19 +82,19 @@ h1 {
   justify-content: center;
   font-size: 0.75rem;
   font-weight: 700;
-  color: white;
+  color: var(--bg-primary);
 }
-.head-q { background: #007bff; }
-.head-k { background: #28a745; }
-.head-v { background: #9c27b0; }
+.head-q { background: var(--accent-cyan); }
+.head-k { background: var(--accent-green); }
+.head-v { background: var(--accent-purple); }
 .kv-memory {
   font-size: 1.1rem;
   font-weight: 600;
   padding: 0.5rem 1rem;
   border-radius: 8px;
-  background: #f5f5f5;
+  background: var(--bg-code);
 }
-.kv-memory span { color: #d63384; }
+.kv-memory span { color: var(--accent-pink); }
 .section-title {
   font-size: 1.6rem;
   font-weight: 700;
@@ -100,10 +102,10 @@ h1 {
   text-align: center;
 }
 .flow-diagram {
-  background: #fafafa;
+  background: var(--bg-card);
   border-radius: 16px;
   padding: 2rem;
-  border: 2px solid #e8e8e8;
+  border: 2px solid var(--border-primary);
   margin-bottom: 2rem;
 }
 .flow-row {
@@ -120,14 +122,14 @@ h1 {
   font-weight: 600;
   text-align: center;
 }
-.flow-input { background: #e8e8e8; color: #333; }
-.flow-proj { background: #007bff; color: white; min-width: 100px; }
-.flow-group { background: #fff3cd; color: #856404; border: 2px dashed #ffc107; }
-.flow-output { background: #d4edda; color: #155724; }
+.flow-input { background: var(--bg-tertiary); color: var(--text-primary); }
+.flow-proj { background: var(--accent-cyan); color: var(--bg-primary); min-width: 100px; }
+.flow-group { background: rgba(210, 153, 34, 0.12); color: var(--accent-orange); border: 2px dashed var(--accent-yellow); }
+.flow-output { background: rgba(63, 185, 80, 0.12); color: var(--accent-green); }
 .arrow-down {
   text-align: center;
   font-size: 1.5rem;
-  color: #999;
+  color: var(--text-secondary);
   margin: 0.5rem 0;
 }
 .benefits {
@@ -136,10 +138,10 @@ h1 {
   gap: 1.5rem;
 }
 .benefit-card {
-  background: #fafafa;
+  background: var(--bg-card);
   border-radius: 12px;
   padding: 1.5rem;
-  border: 2px solid #e8e8e8;
+  border: 2px solid var(--border-primary);
   text-align: center;
 }
 .benefit-icon {
@@ -153,7 +155,7 @@ h1 {
 }
 .benefit-desc {
   font-size: 1rem;
-  color: #555;
+  color: var(--text-secondary);
   line-height: 1.5;
 }
 .legend {
@@ -179,30 +181,32 @@ h1 {
   text-align: center;
   font-size: 1.2rem;
   padding: 1.25rem;
-  background: #f8f9fa;
+  background: var(--bg-card);
   border-radius: 12px;
   margin-top: 1.5rem;
-  font-family: 'Georgia', serif;
-  border: 2px solid #e8e8e8;
+  font-family: var(--font-display);
+  border: 2px solid var(--border-primary);
 }
 .formula code {
-  background: #e9ecef;
+  background: var(--bg-code);
+  color: var(--text-primary);
   padding: 0.2rem 0.5rem;
   border-radius: 4px;
-  font-family: 'Fira Code', monospace;
+  font-family: var(--font-mono);
   font-size: 1.1rem;
 }
 </style>
 </head>
 <body>
-<div class="container">
+<div class="container" role="main">
+  <p class="sr-only">Figure: Grouped Query Attention explained, with the head diagrams drawn illustratively at 4 query heads. Multi-Head Attention gives every query head its own key and value head, 4 KV heads for 4 Q heads; Grouped Query Attention shares one KV head per group, 2 KV heads in a 2 to 1 grouping; Multi-Query Attention shares a single KV head across all query heads. In the worked flow, W_Q, W_K and W_V project the input hidden states into Q0 to Q3 with n_heads = 4 and K0, K1 and V0, V1 with n_kv = 2, so group 0 is Q0 and Q1 attending to K0 and V0 and group 1 is Q2 and Q3 attending to K1 and V1, before the heads are concatenated. Cache size is 2 x n_layers x n_kv_heads x seq_len x head_dim x dtype_size. For the canonical Llama-3 70B, the three rows are a counterfactual over the same 80-layer geometry: MHA with 64 KV heads would cost 32 kilobytes per layer per token, GQA with 8 KV heads costs 4 kilobytes — an 8 times reduction, and what the model actually uses — and MQA with 1 KV head would cost 512 bytes. Only the GQA row describes a real model here. Both Llama-2-70B and Llama-3-70B are GQA with 8 KV heads and 64 query heads, at 320 kibibytes per token; the 2,560 kibibytes-per-token MHA row belongs to Llama-1-65B and the smaller MHA Llama-2 variants, not to Llama-2-70B. The arithmetic: 2 times 80 layers times 8 KV heads times 128 times 2 bytes equals 327,680 bytes equals 320 kibibytes per token, times 8,192 equals 2.50 gibibytes at 8K context and times 131,072 equals 40.0 gibibytes at 128K context, with the single-sequence crossover against 130.4 gibibytes of bf16 weights at about 427,000 tokens. Block granularity is 16 tokens equals 5.00 mebibytes. This is an analytical model — arithmetic over published model geometry, simulator-independent, and it survived the v5.0 retractions unchanged; nothing on this page ever depended on a hit rate.</p>
   <h1>Grouped Query Attention</h1>
-  <p class="subtitle">Balancing KV-cache memory efficiency with model quality</p>
+  <p class="subtitle">Balancing KV-cache memory efficiency with model quality — diagram is illustrative (4 Q heads shown)</p>
   
   <div class="legend">
-    <div class="legend-item"><div class="legend-dot" style="background:#007bff"></div>Query (Q)</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#28a745"></div>Key (K)</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#9c27b0"></div>Value (V)</div>
+    <div class="legend-item"><div class="legend-dot" aria-hidden="true" style="background:var(--accent-cyan)"></div>Query (Q)</div>
+    <div class="legend-item"><div class="legend-dot" aria-hidden="true" style="background:var(--accent-green)"></div>Key (K)</div>
+    <div class="legend-item"><div class="legend-dot" aria-hidden="true" style="background:var(--accent-purple)"></div>Value (V)</div>
   </div>
 
   <div class="comparison">
@@ -210,21 +214,21 @@ h1 {
       <div class="method-name">MHA</div>
       <div class="method-full">Multi-Head Attention</div>
       <div class="heads-visual">
-        <div class="head-row">
+        <div class="head-row" role="img" aria-label="MHA: Query heads 0, 1, 2 and 3">
           <span class="head-label">Q</span>
           <div class="head head-q">0</div>
           <div class="head head-q">1</div>
           <div class="head head-q">2</div>
           <div class="head head-q">3</div>
         </div>
-        <div class="head-row">
+        <div class="head-row" role="img" aria-label="MHA: Key heads 0, 1, 2 and 3, one per query head">
           <span class="head-label">K</span>
           <div class="head head-k">0</div>
           <div class="head head-k">1</div>
           <div class="head head-k">2</div>
           <div class="head head-k">3</div>
         </div>
-        <div class="head-row">
+        <div class="head-row" role="img" aria-label="MHA: Value heads 0, 1, 2 and 3, one per query head">
           <span class="head-label">V</span>
           <div class="head head-v">0</div>
           <div class="head head-v">1</div>
@@ -232,55 +236,55 @@ h1 {
           <div class="head head-v">3</div>
         </div>
       </div>
-      <div class="kv-memory">KV Cache: <span>8 heads</span></div>
+      <div class="kv-memory">KV Cache: <span>4 KV heads</span> (1 per Q head)</div>
     </div>
 
     <div class="method-card highlight">
       <div class="method-name">GQA</div>
       <div class="method-full">Grouped Query Attention</div>
       <div class="heads-visual">
-        <div class="head-row">
+        <div class="head-row" role="img" aria-label="GQA: Query heads 0, 1, 2 and 3">
           <span class="head-label">Q</span>
           <div class="head head-q">0</div>
           <div class="head head-q">1</div>
           <div class="head head-q">2</div>
           <div class="head head-q">3</div>
         </div>
-        <div class="head-row">
+        <div class="head-row" role="img" aria-label="GQA: Key heads grouped 0-1 and 2-3, two KV heads for four query heads">
           <span class="head-label">K</span>
           <div class="head head-k" style="width:78px">0-1</div>
           <div class="head head-k" style="width:78px">2-3</div>
         </div>
-        <div class="head-row">
+        <div class="head-row" role="img" aria-label="GQA: Value heads grouped 0-1 and 2-3, two KV heads for four query heads">
           <span class="head-label">V</span>
           <div class="head head-v" style="width:78px">0-1</div>
           <div class="head head-v" style="width:78px">2-3</div>
         </div>
       </div>
-      <div class="kv-memory">KV Cache: <span>4 heads</span></div>
+      <div class="kv-memory">KV Cache: <span>2 KV heads</span> (2:1 grouping)</div>
     </div>
 
     <div class="method-card">
       <div class="method-name">MQA</div>
       <div class="method-full">Multi-Query Attention</div>
       <div class="heads-visual">
-        <div class="head-row">
+        <div class="head-row" role="img" aria-label="MQA: Query heads 0, 1, 2 and 3">
           <span class="head-label">Q</span>
           <div class="head head-q">0</div>
           <div class="head head-q">1</div>
           <div class="head head-q">2</div>
           <div class="head head-q">3</div>
         </div>
-        <div class="head-row">
+        <div class="head-row" role="img" aria-label="MQA: A single shared key head for all four query heads">
           <span class="head-label">K</span>
           <div class="head head-k" style="width:162px">shared</div>
         </div>
-        <div class="head-row">
+        <div class="head-row" role="img" aria-label="MQA: A single shared value head for all four query heads">
           <span class="head-label">V</span>
           <div class="head head-v" style="width:162px">shared</div>
         </div>
       </div>
-      <div class="kv-memory">KV Cache: <span>2 heads</span></div>
+      <div class="kv-memory">KV Cache: <span>1 KV head</span> (all Q share it)</div>
     </div>
   </div>
 
@@ -298,9 +302,9 @@ h1 {
     </div>
     <div class="arrow-down">↓</div>
     <div class="flow-row">
-      <div class="flow-box" style="background:#cce5ff;color:#004085">Q₀ Q₁ Q₂ Q₃<br><small>n_heads = 4</small></div>
-      <div class="flow-box" style="background:#d4edda;color:#155724">K₀ K₁<br><small>n_kv = 2</small></div>
-      <div class="flow-box" style="background:#f3d9fa;color:#6f2c91">V₀ V₁<br><small>n_kv = 2</small></div>
+      <div class="flow-box" style="background:rgba(88,166,255,0.12);border-left:3px solid var(--accent-cyan);color:var(--accent-cyan)">Q₀ Q₁ Q₂ Q₃<br><small>n_heads = 4</small></div>
+      <div class="flow-box" style="background:rgba(63,185,80,0.12);border-left:3px solid var(--accent-green);color:var(--accent-green)">K₀ K₁<br><small>n_kv = 2</small></div>
+      <div class="flow-box" style="background:rgba(163,113,247,0.12);border-left:3px solid var(--accent-purple);color:var(--accent-purple)">V₀ V₁<br><small>n_kv = 2</small></div>
     </div>
     <div class="arrow-down">↓</div>
     <div class="flow-row">
@@ -319,17 +323,17 @@ h1 {
   
   <div class="benefits">
     <div class="benefit-card">
-      <div class="benefit-icon">💾</div>
+      <div aria-hidden="true" class="benefit-icon">💾</div>
       <div class="benefit-title">Smaller KV Cache</div>
       <div class="benefit-desc">Reduces memory footprint proportional to the grouping ratio. Critical for long-context inference.</div>
     </div>
     <div class="benefit-card">
-      <div class="benefit-icon">⚡</div>
+      <div aria-hidden="true" class="benefit-icon">⚡</div>
       <div class="benefit-title">Faster Decoding</div>
       <div class="benefit-desc">Less KV data to load from HBM per token. Directly improves memory-bound decode throughput.</div>
     </div>
     <div class="benefit-card">
-      <div class="benefit-icon">🎯</div>
+      <div aria-hidden="true" class="benefit-icon">🎯</div>
       <div class="benefit-title">Quality Preserved</div>
       <div class="benefit-desc">Outperforms MQA significantly. Llama 2 70B uses GQA with 8 KV heads for 64 query heads.</div>
     </div>
@@ -338,6 +342,37 @@ h1 {
   <div class="formula">
     KV Cache Size = <code>2 × n_layers × n_kv_heads × seq_len × head_dim × dtype_size</code>
   </div>
+
+  <div class="section-title">The Canonical Model: Llama-3 70B <span style="font-size:0.75rem;font-weight:400;color:var(--text-secondary);">— MHA and MQA rows are counterfactuals over the same geometry</span></div>
+  <div class="benefits">
+    <div class="benefit-card">
+      <div aria-hidden="true" class="benefit-icon">🔴</div>
+      <div class="benefit-title">MHA — 64 KV heads <em>(counterfactual)</em></div>
+      <div class="benefit-desc"><strong>32 KB</strong> per layer per token. No 70B Llama uses this: the 2,560 KiB/token MHA row belongs to <strong>Llama-1-65B</strong> and the smaller MHA Llama-2 variants.</div>
+    </div>
+    <div class="benefit-card">
+      <div aria-hidden="true" class="benefit-icon">🟢</div>
+      <div class="benefit-title">GQA — 8 KV heads</div>
+      <div class="benefit-desc"><strong>4 KB</strong> per layer per token — an <strong>8× cache reduction</strong>, and what <strong>both Llama-2-70B and Llama-3-70B</strong> actually use (64 query heads, 8 KV heads)</div>
+    </div>
+    <div class="benefit-card">
+      <div aria-hidden="true" class="benefit-icon">🔵</div>
+      <div class="benefit-title">MQA — 1 KV head <em>(counterfactual)</em></div>
+      <div class="benefit-desc"><strong>512 B</strong> per layer per token</div>
+    </div>
+  </div>
+  <div class="formula">
+    2 × 80 layers × 8 KV heads × 128 × 2 B = <code>327,680 B = 320 KiB per token</code><br>
+    <code>× 8,192 = 2.50 GiB</code> at 8 K context &nbsp;·&nbsp; <code>× 131,072 = 40.0 GiB</code> at 128 K context<br>
+    <code>16 tokens = 5.00 MiB</code> block &nbsp;·&nbsp; crossover with 130.4 GiB of bf16 weights ≈ <code>427,000 tokens</code>
+  </div>
+
+  <p style="text-align:center;color:var(--text-secondary);font-size:0.8rem;margin-top:1.5rem;padding-top:0.75rem;border-top:1px solid var(--border-primary);">
+    <strong>Analytical model</strong> — arithmetic over published model geometry, simulator-independent and
+    independently confirmed. Everything on this page <strong>stands</strong> through the v5.0 retractions: none of it
+    ever depended on a hit rate. 320 KiB/token · 2.50 GiB at 8K · 40.0 GiB at 128K · 5.00 MiB blocks ·
+    crossover ≈ 427,000 tokens. Canonical numbers v6.0.
+  </p>
 </div>
 </body>
 </html>

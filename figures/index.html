@@ -4,217 +4,294 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Figure Gallery — KV-Cache Offloading Architecture</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../vendor/fonts.css">
   <link rel="stylesheet" href="../css/style.css">
   <style>
     .figure-gallery { margin: 2rem 0; }
-    .chapter-section { margin-bottom: 3rem; }
+    .chapter-section { margin-bottom: 2.5rem; }
     .chapter-section h3 {
-      color: var(--accent-cyan);
-      font-size: 1.3rem;
-      margin-bottom: 1rem;
-      padding-bottom: 0.5rem;
-      border-bottom: 1px solid var(--border-primary);
+      color: var(--accent-cyan); font-size: 1.15rem; margin-bottom: 0.9rem;
+      padding-bottom: 0.5rem; border-bottom: 1px solid var(--border-primary);
+      display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.75rem;
     }
-    .figure-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 1rem;
-    }
+    .chapter-section h3 .ch-sub { color: var(--text-secondary); font-size: 0.9rem; font-weight: 400; }
+    .figure-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; }
     .figure-card {
-      background: var(--bg-card);
-      border: 1px solid var(--border-primary);
-      border-radius: 8px;
-      padding: 1rem;
-      transition: all 0.2s;
+      background: var(--bg-card); border: 1px solid var(--border-primary);
+      border-radius: 10px; padding: 0.9rem 1rem; transition: border-color 0.2s;
     }
-    .figure-card:hover {
-      border-color: var(--accent-cyan);
-      transform: translateY(-2px);
-    }
-    .figure-card a {
-      color: var(--text-primary);
-      text-decoration: none;
-      display: block;
-    }
-    .figure-card .type {
-      font-family: var(--font-mono);
-      font-size: 0.75rem;
-      color: var(--accent-purple);
-      margin-bottom: 0.5rem;
-    }
-    .figure-card .name {
-      font-size: 0.95rem;
-      margin-bottom: 0.25rem;
-    }
-    .figure-count {
-      background: var(--bg-tertiary);
-      padding: 0.25rem 0.75rem;
-      border-radius: 4px;
-      font-family: var(--font-mono);
-      font-size: 0.85rem;
-      color: var(--accent-green);
-    }
+    .figure-card:hover { border-color: var(--accent-cyan); }
+    .figure-card.is-new { border-color: rgba(63,185,80,0.55); }
+    .figure-card a { color: var(--text-primary); text-decoration: none; display: block; }
+    .figure-card a:hover .name { text-decoration: underline; }
+    .figure-card .name { font-size: 0.98rem; font-weight: 600; line-height: 1.35; margin-bottom: 0.3rem; }
+    .figure-card .file { font-family: var(--font-mono); font-size: 0.72rem; color: var(--text-muted);
+      word-break: break-all; }
+    .figure-card .ev { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-secondary);
+      margin-top: 0.4rem; }
+    .figure-card .used { font-size: 0.75rem; color: var(--accent-cyan); margin-top: 0.4rem; }
+    .figure-card .unused { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.4rem; }
+    .newbadge { display: inline-block; background: var(--accent-green); color: var(--bg-primary);
+      font-family: var(--font-mono); font-size: 0.63rem; font-weight: 700; letter-spacing: 0.09em;
+      border-radius: 999px; padding: 0.1rem 0.45rem; margin-bottom: 0.4rem; }
+    .figure-count { background: var(--bg-tertiary); padding: 0.2rem 0.65rem; border-radius: 4px;
+      font-family: var(--font-mono); font-size: 0.78rem; color: var(--accent-green); font-weight: 400; }
+    .gen-note { background: var(--bg-card); border: 1px solid var(--border-primary);
+      border-left: 4px solid var(--accent-cyan); border-radius: 0 10px 10px 0;
+      padding: 0.9rem 1.1rem; margin: 0 0 2rem; font-size: 0.9rem; color: var(--text-secondary); }
+    .gen-note b { color: var(--text-primary); }
+    .gen-note code { font-family: var(--font-mono); font-size: 0.82rem; color: var(--text-primary); }
+    /* --- superseded archive: deliberately subdued --- */
+    .archive { margin-top: 4rem; padding-top: 2rem; border-top: 2px dashed var(--border-primary); }
+    .archive h2 { color: var(--text-secondary); font-size: 1.1rem; border: 0; padding: 0; margin: 0 0 0.6rem; }
+    .archive .why { background: var(--bg-secondary); border: 1px dashed var(--border-primary);
+      border-radius: 10px; padding: 0.9rem 1.1rem; margin: 0 0 1.4rem; font-size: 0.87rem;
+      color: var(--text-muted); max-width: 90ch; }
+    .archive .why b { color: var(--text-secondary); }
+    .archive-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 0.6rem; }
+    .archive-card { background: var(--bg-secondary); border: 1px dashed var(--border-primary);
+      border-radius: 8px; padding: 0.6rem 0.75rem; }
+    .archive-card a { color: var(--text-secondary); text-decoration: none; display: block; }
+    .archive-card a:hover { color: var(--text-primary); text-decoration: underline; }
+    .archive-card .name { font-size: 0.85rem; line-height: 1.35; }
+    .archive-card .file { font-family: var(--font-mono); font-size: 0.68rem; color: var(--text-muted);
+      word-break: break-all; margin-top: 0.2rem; }
   </style>
 </head>
 <body>
-  <div class="watermark">© 2025–2026 Subramaniyam (Sam) Pooni<br>All Rights Reserved<br>Proprietary & Confidential</div>
-  
+  <div class="watermark">© 2025–2026 Subramaniyam (Sam) Pooni<br>All Rights Reserved<br>Proprietary &amp; Confidential</div>
+
   <nav class="nav"><div class="nav-inner"><a href="../index.html" class="nav-brand"><span class="nav-brand-icon">⚡</span> KV-Cache Architecture</a></div></nav>
-  
+
   <div class="page-wrapper">
     <div class="container">
       <header class="chapter-header">
         <div class="chapter-label">Visual Reference</div>
         <h1 class="chapter-title">Figure Gallery</h1>
-        <p class="chapter-subtitle">114 diagrams across 51 source files covering all aspects of the KV-Cache offloading architecture.</p>
+        <p class="chapter-subtitle">Every figure in the package, listed from the filesystem. 70 live figures across 14 chapters, 12 of them new in v6.0, plus a 36-file v4.0 archive retained only so the retraction stays checkable.</p>
       </header>
 
-      <div class="stats-grid" style="margin-bottom: 3rem;">
-        <div class="stat-box"><div class="stat-value">114</div><div class="stat-label">Total Diagrams</div></div>
-        <div class="stat-box"><div class="stat-value">51</div><div class="stat-label">Source Files</div></div>
+      <div class="stats-grid" style="margin-bottom: 2rem;">
+        <div class="stat-box"><div class="stat-value">70</div><div class="stat-label">Live Figures</div></div>
+        <div class="stat-box"><div class="stat-value">12</div><div class="stat-label">New in v6.0</div></div>
         <div class="stat-box"><div class="stat-value">14</div><div class="stat-label">Chapters</div></div>
-        <div class="stat-box"><div class="stat-value">27</div><div class="stat-label">KV-Cache Figs</div></div>
+        <div class="stat-box"><div class="stat-value">36</div><div class="stat-label">Superseded (v4.0)</div></div>
+      </div>
+
+      <div class="gen-note">
+        <b>This page is generated from the filesystem.</b> Every card below is a file that exists in
+        <code>figures/</code>; every link was resolved against disk when the page was built. Counts are
+        not hand-maintained. &ldquo;Embedded in&rdquo; is read from the <code>&lt;iframe&gt;</code> tags in
+        <code>chapters/</code>, so a figure marked <i>gallery only</i> is genuinely not embedded in any
+        chapter body.
       </div>
 
       <div class="figure-gallery">
-        
         <div class="chapter-section">
-          <h3>CH00 — Executive Summary <span class="figure-count">14 diagrams / 6 files</span></h3>
+          <h3>CH00 &mdash; Executive Summary <span class="figure-count">7 figures</span></h3>
           <div class="figure-grid">
-            <div class="figure-card"><a href="ch00-executive-summary/visual-appendix.html" target="_blank"><div class="type">HTML</div><div class="name">Corrected Visual Evidence Map</div></a></div>
-            <div class="figure-card"><a href="ch00-executive-summary/figure-2-1-inference-phases.html" target="_blank"><div class="type">HTML</div><div class="name">Inference Phases</div></a></div>
-            <div class="figure-card"><a href="ch00-executive-summary/figure-2-2-kv-cache-growth.html" target="_blank"><div class="type">HTML</div><div class="name">KV-Cache Growth</div></a></div>
-            <div class="figure-card"><a href="ch00-executive-summary/figure-3-3-attention-locality.html" target="_blank"><div class="type">HTML</div><div class="name">Attention Locality</div></a></div>
-            <div class="figure-card"><a href="ch00-executive-summary/figure-3-4-gqa-structure.html" target="_blank"><div class="type">HTML</div><div class="name">GQA Structure</div></a></div>
-            <div class="figure-card"><a href="ch00-executive-summary/figure-4-2-ema-eviction.html" target="_blank"><div class="type">HTML</div><div class="name">EMA Eviction</div></a></div>
+            <div class="figure-card"><a href="ch00-executive-summary/figure-2-1-inference-phases.html" target="_blank" rel="noopener"><div class="name">Figure 2.1 — LLM Inference Phases</div><div class="file">figure-2-1-inference-phases.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch00-executive-summary/figure-2-2-kv-cache-growth.html" target="_blank" rel="noopener"><div class="name">Figure 2.2 — KV-Cache Growth</div><div class="file">figure-2-2-kv-cache-growth.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch00-executive-summary/figure-3-3-attention-locality.html" target="_blank" rel="noopener"><div class="name">Figure 7.2 — Attention Locality Patterns</div><div class="file">figure-3-3-attention-locality.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch00-executive-summary/figure-3-4-gqa-structure.html" target="_blank" rel="noopener"><div class="name">Figure 7.3 — GQA Structure</div><div class="file">figure-3-4-gqa-structure.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch00-executive-summary/figure-4-2-ema-eviction.html" target="_blank" rel="noopener"><div class="name">Figure 7.9 — EMA Eviction Policy</div><div class="file">figure-4-2-ema-eviction.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch00-executive-summary/competitive-landscape.html" target="_blank" rel="noopener"><div class="name">KV-Cache Offloading: Competitive Landscape</div><div class="file">competitive-landscape.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch00-executive-summary/visual-appendix.html" target="_blank" rel="noopener"><div class="name">Visual appendix</div><div class="file">visual-appendix.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
           </div>
         </div>
 
         <div class="chapter-section">
-          <h3>CH01 — Introduction <span class="figure-count">5 diagrams / 3 files</span></h3>
+          <h3>CH01 &mdash; Introduction <span class="figure-count">3 figures</span></h3>
           <div class="figure-grid">
-            <div class="figure-card"><a href="ch01-introduction/visual-appendix.html" target="_blank"><div class="type">HTML</div><div class="name">Visual Appendix</div></a></div>
-            <div class="figure-card"><a href="ch01-introduction/distributed-endpoint-diagrams.html" target="_blank"><div class="type">HTML</div><div class="name">Distributed Endpoint Diagrams</div></a></div>
-            <div class="figure-card"><a href="ch01-introduction/kv-cache-math-explainer.html" target="_blank"><div class="type">HTML</div><div class="name">KV-Cache Math Explainer</div></a></div>
+            <div class="figure-card"><a href="ch01-introduction/distributed-endpoint-diagrams.html" target="_blank" rel="noopener"><div class="name">Distributed endpoint diagrams</div><div class="file">distributed-endpoint-diagrams.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch01-introduction/kv-cache-math-explainer.html" target="_blank" rel="noopener"><div class="name">KV-Cache Math Explainer</div><div class="file">kv-cache-math-explainer.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch01-introduction/visual-appendix.html" target="_blank" rel="noopener"><div class="name">Visual appendix</div><div class="file">visual-appendix.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
           </div>
         </div>
 
         <div class="chapter-section">
-          <h3>CH02 — Background <span class="figure-count">8 diagrams / 7 files</span></h3>
+          <h3>CH02 &mdash; Background <span class="figure-count">9 figures</span></h3>
           <div class="figure-grid">
-            <div class="figure-card"><a href="ch02-background/visual-appendix.html" target="_blank"><div class="type">HTML</div><div class="name">Visual Appendix</div></a></div>
-            <div class="figure-card"><a href="ch02-background/figure-2-1-inference-phases.html" target="_blank"><div class="type">HTML</div><div class="name">Inference Phases</div></a></div>
-            <div class="figure-card"><a href="ch02-background/figure-2-2-kv-cache-growth.html" target="_blank"><div class="type">HTML</div><div class="name">KV-Cache Growth</div></a></div>
-            <div class="figure-card"><a href="ch02-background/figure-2-3-why-kv-cache.html" target="_blank"><div class="type">HTML</div><div class="name">Why KV-Cache</div></a></div>
-            <div class="figure-card"><a href="ch02-background/figure-2-4-roofline.html" target="_blank"><div class="type">HTML</div><div class="name">Roofline Model</div></a></div>
-            <div class="figure-card"><a href="ch02-background/current-approaches-comparison.html" target="_blank"><div class="type">HTML</div><div class="name">Current Approaches</div></a></div>
-            <div class="figure-card"><a href="ch02-background/section-2-1-inference-fundamentals.html" target="_blank"><div class="type">HTML</div><div class="name">Inference Fundamentals</div></a></div>
+            <div class="figure-card"><a href="ch02-background/bandwidth-utilisation.html" target="_blank" rel="noopener"><div class="name">Bandwidth Utilisation</div><div class="file">bandwidth-utilisation.html</div></a><div class="ev">Figure 2.7 · Measured</div><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch02-background/current-approaches-comparison.html" target="_blank" rel="noopener"><div class="name">Current Approaches Comparison</div><div class="file">current-approaches-comparison.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch02-background/figure-2-1-inference-phases.html" target="_blank" rel="noopener"><div class="name">Figure 2.1 — LLM Inference Phases</div><div class="file">figure-2-1-inference-phases.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch02-background/figure-2-2-kv-cache-growth.html" target="_blank" rel="noopener"><div class="name">Figure 2.2 — KV-Cache Growth</div><div class="file">figure-2-2-kv-cache-growth.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch02-background/figure-2-3-why-kv-cache.html" target="_blank" rel="noopener"><div class="name">Figure 2.3 — Why KV-Cache</div><div class="file">figure-2-3-why-kv-cache.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch02-background/figure-2-4-roofline.html" target="_blank" rel="noopener"><div class="name">Figure 2.4 — Roofline Model</div><div class="file">figure-2-4-roofline.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch02-background/section-2-1-inference-fundamentals.html" target="_blank" rel="noopener"><div class="name">Section 2.1 — Inference Fundamentals</div><div class="file">section-2-1-inference-fundamentals.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch02-background/measured-two-term-decode.html" target="_blank" rel="noopener"><div class="name">Two-Term Decode Model</div><div class="file">measured-two-term-decode.html</div></a><div class="ev">Figure 2.6 · Measured</div><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch02-background/visual-appendix.html" target="_blank" rel="noopener"><div class="name">Visual appendix</div><div class="file">visual-appendix.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
           </div>
         </div>
 
         <div class="chapter-section">
-          <h3>CH03 — Architecture <span class="figure-count">11 diagrams / 5 files</span></h3>
+          <h3>CH03 &mdash; The KV-State Control Plane <span class="figure-count">8 figures &middot; 2 new</span></h3>
           <div class="figure-grid">
-            <div class="figure-card"><a href="ch03-architecture/diagram-architecture-html.html" target="_blank"><div class="type">HTML</div><div class="name">Architecture Diagram</div></a></div>
-            <div class="figure-card"><a href="ch03-architecture/endpoint-diagram.html" target="_blank"><div class="type">HTML</div><div class="name">Endpoint Diagram</div></a></div>
-            <div class="figure-card"><a href="ch03-architecture/cxl-architecture-diagram.html" target="_blank"><div class="type">HTML</div><div class="name">CXL Architecture</div></a></div>
-            <div class="figure-card"><a href="ch03-architecture/figure-3-1-cxl-architecture.html" target="_blank"><div class="type">HTML</div><div class="name">CXL Architecture Detail</div></a></div>
-            <div class="figure-card"><a href="ch03-architecture/figure-3-2-memory-hierarchy.html" target="_blank"><div class="type">HTML</div><div class="name">Memory Hierarchy</div></a></div>
+            <div class="figure-card is-new"><a href="ch03-architecture/kv-state-control-plane.html" target="_blank" rel="noopener"><span class="newbadge">New &middot; v6.0</span><div class="name">KV-State Control Plane</div><div class="file">kv-state-control-plane.html</div></a><div class="ev">Figure 3.2 · Illustrative — proposed architecture · one stage Simulated (provisional)</div><div class="used">Embedded in Chapter 3</div></div>
+            <div class="figure-card is-new"><a href="ch03-architecture/two-hierarchies.html" target="_blank" rel="noopener"><span class="newbadge">New &middot; v6.0</span><div class="name">Two Orthogonal Hierarchies</div><div class="file">two-hierarchies.html</div></a><div class="ev">Figure 3.1 · Illustrative — proposed architecture</div><div class="used">Embedded in Chapter 3</div></div>
+            <div class="figure-card"><a href="ch03-architecture/cxl-architecture-diagram.html" target="_blank" rel="noopener"><div class="name">CXL Architecture Diagram</div><div class="file">cxl-architecture-diagram.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch03-architecture/figure-3-1-cxl-architecture.html" target="_blank" rel="noopener"><div class="name">CXL Architecture Diagram</div><div class="file">figure-3-1-cxl-architecture.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch03-architecture/diagram-architecture-html.html" target="_blank" rel="noopener"><div class="name">Distributed Endpoint Architecture</div><div class="file">diagram-architecture-html.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch03-architecture/endpoint-diagram.html" target="_blank" rel="noopener"><div class="name">Endpoint diagram</div><div class="file">endpoint-diagram.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch03-architecture/figure-3-2-memory-hierarchy.html" target="_blank" rel="noopener"><div class="name">Figure 3.2 — Memory Hierarchy</div><div class="file">figure-3-2-memory-hierarchy.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch03-architecture/four-constraints.html" target="_blank" rel="noopener"><div class="name">Four Constraints</div><div class="file">four-constraints.html</div></a><div class="ev">Figure 3.1 · Analytical model</div><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
           </div>
         </div>
 
         <div class="chapter-section">
-          <h3>CH04 — Latency <span class="figure-count">9 diagrams / 4 files</span></h3>
+          <h3>CH04 &mdash; Hardware Measurement <span class="figure-count">5 figures &middot; 1 new</span></h3>
           <div class="figure-grid">
-            <div class="figure-card"><a href="ch04-latency/diagram-latency-path-html.html" target="_blank"><div class="type">HTML</div><div class="name">Latency Path</div></a></div>
-            <div class="figure-card"><a href="ch04-latency/effective-latency-analysis.html" target="_blank"><div class="type">HTML</div><div class="name">Effective Latency Analysis</div></a></div>
-            <div class="figure-card"><a href="ch04-latency/figure-2-5-latency-waterfall.html" target="_blank"><div class="type">HTML</div><div class="name">Latency Waterfall</div></a></div>
-            <div class="figure-card"><a href="ch04-latency/latency-calculations.html" target="_blank"><div class="type">HTML</div><div class="name">Latency Calculations</div></a></div>
+            <div class="figure-card is-new"><a href="ch04-latency/movement-vs-regeneration.html" target="_blank" rel="noopener"><span class="newbadge">New &middot; v6.0</span><div class="name">Movement vs Regeneration</div><div class="file">movement-vs-regeneration.html</div></a><div class="ev">Figure 5.1 · Analytical model</div><div class="used">Embedded in Chapter 5</div></div>
+            <div class="figure-card"><a href="ch04-latency/diagram-latency-path-html.html" target="_blank" rel="noopener"><div class="name">CXL.mem vs PCIe Latency Paths</div><div class="file">diagram-latency-path-html.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch04-latency/effective-latency-analysis.html" target="_blank" rel="noopener"><div class="name">Effective Latency Analysis</div><div class="file">effective-latency-analysis.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch04-latency/figure-2-5-latency-waterfall.html" target="_blank" rel="noopener"><div class="name">Figure 4.3 — Latency Waterfall</div><div class="file">figure-2-5-latency-waterfall.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch04-latency/latency-calculations.html" target="_blank" rel="noopener"><div class="name">Latency Calculations</div><div class="file">latency-calculations.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
           </div>
         </div>
 
         <div class="chapter-section">
-          <h3>CH05 — Bandwidth <span class="figure-count">5 diagrams / 1 file</span></h3>
+          <h3>CH05 &mdash; Bandwidth and Tier Economics <span class="figure-count">2 figures &middot; 1 new</span></h3>
           <div class="figure-grid">
-            <div class="figure-card"><a href="ch05-bandwidth/bandwidth-aggregation.html" target="_blank"><div class="type">HTML</div><div class="name">Bandwidth Aggregation</div></a></div>
+            <div class="figure-card is-new"><a href="ch05-bandwidth/sustainability-vs-hiding.html" target="_blank" rel="noopener"><span class="newbadge">New &middot; v6.0</span><div class="name">Sustainability vs Hiding</div><div class="file">sustainability-vs-hiding.html</div></a><div class="ev">Figure 5.2 · Analytical model</div><div class="used">Embedded in Chapter 5</div></div>
+            <div class="figure-card"><a href="ch05-bandwidth/bandwidth-aggregation.html" target="_blank" rel="noopener"><div class="name">Bandwidth Aggregation</div><div class="file">bandwidth-aggregation.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
           </div>
         </div>
 
         <div class="chapter-section">
-          <h3>CH06 — Preprocessing <span class="figure-count">3 diagrams / 1 file</span></h3>
+          <h3>CH06 &mdash; Preprocessing Offload <span class="figure-count">1 figure</span></h3>
           <div class="figure-grid">
-            <div class="figure-card"><a href="ch06-preprocessing/preprocessing-offload.html" target="_blank"><div class="type">HTML</div><div class="name">Preprocessing Offload</div></a></div>
+            <div class="figure-card"><a href="ch06-preprocessing/preprocessing-offload.html" target="_blank" rel="noopener"><div class="name">Preprocessing Offload</div><div class="file">preprocessing-offload.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
           </div>
         </div>
 
         <div class="chapter-section">
-          <h3>CH07 — KV-Cache Management <span class="figure-count">27 diagrams / 14 files</span></h3>
+          <h3>CH07 &mdash; Residency and Policy State <span class="figure-count">19 figures &middot; 4 new</span></h3>
           <div class="figure-grid">
-            <div class="figure-card"><a href="ch07-kv-cache/diagram-ema-scoring-html.html" target="_blank"><div class="type">HTML</div><div class="name">EMA Scoring</div></a></div>
-            <div class="figure-card"><a href="ch07-kv-cache/diagram-memory-wall-html.html" target="_blank"><div class="type">HTML</div><div class="name">Memory Wall</div></a></div>
-            <div class="figure-card"><a href="ch07-kv-cache/diagram-per-head-html.html" target="_blank"><div class="type">HTML</div><div class="name">Per-Head Tracking</div></a></div>
-            <div class="figure-card"><a href="ch07-kv-cache/ema-calculation.html" target="_blank"><div class="type">HTML</div><div class="name">EMA Calculation</div></a></div>
-            <div class="figure-card"><a href="ch07-kv-cache/ema-eviction.html" target="_blank"><div class="type">HTML</div><div class="name">EMA Eviction</div></a></div>
-            <div class="figure-card"><a href="ch07-kv-cache/gqa-explainer.html" target="_blank"><div class="type">HTML</div><div class="name">GQA Explainer</div></a></div>
-            <div class="figure-card"><a href="ch07-kv-cache/gqa-tracking-diagram.html" target="_blank"><div class="type">HTML</div><div class="name">GQA Tracking</div></a></div>
-            <div class="figure-card"><a href="ch07-kv-cache/per-head-tracking.html" target="_blank"><div class="type">HTML</div><div class="name">Per-Head Tracking Detail</div></a></div>
-            <div class="figure-card"><a href="ch07-kv-cache/rope-prefetch.html" target="_blank"><div class="type">HTML</div><div class="name">RoPE Prefetch</div></a></div>
-            <div class="figure-card"><a href="ch07-kv-cache/rope-prefetch-example.html" target="_blank"><div class="type">HTML</div><div class="name">RoPE Prefetch Example</div></a></div>
-            <div class="figure-card"><a href="ch07-kv-cache/figure-3-3-attention-locality.html" target="_blank"><div class="type">HTML</div><div class="name">Attention Locality</div></a></div>
-            <div class="figure-card"><a href="ch07-kv-cache/figure-3-4-gqa-structure.html" target="_blank"><div class="type">HTML</div><div class="name">GQA Structure</div></a></div>
-            <div class="figure-card"><a href="ch07-kv-cache/figure-4-2-ema-eviction.html" target="_blank"><div class="type">HTML</div><div class="name">EMA Eviction Component</div></a></div>
-            <div class="figure-card"><a href="ch07-kv-cache/figure-4-3-rope-prefetch.html" target="_blank"><div class="type">HTML</div><div class="name">RoPE Prefetch Component</div></a></div>
+            <div class="figure-card is-new"><a href="ch07-kv-cache/erratum-pick-victim.html" target="_blank" rel="noopener"><span class="newbadge">New &middot; v6.0</span><div class="name">Erratum: _pick_victim()</div><div class="file">erratum-pick-victim.html</div></a><div class="ev">Figure 7.3 · Simulated (provisional)</div><div class="used">Embedded in Chapter 7</div></div>
+            <div class="figure-card is-new"><a href="ch07-kv-cache/kv-block-object.html" target="_blank" rel="noopener"><span class="newbadge">New &middot; v6.0</span><div class="name">KV Block Object</div><div class="file">kv-block-object.html</div></a><div class="ev">Figure 7.1 · Illustrative — object model specification</div><div class="used">Embedded in Chapter 7</div></div>
+            <div class="figure-card is-new"><a href="ch07-kv-cache/lossless-vs-lossy.html" target="_blank" rel="noopener"><span class="newbadge">New &middot; v6.0</span><div class="name">Lossless vs Lossy Boundary</div><div class="file">lossless-vs-lossy.html</div></a><div class="ev">Figure 7.2 · Analytical model</div><div class="used">Embedded in Chapter 7</div></div>
+            <div class="figure-card is-new"><a href="ch07-kv-cache/movement-amplification.html" target="_blank" rel="noopener"><span class="newbadge">New &middot; v6.0</span><div class="name">Movement Amplification</div><div class="file">movement-amplification.html</div></a><div class="ev">Figure 7.4 · Analytical model</div><div class="used">Embedded in Chapter 7</div></div>
+            <div class="figure-card"><a href="ch07-kv-cache/diagram-memory-wall-html.html" target="_blank" rel="noopener"><div class="name">Attention Patterns &amp; RoPE Locality</div><div class="file">diagram-memory-wall-html.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch07-kv-cache/ema-eviction.html" target="_blank" rel="noopener"><div class="name">Attention-Aware Block Eviction (LRFU)</div><div class="file">ema-eviction.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch07-kv-cache/figure-4-3-rope-prefetch.html" target="_blank" rel="noopener"><div class="name">Figure 7.10 — RoPE Distance Bound</div><div class="file">figure-4-3-rope-prefetch.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch07-kv-cache/figure-3-3-attention-locality.html" target="_blank" rel="noopener"><div class="name">Figure 7.2 — Attention Locality Patterns</div><div class="file">figure-3-3-attention-locality.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch07-kv-cache/figure-3-4-gqa-structure.html" target="_blank" rel="noopener"><div class="name">Figure 7.3 — GQA Structure</div><div class="file">figure-3-4-gqa-structure.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch07-kv-cache/figure-7-3-gqa-structure.html" target="_blank" rel="noopener"><div class="name">Figure 7.3 — GQA Structure</div><div class="file">figure-7-3-gqa-structure.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch07-kv-cache/figure-4-2-ema-eviction.html" target="_blank" rel="noopener"><div class="name">Figure 7.9 — LRFU Block Eviction</div><div class="file">figure-4-2-ema-eviction.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch07-kv-cache/gqa-tracking-diagram.html" target="_blank" rel="noopener"><div class="name">GQA Per-Head Scoring Streams</div><div class="file">gqa-tracking-diagram.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch07-kv-cache/gqa-explainer.html" target="_blank" rel="noopener"><div class="name">Grouped Query Attention</div><div class="file">gqa-explainer.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch07-kv-cache/diagram-ema-scoring-html.html" target="_blank" rel="noopener"><div class="name">LRFU Decayed-Frequency Scoring</div><div class="file">diagram-ema-scoring-html.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch07-kv-cache/ema-calculation.html" target="_blank" rel="noopener"><div class="name">LRFU Score and Eviction Priority</div><div class="file">ema-calculation.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch07-kv-cache/diagram-per-head-html.html" target="_blank" rel="noopener"><div class="name">Per-Head Scoring Granularity</div><div class="file">diagram-per-head-html.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch07-kv-cache/per-head-tracking.html" target="_blank" rel="noopener"><div class="name">Per-Head Scoring Signals</div><div class="file">per-head-tracking.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch07-kv-cache/rope-prefetch.html" target="_blank" rel="noopener"><div class="name">RoPE Geometry Explainer</div><div class="file">rope-prefetch.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch07-kv-cache/rope-prefetch-example.html" target="_blank" rel="noopener"><div class="name">RoPE Geometry — Worked Example</div><div class="file">rope-prefetch-example.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
           </div>
         </div>
 
         <div class="chapter-section">
-          <h3>CH08 — MoE Routing <span class="figure-count">5 diagrams / 1 file</span></h3>
+          <h3>CH08 &mdash; MoE Routing <span class="figure-count">1 figure</span></h3>
           <div class="figure-grid">
-            <div class="figure-card"><a href="ch08-moe/moe-routing.html" target="_blank"><div class="type">HTML</div><div class="name">MoE Routing</div></a></div>
+            <div class="figure-card"><a href="ch08-moe/moe-routing.html" target="_blank" rel="noopener"><div class="name">MoE Routing Support</div><div class="file">moe-routing.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
           </div>
         </div>
 
         <div class="chapter-section">
-          <h3>CH09 — GPU Integration <span class="figure-count">7 diagrams / 2 files</span></h3>
+          <h3>CH09 &mdash; GPU Integration <span class="figure-count">2 figures</span></h3>
           <div class="figure-grid">
-            <div class="figure-card"><a href="ch09-gpu-integration/gpu-integration.html" target="_blank"><div class="type">HTML</div><div class="name">GPU Integration</div></a></div>
-            <div class="figure-card"><a href="ch09-gpu-integration/gpu-cxl-kvcache.html" target="_blank"><div class="type">HTML</div><div class="name">GPU-CXL KV-Cache</div></a></div>
+            <div class="figure-card"><a href="ch09-gpu-integration/gpu-integration.html" target="_blank" rel="noopener"><div class="name">GPU Integration</div><div class="file">gpu-integration.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch09-gpu-integration/gpu-cxl-kvcache.html" target="_blank" rel="noopener"><div class="name">GPU–Tier KV-Cache Interaction</div><div class="file">gpu-cxl-kvcache.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
           </div>
         </div>
 
         <div class="chapter-section">
-          <h3>CH10 — Market Landscape <span class="figure-count">6 diagrams / 2 files</span></h3>
+          <h3>CH10 &mdash; The 2026 Landscape <span class="figure-count">4 figures &middot; 1 new</span></h3>
           <div class="figure-grid">
-            <div class="figure-card"><a href="ch10-market/market-landscape.html" target="_blank"><div class="type">HTML</div><div class="name">Market Landscape</div></a></div>
-            <div class="figure-card"><a href="ch10-market/kv-cache-landscape.html" target="_blank"><div class="type">HTML</div><div class="name">KV-Cache Landscape</div></a></div>
+            <div class="figure-card is-new"><a href="ch10-market/landscape-2026.html" target="_blank" rel="noopener"><span class="newbadge">New &middot; v6.0</span><div class="name">2026 Landscape</div><div class="file">landscape-2026.html</div></a><div class="ev">Figure 10.1 · External literature</div><div class="used">Embedded in Chapter 10</div></div>
+            <div class="figure-card"><a href="ch10-market/market-landscape.html" target="_blank" rel="noopener"><div class="name">2026 Landscape by Decision</div><div class="file">market-landscape.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch10-market/competitive-landscape.html" target="_blank" rel="noopener"><div class="name">The 2026 KV-Cache Landscape</div><div class="file">competitive-landscape.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch10-market/kv-cache-landscape.html" target="_blank" rel="noopener"><div class="name">The 2026 KV-Cache Map</div><div class="file">kv-cache-landscape.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
           </div>
         </div>
 
         <div class="chapter-section">
-          <h3>CH11 — Performance <span class="figure-count">6 diagrams / 2 files</span></h3>
+          <h3>CH11 &mdash; Results Summary <span class="figure-count">5 figures &middot; 2 new</span></h3>
           <div class="figure-grid">
-            <div class="figure-card"><a href="ch11-performance/figure-4-1-full-architecture.html" target="_blank"><div class="type">HTML</div><div class="name">Full Architecture</div></a></div>
-            <div class="figure-card"><a href="ch11-performance/figure-5-1-performance-benchmarks.html" target="_blank"><div class="type">HTML</div><div class="name">Performance Benchmarks</div></a></div>
+            <div class="figure-card is-new"><a href="ch11-performance/alpha-grid.html" target="_blank" rel="noopener"><span class="newbadge">New &middot; v6.0</span><div class="name">Alpha Grid</div><div class="file">alpha-grid.html</div></a><div class="ev">Figure 11.1 · Simulated (provisional)</div><div class="used">Embedded in Chapter 11</div></div>
+            <div class="figure-card is-new"><a href="ch11-performance/persistent-metadata.html" target="_blank" rel="noopener"><span class="newbadge">New &middot; v6.0</span><div class="name">Persistent Metadata</div><div class="file">persistent-metadata.html</div></a><div class="ev">Figure 11.2 · Simulated (provisional)</div><div class="used">Embedded in Chapter 11</div></div>
+            <div class="figure-card"><a href="ch11-performance/figure-4-1-full-architecture.html" target="_blank" rel="noopener"><div class="name">Figure 11.1 — The KV-State Control Plane</div><div class="file">figure-4-1-full-architecture.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch11-performance/figure-5-1-performance-benchmarks.html" target="_blank" rel="noopener"><div class="name">Figure 11.2 — Residency-State Persistence: The Largest Effect in the Study</div><div class="file">figure-5-1-performance-benchmarks.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch11-performance/policy-sweep.html" target="_blank" rel="noopener"><div class="name">Policy Sweep</div><div class="file">policy-sweep.html</div></a><div class="ev">Figure 11.1 · Simulated (provisional)</div><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
           </div>
         </div>
 
         <div class="chapter-section">
-          <h3>CH12 — Implementation <span class="figure-count">5 diagrams / 2 files</span></h3>
+          <h3>CH12 &mdash; A Decision Procedure <span class="figure-count">3 figures &middot; 1 new</span></h3>
           <div class="figure-grid">
-            <div class="figure-card"><a href="ch12-implementation/cache-management-placement.html" target="_blank"><div class="type">HTML</div><div class="name">Cache Management Placement</div></a></div>
-            <div class="figure-card"><a href="ch12-implementation/kv-cache-diagrams-html.html" target="_blank"><div class="type">HTML</div><div class="name">KV-Cache Diagrams</div></a></div>
+            <div class="figure-card is-new"><a href="ch12-implementation/decision-procedure.html" target="_blank" rel="noopener"><span class="newbadge">New &middot; v6.0</span><div class="name">Decision Procedure</div><div class="file">decision-procedure.html</div></a><div class="ev">Figure 12.1 · Illustrative — decision procedure</div><div class="used">Embedded in Chapter 12</div></div>
+            <div class="figure-card"><a href="ch12-implementation/cache-management-placement.html" target="_blank" rel="noopener"><div class="name">Cache Management Placement</div><div class="file">cache-management-placement.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
+            <div class="figure-card"><a href="ch12-implementation/kv-cache-diagrams-html.html" target="_blank" rel="noopener"><div class="name">KV Cache Offloading — Visual Diagrams (v6.0)</div><div class="file">kv-cache-diagrams-html.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
           </div>
         </div>
 
         <div class="chapter-section">
-          <h3>CH13 — Conclusion <span class="figure-count">3 diagrams / 1 file</span></h3>
+          <h3>CH13 &mdash; Conclusion <span class="figure-count">1 figure</span></h3>
           <div class="figure-grid">
-            <div class="figure-card"><a href="ch13-conclusion/cover-page.html" target="_blank"><div class="type">HTML</div><div class="name">Cover Page</div></a></div>
+            <div class="figure-card"><a href="ch13-conclusion/cover-page.html" target="_blank" rel="noopener"><div class="name">Distributed Endpoint Architecture</div><div class="file">cover-page.html</div></a><div class="unused">Gallery only &mdash; not embedded in a chapter body</div></div>
           </div>
         </div>
 
+      </div>
+
+      <div class="archive">
+        <h2>Superseded &mdash; v4.0 archive (36 files)</h2>
+        <div class="why">
+          These figures are <b>retracted</b>. They are retained, unmodified, for one reason only:
+          <b>so the retraction stays checkable</b>. Every headline number they carry &mdash; the 97% hit
+          rate, the 72&rarr;80&rarr;87&rarr;93&rarr;97 ladder, +25 points over LRU, 16&times; user capacity,
+          65&times;, 11.5&times;, 15.6&times;, 36% CapEx &mdash; is listed as retracted in
+          <code>RETRACTIONS.md</code> and &sect;7 of <code>CANONICAL-NUMBERS.md</code>. Nothing here was
+          dishonest; all of it was constructed rather than observed, and the construction did not survive
+          contact with a measurement. <b>Do not cite anything on this shelf.</b> Use the live figures above.
+        </div>
+        <div class="archive-grid">
+          <div class="archive-card"><a href="superseded-v4.0/bandwidth-aggregation.html" target="_blank" rel="noopener"><div class="name">Bandwidth Aggregation</div><div class="file">bandwidth-aggregation.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/cache-management-placement.html" target="_blank" rel="noopener"><div class="name">Cache Management Placement</div><div class="file">cache-management-placement.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/competitive-landscape.html" target="_blank" rel="noopener"><div class="name">KV-Cache Offloading: Competitive Landscape</div><div class="file">competitive-landscape.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/cover-page.html" target="_blank" rel="noopener"><div class="name">Distributed Endpoint Architecture</div><div class="file">cover-page.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/current-approaches-comparison.html" target="_blank" rel="noopener"><div class="name">Current Approaches Comparison</div><div class="file">current-approaches-comparison.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/diagram-architecture-html.html" target="_blank" rel="noopener"><div class="name">Distributed Endpoint Architecture</div><div class="file">diagram-architecture-html.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/diagram-ema-scoring-html.html" target="_blank" rel="noopener"><div class="name">EMA Attention Scoring</div><div class="file">diagram-ema-scoring-html.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/diagram-latency-path-html.html" target="_blank" rel="noopener"><div class="name">CXL.mem vs PCIe Latency Paths</div><div class="file">diagram-latency-path-html.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/diagram-memory-wall-html.html" target="_blank" rel="noopener"><div class="name">Attention Patterns &amp; RoPE Locality</div><div class="file">diagram-memory-wall-html.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/diagram-per-head-html.html" target="_blank" rel="noopener"><div class="name">Per-Head Attention Tracking</div><div class="file">diagram-per-head-html.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/distributed-endpoint-diagrams.html" target="_blank" rel="noopener"><div class="name">Distributed endpoint diagrams</div><div class="file">distributed-endpoint-diagrams.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/effective-latency-analysis.html" target="_blank" rel="noopener"><div class="name">Effective Latency Analysis</div><div class="file">effective-latency-analysis.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/ema-calculation.html" target="_blank" rel="noopener"><div class="name">EMA Calculation</div><div class="file">ema-calculation.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/ema-eviction.html" target="_blank" rel="noopener"><div class="name">Attention-Aware Eviction</div><div class="file">ema-eviction.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/figure-11-1-full-architecture.html" target="_blank" rel="noopener"><div class="name">Figure 11.1 — Full Architecture</div><div class="file">figure-11-1-full-architecture.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/figure-11-2-performance-benchmarks.html" target="_blank" rel="noopener"><div class="name">Figure 11.2 — Modeled System Comparison</div><div class="file">figure-11-2-performance-benchmarks.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/figure-2-4-roofline.html" target="_blank" rel="noopener"><div class="name">Figure 2.4 — Roofline Model</div><div class="file">figure-2-4-roofline.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/figure-3-1-cxl-architecture.html" target="_blank" rel="noopener"><div class="name">CXL Architecture Diagram</div><div class="file">figure-3-1-cxl-architecture.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/figure-3-2-memory-hierarchy.html" target="_blank" rel="noopener"><div class="name">Figure 3.2 — Memory Hierarchy</div><div class="file">figure-3-2-memory-hierarchy.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/figure-4-3-latency-waterfall.html" target="_blank" rel="noopener"><div class="name">Figure 4.3 — Latency Waterfall</div><div class="file">figure-4-3-latency-waterfall.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/figure-7-10-rope-prefetch.html" target="_blank" rel="noopener"><div class="name">Figure 7.10 — RoPE Prefetch</div><div class="file">figure-7-10-rope-prefetch.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/figure-7-2-attention-locality.html" target="_blank" rel="noopener"><div class="name">Figure 7.2 — Attention Locality Patterns</div><div class="file">figure-7-2-attention-locality.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/figure-7-9-ema-eviction-policy.html" target="_blank" rel="noopener"><div class="name">Figure 7.9 — EMA Eviction Policy</div><div class="file">figure-7-9-ema-eviction-policy.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/gpu-cxl-kvcache.html" target="_blank" rel="noopener"><div class="name">Gpu cxl kvcache</div><div class="file">gpu-cxl-kvcache.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/gpu-integration.html" target="_blank" rel="noopener"><div class="name">GPU Integration</div><div class="file">gpu-integration.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/gqa-explainer.html" target="_blank" rel="noopener"><div class="name">Grouped Query Attention</div><div class="file">gqa-explainer.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/gqa-tracking-diagram.html" target="_blank" rel="noopener"><div class="name">GQA Per-Head Tracking</div><div class="file">gqa-tracking-diagram.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/kv-cache-diagrams-html.html" target="_blank" rel="noopener"><div class="name">KV Cache Offloading - Visual Diagrams &amp; Architecture</div><div class="file">kv-cache-diagrams-html.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/kv-cache-landscape.html" target="_blank" rel="noopener"><div class="name">KV Cache Offloading: Market Landscape</div><div class="file">kv-cache-landscape.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/latency-calculations.html" target="_blank" rel="noopener"><div class="name">Latency Calculations</div><div class="file">latency-calculations.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/market-landscape.html" target="_blank" rel="noopener"><div class="name">Market Landscape</div><div class="file">market-landscape.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/per-head-tracking.html" target="_blank" rel="noopener"><div class="name">Per-Head Tracking Rationale</div><div class="file">per-head-tracking.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/preprocessing-offload.html" target="_blank" rel="noopener"><div class="name">Preprocessing Offload</div><div class="file">preprocessing-offload.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/rope-prefetch-example.html" target="_blank" rel="noopener"><div class="name">RoPE Prefetch - Worked Example</div><div class="file">rope-prefetch-example.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/rope-prefetch.html" target="_blank" rel="noopener"><div class="name">RoPE Prefetch Strategy</div><div class="file">rope-prefetch.html</div></a></div>
+          <div class="archive-card"><a href="superseded-v4.0/visual-appendix.html" target="_blank" rel="noopener"><div class="name">Visual appendix</div><div class="file">visual-appendix.html</div></a></div>
+        </div>
       </div>
 
       <div class="chapter-nav">
@@ -229,7 +306,7 @@
           This document contains proprietary and confidential information.
         </p>
       </div>
-      <p>KV-State Management Architecture — v5.0.2</p>
+      <p>KV-State Management Architecture — v6.0</p>
     </footer>
   </div>
 </body>

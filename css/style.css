@@ -19,8 +19,8 @@
   
   /* Text Colors */
   --text-primary: #e6edf3;
-  --text-secondary: #8b949e;
-  --text-muted: #6e7681;
+  --text-secondary: #a2abb4;
+  --text-muted: #8b949e;
   --text-link: #58a6ff;
   
   /* Accent Colors */
@@ -625,8 +625,8 @@ tr:hover td {
   align-items: center;
   padding-left: 12px;
   font-size: 0.85rem;
-  font-weight: 500;
-  color: #fff;
+  font-weight: 600;
+  color: var(--bg-primary);
   transition: width var(--transition-slow);
 }
 
@@ -646,8 +646,8 @@ tr:hover td {
   align-items: center;
   justify-content: center;
   font-size: 0.85rem;
-  font-weight: 500;
-  color: #fff;
+  font-weight: 600;
+  color: var(--bg-primary);
 }
 
 /* =====================================================
@@ -1193,7 +1193,8 @@ body::before {
   padding-left: 1rem;
   font-family: var(--font-mono);
   font-size: 0.85rem;
-  color: #fff;
+  font-weight: 600;
+  color: var(--bg-primary);
   white-space: nowrap;
 }
 
@@ -1222,3 +1223,14 @@ body::before {
   color: var(--text-primary);
   margin-bottom: 0.25rem;
 }
+
+
+/* ── Accessibility helpers ───────────────────────────────────────────── */
+.sr-only { position:absolute!important; width:1px; height:1px; padding:0; margin:-1px;
+  overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+.sr-only:focus, .sr-only:active { position:static!important; width:auto; height:auto;
+  margin:0; overflow:visible; clip:auto; white-space:normal; }
+.bar-fill.bg-cyan, .bar-fill.bg-green, .bar-fill.bg-orange,
+.bar-fill.bg-red, .bar-fill.bg-purple { color: var(--text-primary); }
+a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
+  outline: 2px solid var(--accent-cyan); outline-offset: 2px; }

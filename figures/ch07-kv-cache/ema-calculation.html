@@ -3,17 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EMA Calculation</title>
+<title>LRFU Score and Eviction Priority</title>
+<link rel="stylesheet" href="../../css/style.css">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
-  font-family: 'Segoe UI', system-ui, sans-serif;
-  background: #ffffff;
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
   min-height: 100vh;
-  color: #1a1a1a;
+  color: var(--text-primary);
   padding: 2rem;
 }
-.container { max-width: 900px; margin: 0 auto; }
+.container { max-width: 900px; margin: 0 auto; padding: 0; }
 h1 {
   text-align: center;
   font-size: 2rem;
@@ -22,22 +23,22 @@ h1 {
 }
 .subtitle {
   text-align: center;
-  color: #555;
+  color: var(--text-secondary);
   font-size: 1.1rem;
   margin-bottom: 2rem;
 }
 .section {
-  background: #fafafa;
+  background: var(--bg-card);
   border-radius: 16px;
   padding: 1.75rem;
-  border: 2px solid #e8e8e8;
+  border: 2px solid var(--border-primary);
   margin-bottom: 1.5rem;
 }
 .section-title {
   font-size: 1.3rem;
   font-weight: 700;
   margin-bottom: 1.25rem;
-  color: #333;
+  color: var(--text-primary);
 }
 .param-row {
   display: flex;
@@ -46,8 +47,8 @@ h1 {
   flex-wrap: wrap;
 }
 .param {
-  background: #fff;
-  border: 2px solid #e0e0e0;
+  background: var(--bg-code);
+  border: 2px solid var(--border-primary);
   border-radius: 10px;
   padding: 1rem 1.25rem;
   flex: 1;
@@ -55,30 +56,34 @@ h1 {
 }
 .param-label {
   font-size: 0.9rem;
-  color: #666;
+  color: var(--text-secondary);
   margin-bottom: 0.25rem;
 }
 .param-value {
   font-size: 1.4rem;
   font-weight: 700;
-  font-family: 'Fira Code', monospace;
+  font-family: var(--font-mono);
 }
-.param-value.alpha { color: #e67700; }
-.param-value.score { color: #007bff; }
-.param-value.ema { color: #28a745; }
+.param-value.alpha { color: var(--accent-orange); }
+.param-value.score { color: var(--accent-cyan); }
+.param-value.ema { color: var(--accent-green); }
 .calc-table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 1rem;
 }
 .calc-table th, .calc-table td {
+  color: var(--text-primary);
   padding: 1rem;
   text-align: center;
-  border-bottom: 2px solid #e8e8e8;
+  border-bottom: 2px solid var(--border-primary);
   font-size: 1.05rem;
 }
 .calc-table th {
-  background: #f0f0f0;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  text-transform: none;
+  letter-spacing: normal;
   font-weight: 700;
   font-size: 1rem;
 }
@@ -86,41 +91,42 @@ h1 {
   border-bottom: none;
 }
 .calc-detail {
-  font-family: 'Fira Code', monospace;
+  font-family: var(--font-mono);
   font-size: 0.9rem;
-  color: #555;
-  background: #f8f9fa;
+  color: var(--text-secondary);
+  background: var(--bg-code);
   padding: 0.5rem;
   border-radius: 6px;
   margin-top: 0.5rem;
 }
 .ema-result {
   font-weight: 700;
-  color: #28a745;
-  font-family: 'Fira Code', monospace;
+  color: var(--accent-green);
+  font-family: var(--font-mono);
 }
 .priority-section {
   margin-top: 1rem;
 }
 .formula-box {
-  background: #2d3748;
+  background: var(--bg-code);
+  border: 1px solid var(--border-primary);
   border-radius: 10px;
   padding: 1.25rem;
   margin: 1rem 0;
 }
 .formula {
-  font-family: 'Fira Code', monospace;
+  font-family: var(--font-mono);
   font-size: 1.15rem;
-  color: #fff;
+  color: var(--text-primary);
   text-align: center;
 }
 .formula .comment {
-  color: #68d391;
+  color: var(--accent-green);
   font-size: 0.95rem;
 }
 .example-calc {
-  background: #fff;
-  border: 2px solid #e0e0e0;
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-primary);
   border-radius: 12px;
   padding: 1.25rem;
   margin-top: 1rem;
@@ -134,33 +140,35 @@ h1 {
   gap: 0.5rem;
 }
 .token-badge {
-  background: #007bff;
-  color: white;
+  background: var(--accent-cyan);
+  color: var(--bg-primary);
   padding: 0.25rem 0.75rem;
   border-radius: 20px;
   font-size: 0.9rem;
 }
 .calc-line {
-  font-family: 'Fira Code', monospace;
+  font-family: var(--font-mono);
   font-size: 1rem;
   margin: 0.75rem 0;
   padding: 0.5rem;
-  background: #f8f9fa;
+  background: var(--bg-code);
+  color: var(--text-primary);
   border-radius: 6px;
-  border-left: 4px solid #ddd;
+  border-left: 4px solid var(--border-highlight);
 }
 .calc-line.highlight {
-  background: #e7f3ff;
-  border-left-color: #007bff;
+  color: var(--text-primary);
+  background: rgba(88, 166, 255, 0.12);
+  border-left-color: var(--accent-cyan);
 }
 .calc-line.result {
-  background: #d4edda;
-  border-left-color: #28a745;
+  background: rgba(63, 185, 80, 0.12);
+  border-left-color: var(--accent-green);
   font-weight: 600;
 }
 .calc-line.evict {
-  background: #f8d7da;
-  border-left-color: #dc3545;
+  background: rgba(248, 81, 73, 0.12);
+  border-left-color: var(--accent-red);
 }
 .compare-grid {
   display: grid;
@@ -169,38 +177,38 @@ h1 {
   margin-top: 1rem;
 }
 .compare-card {
-  background: #fff;
-  border: 2px solid #e0e0e0;
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-primary);
   border-radius: 12px;
   padding: 1.25rem;
 }
 .compare-card.keep {
-  border-color: #28a745;
-  background: #f8fff8;
+  border-color: var(--accent-green);
+  background: rgba(63, 185, 80, 0.08);
 }
 .compare-card.evict {
-  border-color: #dc3545;
-  background: #fff8f8;
+  border-color: var(--accent-red);
+  background: rgba(248, 81, 73, 0.08);
 }
 .compare-title {
   font-weight: 700;
   font-size: 1.1rem;
   margin-bottom: 0.75rem;
 }
-.compare-card.keep .compare-title { color: #155724; }
-.compare-card.evict .compare-title { color: #721c24; }
+.compare-card.keep .compare-title { color: var(--accent-green); }
+.compare-card.evict .compare-title { color: var(--accent-red); }
 .metric-row {
   display: flex;
   justify-content: space-between;
   padding: 0.5rem 0;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border-secondary);
   font-size: 1rem;
 }
 .metric-row:last-child { border-bottom: none; }
-.metric-label { color: #666; }
+.metric-label { color: var(--text-secondary); }
 .metric-value { 
   font-weight: 600; 
-  font-family: 'Fira Code', monospace;
+  font-family: var(--font-mono);
 }
 .final-verdict {
   text-align: center;
@@ -211,74 +219,92 @@ h1 {
   margin-top: 0.75rem;
 }
 .compare-card.keep .final-verdict {
-  background: #28a745;
-  color: white;
+  background: var(--accent-green);
+  color: var(--bg-primary);
 }
 .compare-card.evict .final-verdict {
-  background: #dc3545;
-  color: white;
+  background: var(--accent-red);
+  color: var(--bg-primary);
 }
 </style>
 </head>
 <body>
-<div class="container">
-  <h1>EMA + Eviction Priority</h1>
-  <p class="subtitle">Step-by-step calculation with concrete numbers</p>
+<div class="container" role="main">
+  <p class="sr-only">Figure: the LRFU score update and eviction-priority calculation worked end to end. The scoring rule is not new: a decayed-frequency score is LRFU — Lee et al., "On the Existence of a Spectrum of Policies that Subsumes the LRU and LFU Policies", ACM SIGMETRICS 1999 — and alpha is its documented LRU-to-LFU knob. The unit scored and evicted here is a (sequence, token block) of 16 tokens, 5.00 mebibytes, never a head: every head of every layer is required for every token, so evicting a head produces wrong outputs, not a cache miss. With alpha = 0.05, the simulated optimum, giving a half-life of ln0.5 over ln0.95 = 13.5 decode steps, score[t] = 0.05 x attention[t] + 0.95 x score[t-1] starting from an initial score of 0.0 for the block at position 1024. The five decode steps run: new score 0.45 gives 0.023; 0.12 gives 0.028; 0.30 gives 0.042; 0.08 gives 0.044; 0.35 gives 0.059. Eviction priority is (1 - score) x recency_decay, where recency_decay = 1 - exp(-beta x steps_since_access) with beta = 0.001. The coefficient beta = 0.001 is an uncalibrated design parameter, not a derived or measured value: it sets the timescale over which idleness becomes a reason to evict, a characteristic time of 1 over beta = 1,000 decode steps, about 100 seconds at an illustrative 10 tokens per second. Raising beta makes eviction more aggressively recency-driven and puts long-lived but rarely touched blocks such as system prompts at risk; lowering it lets stale entries linger and consume capacity. Beta interacts with alpha and must be swept jointly against real attention traces. Appendix K section K.7 lists it with the package's other uncalibrated parameters. Block A at position 1024, score 0.059 and accessed 50 steps ago, has recency_decay 0.049 and priority 0.046, so it is kept; block B at position 45678, score 0.02 and accessed 2000 steps ago, has recency_decay 0.865 and priority 0.848, so it is evicted. Higher priority means evict sooner. Alpha = 0.2 was never validated and is withdrawn; in simulation alpha is non-monotonic with an interior optimum near 0.05, and there is no convergence onto LFU as alpha approaches zero. The scoring rule is also not where the largest effect lies: at a 32 gibibyte budget, letting identity-keyed policy state survive HBM eviction is worth plus 34.15 percentage points to LFU and plus 24.85 to EMA alpha 0.01, larger than the whole spread between scoring functions. When this block is evicted, its score and identity key travel with it and are restored on re-admission, rather than being reset. The worked numbers here are illustrative, never a result; the simulated figures are provisional, because a single data-structure defect in Revision 1 inverted four of five findings.</p>
+  <h1>LRFU Score + Eviction Priority</h1>
+  <p class="subtitle">Step-by-step calculation, per (sequence, token block). The policy is <strong>LRFU</strong> (Lee et al., ACM SIGMETRICS 1999) — established prior art, not a new algorithm.</p>
+
+  <div class="callout" style="border-left:4px solid var(--accent-purple);background:rgba(163,113,247,0.10);padding:1rem 1.25rem;border-radius:8px;margin-bottom:1.5rem;">
+    <div class="callout-title" style="color:var(--accent-purple);font-weight:700;margin-bottom:0.35rem;">The scored unit is a (sequence, token block) — not a head</div>
+    <p style="color:var(--text-secondary);">16 tokens = 5.00 MiB. Every head of every layer is required for every token,
+    so evicting a head produces <strong>wrong outputs, not a cache miss</strong>. H2O and SnapKV evict
+    <strong>(head, token)</strong> pairs — the token axis is not optional.</p>
+  </div>
 
   <div class="section">
     <div class="section-title">1. EMA Update (per decode step)</div>
     
     <div class="param-row">
       <div class="param">
-        <div class="param-label">α (smoothing factor)</div>
-        <div class="param-value alpha">0.2</div>
+        <div class="param-label">α (LRFU LRU↔LFU knob)</div>
+        <div class="param-value alpha">0.05</div>
       </div>
       <div class="param">
-        <div class="param-label">Token Position</div>
+        <div class="param-label">Block (position)</div>
         <div class="param-value">1024</div>
       </div>
       <div class="param">
-        <div class="param-label">Initial EMA</div>
+        <div class="param-label">Initial score</div>
         <div class="param-value ema">0.0</div>
+      </div>
+    </div>
+
+    <div class="formula-box">
+      <div class="formula">
+        score[t] = 0.05 × attention[t] + 0.95 × score[t−1]<br>
+        <span class="comment"># α = 0.05 (simulated optimum, not a derived constant) → half-life ln0.5/ln0.95 = 13.5 decode steps</span><br>
+        <span class="comment"># α = 0.2 was never validated and is withdrawn. α is non-monotonic:</span><br>
+        <span class="comment"># 32 GiB: 0.5→37.20  0.3→38.84  0.15→44.33  0.05→55.96  0.01→31.54  0.003→25.47  0.001→24.44</span><br>
+        <span class="comment"># No convergence onto LFU as α→0.  [Simulated (provisional)]</span>
       </div>
     </div>
 
     <table class="calc-table">
       <tr>
-        <th>Step</th>
-        <th>new_score</th>
-        <th>Calculation</th>
-        <th>score_ema</th>
+        <th scope="col">Step</th>
+        <th scope="col">new_score</th>
+        <th scope="col">Calculation</th>
+        <th scope="col">score_ema</th>
       </tr>
       <tr>
         <td>t₁</td>
         <td>0.45</td>
-        <td class="calc-detail">0.3 × 0.45 + 0.7 × 0.00</td>
-        <td class="ema-result">0.135</td>
+        <td class="calc-detail">0.05 × 0.45 + 0.95 × 0.000</td>
+        <td class="ema-result" role="img" aria-label="LRFU score after step t1, 0.023">0.023</td>
       </tr>
       <tr>
         <td>t₂</td>
         <td>0.12</td>
-        <td class="calc-detail">0.3 × 0.12 + 0.7 × 0.135</td>
-        <td class="ema-result">0.131</td>
+        <td class="calc-detail">0.05 × 0.12 + 0.95 × 0.023</td>
+        <td class="ema-result" role="img" aria-label="LRFU score after step t2, 0.028">0.028</td>
       </tr>
       <tr>
         <td>t₃</td>
         <td>0.30</td>
-        <td class="calc-detail">0.3 × 0.30 + 0.7 × 0.131</td>
-        <td class="ema-result">0.182</td>
+        <td class="calc-detail">0.05 × 0.30 + 0.95 × 0.028</td>
+        <td class="ema-result" role="img" aria-label="LRFU score after step t3, 0.042">0.042</td>
       </tr>
       <tr>
         <td>t₄</td>
         <td>0.08</td>
-        <td class="calc-detail">0.3 × 0.08 + 0.7 × 0.182</td>
-        <td class="ema-result">0.151</td>
+        <td class="calc-detail">0.05 × 0.08 + 0.95 × 0.042</td>
+        <td class="ema-result" role="img" aria-label="LRFU score after step t4, 0.044">0.044</td>
       </tr>
       <tr>
         <td>t₅</td>
         <td>0.35</td>
-        <td class="calc-detail">0.3 × 0.35 + 0.7 × 0.151</td>
-        <td class="ema-result">0.211</td>
+        <td class="calc-detail">0.05 × 0.35 + 0.95 × 0.044</td>
+        <td class="ema-result" role="img" aria-label="LRFU score after step t5, 0.059">0.059</td>
       </tr>
     </table>
   </div>
@@ -288,7 +314,7 @@ h1 {
     
     <div class="formula-box">
       <div class="formula">
-        priority = (1 - score_ema) × recency_decay<br>
+        priority = (1 - score) × recency_decay<br>
         <span class="comment"># Higher priority = evict sooner</span>
       </div>
     </div>
@@ -296,28 +322,54 @@ h1 {
     <div class="formula-box">
       <div class="formula">
         recency_decay = 1 - exp(-β × steps_since_access)<br>
-        <span class="comment"># β = 0.001, decays over ~1000 steps</span>
+        <span class="comment"># β = 0.001 (uncalibrated design parameter), decays over ~1000 steps</span>
       </div>
     </div>
 
+    <div class="callout warning">
+      <div class="callout-title">β = 0.001 is an uncalibrated design parameter</div>
+        <p>The recency-decay coefficient is not derived from anything and was not fitted to data. It is
+        stated here as an assumption.</p>
+        <p><strong>What it controls.</strong> β sets the timescale over which "not accessed recently" becomes
+        a reason to evict. In <span class="mono">1 − e<sup>−β·steps</sup></span> the characteristic time is
+        <span class="mono">1/β = 1,000 decode steps</span>, so a token reaches ~63% decay at 1,000 steps and
+        ~86% at 2,000. At the canonical 10 tok/s per user that is about 100 seconds of wall-clock idleness
+        before a token is treated as fully stale.</p>
+        <p><strong>Which way it pushes.</strong> Raising β shortens that horizon and makes the policy more
+        aggressively recency-driven: idle tokens are surrendered sooner, HBM and CXL DRAM are reclaimed faster,
+        and long-lived-but-rarely-touched blocks — system prompts, few-shot exemplars, shared prefixes — start
+        losing to whatever was touched last. (The "+8 pts from anchor pinning" rung that this paragraph once
+        cited is <strong>retracted</strong>: the 72→80→87→93→97 ladder was never run as an ablation, and its
+        increments were assumed additive and independent.) Lowering β lengthens the horizon toward pure
+        score-based eviction: the working set holds its shape longer and stale entries linger, consuming
+        capacity. β → 0 removes the recency term entirely and leaves <span class="mono">(1 − score)</span> alone.</p>
+        <p><strong>How it would be calibrated.</strong> β and α interact and must be swept together: α = 0.05
+        already gives a 13.5-step half-life on the score itself, so a β chosen without reference to α
+        double-counts recency. The calibration is a two-dimensional sweep over real attention traces at 128 K
+        context, scored on hit rate at fixed working-set size — and α is non-monotonic, so the sweep cannot be
+        interpolated. See
+        <a href="../../appendix/k-methodology.html">Appendix K, section K.7 — Uncalibrated parameters</a>.</p>
+      </div>
+
     <div class="example-calc">
       <div class="example-title">
-        <span class="token-badge">Token A</span> pos=1024, accessed 50 steps ago
+        <span class="token-badge">Block A</span> pos=1024, accessed 50 steps ago
       </div>
-      <div class="calc-line">score_ema = 0.211</div>
+      <div class="calc-line">score = 0.059</div>
       <div class="calc-line">steps_since_access = 50</div>
       <div class="calc-line highlight">recency_decay = 1 - exp(-0.001 × 50) = 0.049</div>
-      <div class="calc-line result">priority = (1 - 0.211) × 0.049 = 0.039</div>
+      <div class="calc-line result">priority = (1 - 0.059) × 0.049 = 0.046</div>
     </div>
 
     <div class="example-calc">
       <div class="example-title">
-        <span class="token-badge">Token B</span> pos=45678, accessed 2000 steps ago
+        <span class="token-badge">Block B</span> pos=45678, accessed 2000 steps ago
       </div>
-      <div class="calc-line">score_ema = 0.08</div>
+      <div class="calc-line">score = 0.02</div>
       <div class="calc-line">steps_since_access = 2000</div>
       <div class="calc-line highlight">recency_decay = 1 - exp(-0.001 × 2000) = 0.865</div>
-      <div class="calc-line evict">priority = (1 - 0.08) × 0.865 = 0.796</div>
+      <div class="calc-line evict">priority = (1 - 0.02) × 0.865 = 0.848</div>
+      <div class="calc-line" style="color:var(--accent-purple);">on eviction: identity key + score persist with the block, and are restored on re-admission</div>
     </div>
   </div>
 
@@ -326,10 +378,10 @@ h1 {
     
     <div class="compare-grid">
       <div class="compare-card keep">
-        <div class="compare-title">Token A (pos 1024)</div>
+        <div class="compare-title">Block A (pos 1024)</div>
         <div class="metric-row">
-          <span class="metric-label">score_ema</span>
-          <span class="metric-value">0.211</span>
+          <span class="metric-label">score</span>
+          <span class="metric-value">0.059</span>
         </div>
         <div class="metric-row">
           <span class="metric-label">steps_since_access</span>
@@ -341,16 +393,16 @@ h1 {
         </div>
         <div class="metric-row">
           <span class="metric-label">eviction_priority</span>
-          <span class="metric-value">0.039</span>
+          <span class="metric-value">0.046</span>
         </div>
-        <div class="final-verdict">✓ KEEP (low priority)</div>
+        <div class="final-verdict" role="img" aria-label="Verdict for block A: keep, eviction priority 0.046, low"><span aria-hidden="true">✓</span> KEEP (low priority)</div>
       </div>
       
       <div class="compare-card evict">
-        <div class="compare-title">Token B (pos 45678)</div>
+        <div class="compare-title">Block B (pos 45678)</div>
         <div class="metric-row">
-          <span class="metric-label">score_ema</span>
-          <span class="metric-value">0.08</span>
+          <span class="metric-label">score</span>
+          <span class="metric-value">0.02</span>
         </div>
         <div class="metric-row">
           <span class="metric-label">steps_since_access</span>
@@ -362,12 +414,21 @@ h1 {
         </div>
         <div class="metric-row">
           <span class="metric-label">eviction_priority</span>
-          <span class="metric-value">0.796</span>
+          <span class="metric-value">0.848</span>
         </div>
-        <div class="final-verdict">🗑 EVICT (high priority)</div>
+        <div class="final-verdict" role="img" aria-label="Verdict for block B: evict, eviction priority 0.848, high. Its identity key and score persist across the eviction and are restored on re-admission."><span aria-hidden="true">🗑</span> EVICT (high priority)</div>
+        <div style="font-size:0.78rem;color:var(--accent-purple);margin-top:0.5rem;">state persists across the tier boundary</div>
       </div>
     </div>
   </div>
+
+  <p style="text-align:center;color:var(--text-secondary);font-size:0.85rem;margin-top:1.5rem;border-top:1px solid var(--border-primary);padding-top:0.75rem;">
+    <strong>Illustrative</strong> — pedagogical worked example, never a result. α = 0.05, half-life 13.5 decode steps.
+    Policy is <strong>LRFU</strong> (Lee et al., ACM SIGMETRICS 1999) — <em>External literature</em>. Hit-rate figures quoted
+    on this page are <strong>Simulated (provisional)</strong>: a single data-structure defect in Revision 1 inverted four of
+    five findings, so Revision 2 is provisional, not settled. Withdrawn from this figure: α = 0.2, the 97% hit rate and the
+    72→80→87→93→97 ladder. Canonical numbers v6.0.
+  </p>
 </div>
 </body>
 </html>

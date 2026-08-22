@@ -1,20 +1,16 @@
-================================================================================
-CH05 - BANDWIDTH - FIGURE INDEX
-================================================================================
+==============================================================================
+CH05 - BANDWIDTH AND TIER ECONOMICS - FIGURE INDEX
+==============================================================================
 
-Fig 5.1: Single Endpoint Limitation
-      Source: bandwidth-aggregation.html
+Generated from the filesystem on 2026-08-22.
 
-Fig 5.2: Layer Prefetch Pipeline
-      Source: bandwidth-aggregation.html
+bandwidth-aggregation.html
+      Bandwidth Aggregation
+      embedded: (gallery only)
 
-Fig 5.3: Overlap Execution & Transfer
-      Source: bandwidth-aggregation.html
+sustainability-vs-hiding.html   [NEW v6.0]
+      Sustainability vs Hiding
+      evidence: Figure 5.2 · Analytical model
+      embedded: chapters/ch05-bandwidth.html
 
-Fig 5.4: Multi-GPU Scaling
-      Source: bandwidth-aggregation.html
-
-Fig 5.5: Bandwidth Aggregation
-      Source: bandwidth-aggregation.html
-
-TOTAL: 5 figures
+TOTAL: 2 figures (1 new in v6.0)

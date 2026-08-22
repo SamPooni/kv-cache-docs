@@ -1,1 +1,620 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RoPE Prefetch — Corrected</title><style>body{margin:0;background:#0d1117;color:#e6edf3;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}.w{max-width:1040px;margin:auto;padding:30px}.ey{font:600 11px system-ui;letter-spacing:.12em;text-transform:uppercase;color:#8b949e}.h{font-size:31px;font-weight:760;margin:7px 0 10px}.p{color:#aab4c0;line-height:1.55}.flow{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:20px 0}.b{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:14px 16px;font-weight:650}.a{color:#7d8590;font-size:20px}.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:20px 0}.c{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:16px}.n{font:700 24px ui-monospace,Consolas,monospace;color:#58a6ff}.l{font-weight:650;margin-top:5px}.s{font-size:13px;color:#8b949e;margin-top:6px;line-height:1.4}.warn{border-left:4px solid #d29922;background:#1d1a12;padding:13px 15px;border-radius:8px;line-height:1.5}.t{width:100%;border-collapse:collapse;margin:18px 0}.t td,.t th{padding:9px 11px;border-bottom:1px solid #30363d;text-align:left}.t th{color:#8b949e;font-size:11px;text-transform:uppercase}</style></head><body><main class="w"><div class="ey">Prefetch policy · hypothesis</div><div class="h">RoPE Is Not a Universal Locality Guarantee</div><p class="p">Position can be one input to a prefetch heuristic, but RoPE itself does not prove that a fixed ±W window captures a fixed fraction of future attention. Any locality window and hit-rate benefit must be learned or measured from real attention traces.</p><div class="flow"><div class="b">attention trace</div><div class="a">+</div><div class="b">position / distance</div><div class="a">+</div><div class="b">reuse history</div><div class="a">→</div><div class="b">prefetch score</div><div class="a">→</div><div class="b">validate precision / recall / stall</div></div><div class="warn"><b>Removed:</b> the earlier +4%, 70%, 72%, 85% and 90% locality/hit-rate figures were not measured results.</div></main></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RoPE Geometry Explainer</title>
+<link rel="stylesheet" href="../../css/style.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  padding: 2.5rem;
+  line-height: 1.5;
+}
+.container { max-width: 950px; margin: 0 auto; padding: 0; }
+h1 {
+  font-size: 2.2rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+.subtitle {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 1.15rem;
+  margin-bottom: 2.5rem;
+}
+.section {
+  margin-bottom: 2.5rem;
+}
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+.section-num {
+  width: 36px;
+  height: 36px;
+  background: var(--accent-purple);
+  color: var(--bg-primary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.section-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+.card {
+  background: var(--bg-card);
+  border: 2px solid var(--border-primary);
+  border-radius: 14px;
+  padding: 1.5rem;
+}
+.rope-viz {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+.decay-chart {
+  width: 100%;
+  max-width: 700px;
+  height: 200px;
+  background: var(--bg-code);
+  border: 2px solid var(--border-primary);
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+}
+.decay-curve {
+  position: absolute;
+  bottom: 40px;
+  left: 50px;
+  right: 50px;
+  height: 140px;
+}
+.decay-svg {
+  width: 100%;
+  height: 100%;
+}
+.axis-label {
+  position: absolute;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+.axis-label.y { 
+  left: 8px; 
+  top: 50%; 
+  transform: rotate(-90deg) translateX(-50%);
+  transform-origin: left center;
+}
+.axis-label.x { 
+  bottom: 8px; 
+  left: 50%; 
+  transform: translateX(-50%); 
+}
+.query-marker {
+  position: absolute;
+  bottom: 35px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.query-label {
+  margin-top: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--accent-red);
+}
+.rope-explanation {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.rope-point {
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-primary);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  max-width: 300px;
+}
+.rope-point-title {
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-bottom: 0.3rem;
+  color: var(--accent-purple);
+}
+.rope-point-desc {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+.prefetch-viz {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+}
+.position-line {
+  width: 100%;
+  max-width: 800px;
+  position: relative;
+  padding: 2rem 0;
+}
+.line-base {
+  height: 4px;
+  background: rgba(58, 69, 85, 0.5);
+  border-radius: 2px;
+  position: relative;
+}
+.prefetch-window {
+  position: absolute;
+  top: -8px;
+  height: 20px;
+  background: rgba(163, 113, 247, 0.2);
+  border: 2px solid var(--accent-purple);
+  border-radius: 4px;
+}
+.window-label {
+  position: absolute;
+  top: -35px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--accent-purple);
+  white-space: nowrap;
+}
+.position-markers {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1rem;
+  padding: 0 2%;
+}
+.pos-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+.pos-tick {
+  width: 2px;
+  height: 12px;
+  background: var(--text-secondary);
+}
+.pos-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+}
+.current-pos {
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 24px;
+  background: var(--accent-red);
+  border-radius: 50%;
+  border: 3px solid var(--bg-primary);
+  box-shadow: 0 2px 10px rgba(248,81,73,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--bg-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.pos-p-label {
+  position: absolute;
+  top: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--accent-red);
+}
+.window-edges {
+  position: absolute;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.edge-label {
+  position: absolute;
+  top: 28px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--accent-purple);
+  font-family: var(--font-mono);
+}
+.edge-label.left { left: calc(25% - 20px); }
+.edge-label.right { right: calc(25% - 20px); }
+.token-slots {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+  flex-wrap: wrap;
+  max-width: 800px;
+}
+.token-slot {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+.token-slot.cached { background: rgba(63, 185, 80, 0.15); color: var(--accent-green); border: 2px solid var(--accent-green); }
+.token-slot.prefetch { background: rgba(163, 113, 247, 0.18); color: var(--accent-purple); border: 2px solid var(--accent-purple); }
+.token-slot.current { background: var(--accent-red); color: var(--bg-primary); border: 2px solid var(--accent-red); }
+.token-slot.storage { background: var(--bg-code); color: var(--text-secondary); border: 2px solid var(--border-primary); }
+.slot-legend {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+}
+.legend-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+}
+.formula-card {
+  background: rgba(163, 113, 247, 0.10);
+  border: 2px solid var(--accent-purple);
+  border-radius: 12px;
+  padding: 1.25rem;
+  text-align: center;
+}
+.formula-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent-purple);
+  margin-bottom: 0.75rem;
+}
+.formula-content {
+  font-family: var(--font-mono);
+  font-size: 1.2rem;
+  color: var(--text-primary);
+  background: var(--bg-code);
+  padding: 1rem;
+  border-radius: 8px;
+  display: inline-block;
+}
+.formula-note {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin-top: 0.75rem;
+}
+.attn-dist {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+}
+.dist-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 3px;
+  height: 120px;
+  padding: 1rem;
+  background: var(--bg-code);
+  border: 2px solid var(--border-primary);
+  border-radius: 10px;
+}
+.dist-bar {
+  width: 28px;
+  background: linear-gradient(to top, var(--accent-purple), #c4a6fb);
+  border-radius: 4px 4px 0 0;
+  position: relative;
+}
+.dist-bar.in-window {
+  background: linear-gradient(to top, var(--accent-green), #6ede7c);
+}
+.dist-bar.current {
+  background: linear-gradient(to top, var(--accent-red), #fb8a84);
+}
+.dist-label {
+  text-align: center;
+  margin-top: 0.75rem;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+.dist-label strong {
+  color: var(--accent-green);
+}
+.w-selection {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.w-option {
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-primary);
+  border-radius: 10px;
+  padding: 1rem;
+  text-align: center;
+}
+.w-option.recommended {
+  border-color: var(--accent-green);
+  background: rgba(63, 185, 80, 0.10);
+}
+.w-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+.w-option.recommended .w-value { color: var(--accent-green); }
+.w-coverage {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+}
+.w-tradeoff {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-top: 0.5rem;
+}
+</style>
+</head>
+<body>
+<div class="container" role="main">
+  <p class="sr-only">Figure: a RoPE geometry explainer. RoPE rotates Q and K in d/2 two-dimensional subspaces, each with its own frequency, so the inner product is a sum over those pairs and does not fall off monotonically. The guarantee is an upper-bound envelope: the magnitude of the inner product of q_m and k_n is at most B of the absolute distance m minus n, with B non-increasing. It is never proportional to cosine of (m minus n) times theta — writing it that way converts a bound into a decay law, which is the error this figure previously rested on. Critically, RoPE is a rotation applied to Q and K at compute time. The rotation is a function of position alone, known in advance for every position, and identical whether a block is resident or evicted, so it carries no information about which blocks will be needed next and cannot drive prefetch. The claim that RoPE-aware prefetch contributes plus 4 percentage points of hit rate, taking a cumulative 93 percent to 97 percent, is retracted, along with the entire 72 to 80 to 87 to 93 to 97 ladder, which was never run as an ablation and whose plus 8, plus 7, plus 6, plus 4 increments were assumed additive and independent. No single hit rate exists: across budgets, policies and workloads the simulated range is 8.5 to 91.6 percent. Section 2 shows a distance band around a query position P, from P minus W to P plus W, with W = 5 in the worked strip at P = 55, so positions 50 to 54 and 56 to 60 are inside the band and 48, 49, 61 and 62 outside. That band is where the bound is loosest, not a set of blocks predicted to be read: whether a block is resident is a separate question, decided by the PLACE stage, and a distant position may still attend strongly. Section 3 shows band widths against an assumed attention-mass distribution: W = 32 covers about 50 percent, W = 128 about 75 percent, W = 512 about 90 percent. All three widths and all three coverage figures are uncalibrated assumptions, not measurements — the distribution is illustrative, not a measured histogram, and the coverage is model-, layer-, head- and workload-dependent. A position-window prefetch remains an open idea, not a validated technique; it has not been shown to give a predictive advantage over the reuse-prediction approaches already shipping elsewhere, and it belongs in future work rather than in a list of contributions. Nothing on this page is a cache result. Related published work on which the reframing rests includes H2O, SnapKV, Scissorhands, PyramidKV, Quest, Ada-KV, HeadKV, InfiniGen, LayerKV, KVPR and PagedAttention.</p>
+  <h1>RoPE — A Geometry Explainer</h1>
+  <p class="subtitle">What rotary position embedding bounds, and what it cannot tell you. It is <strong>not a prefetch signal</strong>.</p>
+
+  <div class="callout warning" style="margin-bottom:1.5rem;">
+    <div class="callout-title">RoPE cannot drive prefetch — the hit-rate claim on this figure is retracted</div>
+    <p>RoPE is a <strong>rotation applied to Q/K at compute time</strong>. The rotation is a function of position
+    alone: known in advance for every position, and identical whether a block sits in HBM or on NVMe. It therefore
+    carries <strong>no information about which blocks are needed next</strong>. The former claim — RoPE-aware prefetch
+    worth <strong>+4 pts of hit rate, 93% → 97% cumulative</strong> — is withdrawn with the whole
+    72→80→87→93→97 ladder, which was never run as an ablation.</p>
+    <p>Distance decay is an <strong>upper bound</strong>, <code>|⟨q_m, k_n⟩| ≤ B(|m − n|)</code> — <strong>never</strong>
+    <code>∝ cos((m − n)·θ)</code>. A position-window prefetch remains an <strong>open idea, not a validated
+    technique</strong>: it has not been shown to beat the reuse-prediction approaches already shipping (CacheWise's
+    tool-call-driven prediction, for instance), and it belongs in future work.</p>
+  </div>
+
+  <!-- Section 1: RoPE Attention Decay -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">1</div>
+      <div class="section-title">RoPE Bounds Attention Magnitude by Distance</div>
+    </div>
+    <div class="card">
+      <div class="rope-viz">
+        <div class="decay-chart">
+          <span class="axis-label y">Attention</span>
+          <span class="axis-label x">Relative Position (distance from query)</span>
+          <div class="decay-curve">
+            <svg class="decay-svg" viewBox="0 0 600 140" preserveAspectRatio="none" role="img" aria-label="Sketch of the RoPE upper-bound envelope: attention is highest at the query position in the centre and falls away symmetrically with distance in both directions.">
+              <defs>
+                <linearGradient id="curveGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" style="stop-color:var(--accent-purple);stop-opacity:0.3" />
+                  <stop offset="100%" style="stop-color:var(--accent-purple);stop-opacity:0.05" />
+                </linearGradient>
+              </defs>
+              <path d="M0,140 L0,120 Q75,115 150,90 T300,10 T450,90 Q525,115 600,120 L600,140 Z" fill="url(#curveGrad)" />
+              <path d="M0,120 Q75,115 150,90 T300,10 T450,90 Q525,115 600,120" fill="none" stroke="var(--accent-purple)" stroke-width="3" />
+              <circle cx="300" cy="10" r="6" fill="var(--accent-red)" />
+            </svg>
+          </div>
+          <div class="query-marker">
+            <div class="query-label">Query Position</div>
+          </div>
+        </div>
+        <div class="rope-explanation">
+          <div class="rope-point">
+            <div class="rope-point-title">Rotary Encoding — what RoPE actually gives</div>
+            <div class="rope-point-desc">
+              RoPE encodes position by rotating Q/K in d/2 two-dimensional subspaces, each with its own
+              frequency θ_i. The inner product is a <strong>sum over those d/2 frequency pairs</strong>,
+              so it is not a single cosine of the distance and it does not fall off monotonically.
+              The guarantee is an <strong>upper-bound envelope</strong>:
+              <code>|⟨q_m, k_n⟩| ≤ B(|m − n|)</code> with B non-increasing. The curve at left sketches
+              that envelope, not a measured attention trace.
+            </div>
+          </div>
+          <div class="rope-point">
+            <div class="rope-point-title">Locality Bias — an ASSUMPTION of this model</div>
+            <div class="rope-point-desc">
+              This design assumes roughly <strong>70% of attention mass falls within ±W positions</strong>
+              of the query. That figure is <strong>not a universal property of transformers</strong>:
+              it is model-, layer-, head- and workload-dependent, and it is stated here as an input
+              assumption, not as an established fact or a measurement.
+            </div>
+          </div>
+          <div class="rope-point">
+            <div class="rope-point-title">What it is NOT — <code>∝ cos((m − n)·θ)</code></div>
+            <div class="rope-point-desc">
+              The inner product is <strong>never</strong> proportional to a single cosine of the distance.
+              Writing it that way turns an <strong>upper bound</strong> into a <strong>decay law</strong>, and a
+              decay law reads like a prediction of which positions will be read. It is not one. A distant
+              position may still attend strongly — the bound permits it — and nothing in the rotation says
+              which blocks the next step will touch.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: the distance band -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">2</div>
+      <div class="section-title">The [P − W, P + W] Band — a Bound, Not a Prediction</div>
+    </div>
+    <div class="card">
+      <div class="prefetch-viz">
+        <div class="formula-card">
+          <div class="formula-title">What the band means</div>
+          <div class="formula-content">|⟨q_m, k_n⟩| ≤ B(|m − n|),&nbsp; B non-increasing</div>
+          <div class="formula-content" style="margin-top:0.5rem">|m − n| ≤ W&nbsp; →&nbsp; the bound is <em>loosest</em> here</div>
+          <div class="formula-note">The band marks where a large inner product is <strong>permitted</strong>, not where
+          one is <strong>predicted</strong>. Residency is decided separately, by the <strong>PLACE</strong> stage,
+          from past-access signals — not from position geometry. W is an <em>assumed</em> width, not a fitted one.</div>
+        </div>
+        
+        <div class="position-line">
+          <div class="line-base">
+            <div class="prefetch-window" style="left: 25%; width: 50%;">
+              <div class="window-label">Loosest-bound band (2W)</div>
+            </div>
+            <div class="current-pos">P</div>
+            <div class="pos-p-label">Query position</div>
+            <div class="window-edges">
+              <span class="edge-label left">P−W</span>
+              <span class="edge-label right">P+W</span>
+            </div>
+          </div>
+          <div class="position-markers">
+            <div class="pos-marker"><div class="pos-tick"></div><div class="pos-label">P−2W</div></div>
+            <div class="pos-marker"><div class="pos-tick"></div><div class="pos-label">P−W</div></div>
+            <div class="pos-marker"><div class="pos-tick"></div><div class="pos-label">P</div></div>
+            <div class="pos-marker"><div class="pos-tick"></div><div class="pos-label">P+W</div></div>
+            <div class="pos-marker"><div class="pos-tick"></div><div class="pos-label">P+2W</div></div>
+          </div>
+        </div>
+
+        <div class="token-slots">
+          <div class="token-slot storage" role="img" aria-label="Position 48, outside the band, where the bound B is tighter — but still only a bound">48</div>
+          <div class="token-slot storage" role="img" aria-label="Position 49, outside the band, where the bound B is tighter — but still only a bound">49</div>
+          <div class="token-slot prefetch" role="img" aria-label="Position 50, inside the band, where the bound B is loosest">50</div>
+          <div class="token-slot prefetch" role="img" aria-label="Position 51, inside the band, where the bound B is loosest">51</div>
+          <div class="token-slot prefetch" role="img" aria-label="Position 52, inside the band, where the bound B is loosest">52</div>
+          <div class="token-slot prefetch" role="img" aria-label="Position 53, inside the band, where the bound B is loosest">53</div>
+          <div class="token-slot prefetch" role="img" aria-label="Position 54, inside the band, where the bound B is loosest">54</div>
+          <div class="token-slot current" role="img" aria-label="Position 55, the query position m">55</div>
+          <div class="token-slot prefetch" role="img" aria-label="Position 56, inside the band, where the bound B is loosest">56</div>
+          <div class="token-slot prefetch" role="img" aria-label="Position 57, inside the band, where the bound B is loosest">57</div>
+          <div class="token-slot prefetch" role="img" aria-label="Position 58, inside the band, where the bound B is loosest">58</div>
+          <div class="token-slot prefetch" role="img" aria-label="Position 59, inside the band, where the bound B is loosest">59</div>
+          <div class="token-slot prefetch" role="img" aria-label="Position 60, inside the band, where the bound B is loosest">60</div>
+          <div class="token-slot storage" role="img" aria-label="Position 61, outside the band, where the bound B is tighter — but still only a bound">61</div>
+          <div class="token-slot storage" role="img" aria-label="Position 62, outside the band, where the bound B is tighter — but still only a bound">62</div>
+        </div>
+        <div class="slot-legend">
+          <div class="legend-item"><div class="legend-dot" aria-hidden="true" style="background:var(--accent-red)"></div>Query position (P=55)</div>
+          <div class="legend-item"><div class="legend-dot" aria-hidden="true" style="background:rgba(163,113,247,0.18);border:2px solid var(--accent-purple)"></div>|m − n| ≤ W, W=5 — bound loosest</div>
+          <div class="legend-item"><div class="legend-dot" aria-hidden="true" style="background:var(--bg-code);border:2px solid var(--border-primary)"></div>Outside the band — bound tighter</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 3: Choosing W -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">3</div>
+      <div class="section-title">Band Width vs. Assumed Coverage — <em>Illustrative</em>, not empirical</div>
+    </div>
+    <div class="card">
+      <div class="attn-dist">
+        <div class="dist-bars">
+          <div class="dist-bar" role="img" aria-label="Distance -6 from the query, assumed attention mass 15% of the peak, outside the band" style="height:15%"></div>
+          <div class="dist-bar" role="img" aria-label="Distance -5 from the query, assumed attention mass 22% of the peak, outside the band" style="height:22%"></div>
+          <div class="dist-bar" role="img" aria-label="Distance -4 from the query, assumed attention mass 35% of the peak, outside the band" style="height:35%"></div>
+          <div class="dist-bar in-window" role="img" aria-label="Distance -3 from the query, assumed attention mass 55% of the peak, inside the band" style="height:55%"></div>
+          <div class="dist-bar in-window" role="img" aria-label="Distance -2 from the query, assumed attention mass 78% of the peak, inside the band" style="height:78%"></div>
+          <div class="dist-bar in-window" role="img" aria-label="Distance -1 from the query, assumed attention mass 92% of the peak, inside the band" style="height:92%"></div>
+          <div class="dist-bar current" role="img" aria-label="Query position, attention mass 100% of the peak" style="height:100%"></div>
+          <div class="dist-bar in-window" role="img" aria-label="Distance +1 from the query, assumed attention mass 88% of the peak, inside the band" style="height:88%"></div>
+          <div class="dist-bar in-window" role="img" aria-label="Distance +2 from the query, assumed attention mass 72% of the peak, inside the band" style="height:72%"></div>
+          <div class="dist-bar in-window" role="img" aria-label="Distance +3 from the query, assumed attention mass 50% of the peak, inside the band" style="height:50%"></div>
+          <div class="dist-bar" role="img" aria-label="Distance +4 from the query, assumed attention mass 30% of the peak, outside the band" style="height:30%"></div>
+          <div class="dist-bar" role="img" aria-label="Distance +5 from the query, assumed attention mass 18% of the peak, outside the band" style="height:18%"></div>
+          <div class="dist-bar" role="img" aria-label="Distance +6 from the query, assumed attention mass 12% of the peak, outside the band" style="height:12%"></div>
+        </div>
+        <div class="dist-label"><strong>Illustrative</strong> — an assumed attention-mass distribution, not a measured histogram · <strong>Green = within the band</strong></div>
+      </div>
+      
+      <div class="w-selection">
+        <div class="w-option">
+          <div class="w-value">W = 32</div>
+          <div class="w-coverage">~50% attention captured (assumed)</div>
+          <div class="w-tradeoff">Low bandwidth, more misses</div>
+        </div>
+        <div class="w-option recommended">
+          <div class="w-value">W = 128</div>
+          <div class="w-coverage">~75% attention captured (assumed)</div>
+          <div class="w-tradeoff">A judgement call, not a fitted result</div>
+        </div>
+        <div class="w-option">
+          <div class="w-value">W = 512</div>
+          <div class="w-coverage">~90% attention captured (assumed)</div>
+          <div class="w-tradeoff">High bandwidth overhead</div>
+        </div>
+      </div>
+
+      <div class="callout warning">
+        <div class="callout-title">W = 32 / 128 / 512 are uncalibrated design parameters</div>
+        <p>These three window sizes are not derived and were not selected by experiment. They are round
+        powers of two spanning two orders of magnitude, chosen to show the shape of the trade-off; the
+        coverage percentages beside them (~50% / ~75% / ~90%) are assumptions of the model, not a measured
+        histogram, and W = 128 is labelled "balanced for Llama-70B" as a judgement call, not a fitted result.</p>
+        <p><strong>What W controls.</strong> W sets the radius of the band
+        <span class="mono">[P − W, P + W]</span> around a query position, and so the fraction of attention mass
+        that falls inside it under the assumed distribution. It is a property of the <em>bound</em>, not a
+        speculative-fetch budget.</p>
+        <p><strong>No hit rate is attached to W.</strong> The claim that widening W lifts the hit rate — "the rung
+        worth +4 pts, 93% → 97%" — is <strong>retracted</strong>, and no replacement figure is offered, because the
+        ablation that would have produced one was never run. The tier latency this paragraph once priced the miss
+        tail against is retracted too: <strong>no CXL hardware was measured</strong>. Tier latency is an assumption
+        across <strong>32 / 64 / 121 GB/s</strong>, under which a 5.00 MiB block fetch is
+        <strong>164 / 82 / 43 µs</strong>. What the tier buys is <strong>avoiding regeneration</strong> — forward
+        compute for 16 tokens is 9 / 11 / 18 ms at 50 / 40 / 25% MFU, two to three orders of magnitude above the
+        transfer — and no precise multiple is claimed.</p>
+        <p><strong>Why the per-head framing does not save it.</strong> A head is not an eviction unit. Every head of
+        every layer is required for every token, so evicting a head produces <strong>wrong outputs, not a cache
+        miss</strong>. Per-head attention statistics are a <em>scoring</em> signal; the placed and moved unit is a
+        <strong>(sequence, token block)</strong> of 16 tokens = 5.00 MiB. H2O and SnapKV evict
+        <strong>(head, token)</strong> pairs — the token axis is not optional.</p>
+        <p><strong>Where the leverage actually is.</strong> Not in the position window. At a 32 GiB budget, letting
+        identity-keyed policy state survive HBM eviction is worth <strong>+34.15 pts to LFU</strong> (15.56 → 49.71)
+        and <strong>+24.85 pts to EMA α=0.01</strong> (31.54 → 56.39), while EMA α=0.15 is unchanged (−0.21 pts) —
+        larger than the whole spread between policies, and a <strong>protocol</strong> result, testable with no CXL
+        hardware. <span class="mono" style="font-size:0.72rem;">Simulated (provisional)</span>
+        See <a href="../../appendix/k-methodology.html">Appendix K, section K.7 — Uncalibrated parameters</a>.</p>
+      </div>
+    </div>
+  </div>
+
+  <p style="text-align:center;color:var(--text-secondary);font-size:0.8rem;margin-top:1.5rem;padding-top:0.75rem;border-top:1px solid var(--border-primary);">
+    <strong>Analytical model</strong> — the bound |⟨q_m, k_n⟩| ≤ B(|m − n|) follows from the RoPE construction.
+    The locality percentages and band-coverage figures are <strong>Illustrative</strong> assumptions, not measurements.
+    <strong>Retracted from this figure:</strong> the +4 pts / 93% → 97% prefetch contribution, the 97% hit rate, the
+    whole 72→80→87→93→97 ladder, and the 200 ns CXL access — no CXL hardware was measured. No single hit rate exists;
+    the simulated range is 8.5–91.6% <span class="mono">Simulated (provisional)</span>, and a single data-structure
+    defect in Revision 1 inverted four of five findings, so Revision 2 is provisional, not settled.
+    Work this reframing builds on, cited not competed with: H2O, SnapKV, Scissorhands, PyramidKV, Quest, Ada-KV,
+    HeadKV, InfiniGen, LayerKV, KVPR, PagedAttention. Canonical numbers v6.0.
+  </p>
+</div>
+</body>
+</html>

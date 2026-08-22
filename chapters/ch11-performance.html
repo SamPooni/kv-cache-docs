@@ -4,8 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chapter 11: Results Summary — KV-Cache Offloading Architecture</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../vendor/fonts.css">
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
@@ -151,6 +150,15 @@
 
       <p>The α grid shows a non-monotonic peak, not a "smaller decay is always better" relationship: hit rate rises from α = 0.5 down to an optimum at α = 0.05 (55.96%), then falls off sharply as α continues toward zero, bottoming near 24–25% at the smallest decay constants tested. Both extremes underperform plain LRU (36.85%) and LFU (15.56%) sits well below all EMA settings tested.</p>
 
+      <div class="figure-embed tall">
+        <div class="figure-embed-header">
+          <span class="figure-embed-label">Figure 11.1 &mdash; Hit rate against &alpha; at 32 GiB: an interior optimum, and no convergence onto LFU</span>
+          <a class="figure-embed-link" href="../figures/ch11-performance/alpha-grid.html" target="_blank" rel="noopener">Open Full Screen &#8599;</a>
+        </div>
+        <iframe src="../figures/ch11-performance/alpha-grid.html" title="Hit rate against the EMA decay constant alpha at a 32 GiB HBM budget on a log axis, with LRU and LFU reference lines" loading="lazy" style="height:860px;background:var(--bg-primary)"></iframe>
+      </div>
+
+
       <table class="data-table" style="margin: 1.5rem 0; width: 100%; border-collapse: collapse;">
         <caption style="text-align: left; margin-bottom: 0.5rem; font-weight: 600;">Table 11.5 — Persistent metadata effect at 32 GiB (headline simulated result)</caption>
         <thead>
@@ -169,6 +177,15 @@
       </table>
 
       <p>This is the simulator's central finding, and its shape matters as much as its magnitude: persisting eviction-policy metadata across a tier eviction helps the policies that were being hurt most by starting cold — LFU gains 34.15 points, the slowest-decaying EMA variant gains 24.85 — and is essentially neutral for a policy already tuned to a fast decay constant (EMA .15 moves by −0.21 points, within noise). Persistent metadata is not a uniform multiplier on hit rate; it rescues policies whose accumulated state was otherwise being thrown away on every eviction, and does little for a policy that wasn't relying on that state in the first place.</p>
+
+      <div class="figure-embed tall">
+        <div class="figure-embed-header">
+          <span class="figure-embed-label">Figure 11.2 &mdash; Persistent metadata at 32 GiB: reset against persists</span>
+          <a class="figure-embed-link" href="../figures/ch11-performance/persistent-metadata.html" target="_blank" rel="noopener">Open Full Screen &#8599;</a>
+        </div>
+        <iframe src="../figures/ch11-performance/persistent-metadata.html" title="Paired bars of hit rate with eviction metadata reset against metadata persisting, for LFU, EMA alpha 0.01 and EMA alpha 0.15" loading="lazy" style="height:880px;background:var(--bg-primary)"></iframe>
+      </div>
+
 
       <table class="data-table" style="margin: 1.5rem 0; width: 100%; border-collapse: collapse;">
         <caption style="text-align: left; margin-bottom: 0.5rem; font-weight: 600;">Table 11.6 — Workload dependence at 32 GiB (hit rate %)</caption>

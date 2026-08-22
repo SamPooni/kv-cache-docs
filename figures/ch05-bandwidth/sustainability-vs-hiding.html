@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sustainability vs Hiding</title>
+<link rel="stylesheet" href="../../vendor/fonts.css">
+<link rel="stylesheet" href="../../css/style.css">
+<style>
+/* ---- figure shell: package tokens only, no external assets ---- */
+body{background:var(--bg-primary);color:var(--text-primary);font-family:var(--font-sans);
+     line-height:1.6;font-size:16px;}
+.vz{position:relative;z-index:1;max-width:1120px;margin:0 auto;padding:1.6rem 1.4rem 1.2rem;}
+.vz-eyebrow{font-family:var(--font-mono);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;
+     color:var(--accent-purple);margin:0 0 .4rem;}
+.vz h1{font-family:var(--font-sans);font-size:1.45rem;font-weight:600;line-height:1.25;
+     color:var(--text-primary);margin:0 0 .4rem;letter-spacing:-.01em;}
+.vz h2{font-family:var(--font-sans);font-size:1rem;font-weight:600;color:var(--text-primary);
+     margin:0 0 .5rem;padding:0;border:0;letter-spacing:0;}
+.vz h3{font-family:var(--font-sans);font-size:.86rem;font-weight:600;color:var(--text-secondary);
+     margin:1rem 0 .45rem;padding:0;border:0;letter-spacing:.02em;text-transform:uppercase;}
+.vz-sub{color:var(--text-secondary);font-size:.94rem;max-width:78ch;margin:0 0 1.1rem;}
+.vz-card{background:var(--bg-card);border:1px solid var(--border-primary);border-radius:14px;
+     padding:1.15rem 1.2rem;}
+.vz-card + .vz-card{margin-top:1.1rem;}
+.vz-plot{display:block;width:100%;height:auto;overflow:visible;}
+.vz-scroll{overflow-x:auto;}
+.vz-caveat{display:flex;gap:.7rem;align-items:flex-start;background:rgba(210,153,34,.09);
+     border:1px solid rgba(210,153,34,.4);border-left:4px solid var(--accent-orange);
+     border-radius:0 10px 10px 0;padding:.7rem .9rem;margin:0 0 1.1rem;font-size:.85rem;
+     color:var(--text-secondary);}
+.vz-caveat strong{color:var(--accent-orange);}
+.vz-caveat-icon{font-size:1rem;line-height:1.3;flex:0 0 auto;}
+.vz-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:.75rem;margin:1.1rem 0 0;}
+.vz-tile{background:var(--bg-tertiary);border:1px solid var(--border-primary);border-radius:12px;padding:.8rem .9rem;}
+.vz-tile-v{font-family:var(--font-sans);font-size:1.55rem;font-weight:650;color:var(--text-primary);
+     line-height:1.15;letter-spacing:-.02em;}
+.vz-tile-l{font-size:.775rem;color:var(--text-secondary);margin-top:.28rem;line-height:1.45;}
+.vz-legend{display:flex;flex-wrap:wrap;gap:.4rem 1.4rem;margin:.9rem 0 0;font-size:.85rem;
+     color:var(--text-secondary);}
+.vz-legend-item{display:flex;align-items:center;gap:.5rem;}
+.vz-key{flex:0 0 auto;}
+.vz-legend b{color:var(--text-primary);font-weight:600;}
+.vz-legend .vz-eq{font-family:var(--font-mono);font-size:.8rem;color:var(--text-secondary);}
+.vz-note{font-size:.83rem;color:var(--text-secondary);margin:.9rem 0 0;max-width:82ch;}
+.vz-note b{color:var(--text-primary);}
+.vz-note code{font-family:var(--font-mono);font-size:.79rem;color:var(--text-primary);
+     background:var(--bg-code);border:1px solid var(--border-secondary);border-radius:5px;padding:.05rem .3rem;}
+details.vz-table{margin:1.1rem 0 0;}
+details.vz-table>summary{cursor:pointer;font-size:.83rem;color:var(--accent-cyan);
+     font-family:var(--font-mono);list-style:none;display:inline-flex;align-items:center;gap:.4rem;
+     padding:.3rem .1rem;}
+details.vz-table>summary::-webkit-details-marker{display:none;}
+details.vz-table>summary::before{content:"\25B8";display:inline-block;transition:transform .15s ease;}
+details.vz-table[open]>summary::before{transform:rotate(90deg);}
+details.vz-table table{font-size:.85rem;border-collapse:collapse;width:100%;margin-top:.5rem;}
+details.vz-table td,details.vz-table th{padding:.5rem .7rem;border-bottom:1px solid var(--border-secondary);
+     text-align:left;}
+details.vz-table th{color:var(--text-primary);font-weight:600;font-size:.8rem;}
+details.vz-table td{font-family:var(--font-mono);color:var(--text-secondary);}
+details.vz-table td:first-child{font-family:var(--font-sans);color:var(--text-primary);}
+.vz-foot{margin:1.3rem 0 0;padding-top:.8rem;border-top:1px solid var(--border-secondary);
+     font-family:var(--font-mono);font-size:.74rem;color:var(--text-muted);letter-spacing:.01em;}
+.vz-grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;}
+@media (max-width:860px){.vz-grid2{grid-template-columns:1fr;}}
+/* axis + mark typography inside the SVGs */
+.ax{fill:var(--text-muted);font-family:var(--font-mono);font-size:11px;
+    font-variant-numeric:tabular-nums;}
+.ax-title{fill:var(--text-secondary);font-family:var(--font-sans);font-size:12px;font-weight:500;}
+.lbl{fill:var(--text-primary);font-family:var(--font-sans);font-size:12px;font-weight:600;}
+.lbl-2{fill:var(--text-secondary);font-family:var(--font-sans);font-size:11.5px;}
+.lbl-m{fill:var(--text-secondary);font-family:var(--font-mono);font-size:11px;
+    font-variant-numeric:tabular-nums;}
+.val{fill:var(--text-primary);font-family:var(--font-mono);font-size:11.5px;font-weight:600;
+    font-variant-numeric:tabular-nums;}
+.grid{stroke:var(--border-secondary);stroke-width:1;}
+.axis{stroke:var(--border-primary);stroke-width:1;}
+/* evidence badges */
+.vz-badge{flex:0 0 auto;font-family:var(--font-mono);font-size:.68rem;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;border:1px solid;border-radius:999px;padding:.15rem .5rem;white-space:nowrap;
+  display:inline-block;}
+.ev-sim{color:var(--accent-orange);border-color:var(--accent-orange);}
+.ev-des{color:var(--accent-purple);border-color:var(--accent-purple);}
+.ev-ana{color:var(--accent-cyan);border-color:var(--accent-cyan);}
+.ev-lit{color:var(--accent-teal);border-color:var(--accent-teal);}
+.ev-mea{color:var(--accent-green);border-color:var(--accent-green);}
+.vz-claim{margin:1.1rem 0 0;background:rgba(63,185,80,.07);border:1px solid rgba(63,185,80,.35);
+  border-left:4px solid var(--accent-green);border-radius:0 12px 12px 0;padding:.95rem 1.1rem;}
+.vz-claim p{margin:0;color:var(--text-secondary);font-size:.9rem;line-height:1.6;}
+.vz-claim b{color:var(--text-primary);}
+.vz-claim .vz-claim-h{display:block;color:var(--text-primary);font-size:1.02rem;font-weight:600;
+  margin-bottom:.35rem;line-height:1.45;}
+.vz-claim.neutral{background:rgba(88,166,255,.07);border-color:rgba(88,166,255,.35);
+  border-left-color:var(--accent-cyan);}
+.vz-claim.warn{background:rgba(248,81,73,.07);border-color:rgba(248,81,73,.35);
+  border-left-color:var(--accent-red);}
+.vz-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.6rem;}
+.vz-item{background:var(--bg-tertiary);border:1px solid var(--border-primary);border-radius:12px;
+  padding:.7rem .85rem;}
+.vz-item-top{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.3rem;
+  flex-wrap:wrap;}
+.vz-item-name{font-weight:600;color:var(--text-primary);font-size:.92rem;}
+.vz-item p{margin:0 0 .25rem;font-size:.84rem;color:var(--text-secondary);line-height:1.5;}
+.vz-item p:last-child{margin-bottom:0;}
+.vz-item p b{color:var(--text-primary);}
+.vz-code{font-family:var(--font-mono);font-size:.78rem;line-height:1.65;color:var(--text-primary);
+  background:var(--bg-code);border:1px solid var(--border-primary);border-radius:10px;
+  padding:.75rem .9rem;overflow-x:auto;white-space:pre;margin:.55rem 0 0;}
+.vz-eq{font-family:var(--font-mono);font-size:.9rem;color:var(--text-primary);
+  background:var(--bg-code);border:1px solid var(--border-primary);border-radius:10px;
+  padding:.6rem .8rem;margin:.5rem 0 0;overflow-x:auto;}
+.vz-inline{font-family:var(--font-mono);font-size:.79rem;color:var(--text-primary);
+  background:var(--bg-code);border:1px solid var(--border-secondary);border-radius:5px;
+  padding:.05rem .3rem;white-space:nowrap;}
+.vz-legend .vz-eq{background:none;border:0;padding:0;margin:0;display:inline;font-size:.8rem;}
+.vz-dt{width:100%;border-collapse:collapse;font-size:.84rem;margin:.6rem 0 0;}
+.vz-dt th,.vz-dt td{padding:.5rem .65rem;border-bottom:1px solid var(--border-secondary);
+  text-align:left;vertical-align:top;color:var(--text-secondary);}
+.vz-dt th{color:var(--text-primary);font-weight:600;font-size:.79rem;text-transform:uppercase;
+  letter-spacing:.05em;border-bottom:1px solid var(--border-primary);}
+.vz-dt td b{color:var(--text-primary);}
+.vz-dt td:first-child{color:var(--text-primary);}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;}}
+</style>
+</head>
+<body>
+<main class="vz" role="main">
+<p class="sr-only">Figure: two independent constraints on tier traffic. SUSTAINABILITY is the sum over the decode set of R sub KV comma i, less than or equal to B tier: an aggregate rate across all concurrently decoding sequences, not one sequence. HIDING is T transfer of a chunk less than or equal to T compute of the previous chunk plus prefetch slack: per transfer, not on average. An aggregate panel shows four sequences' KV rates stacked inside the tier bandwidth with headroom left over, so sustainability holds. A per-transfer panel then shows four transfers of one 5.00 mebibyte block against a single deadline: 43 microseconds at 121 gigabytes per second is hidden, 82 microseconds at 64 gigabytes per second is hidden, 43 microseconds is hidden again, and 164 microseconds at a contended 32 gigabytes per second misses the deadline and exposes a stall. So hiding fails on one transfer at an entirely satisfactory average bandwidth. Link width and compression act on sustainability; prefetch depth, chunk sizing and traversal order act on hiding. The deadline position is a scenario parameter, not a measurement, and no CXL hardware was measured.</p>
+<p class="vz-eyebrow">Figure 5.2 &middot; Analytical model</p>
+<h1>Sustainability and hiding are independent constraints</h1>
+<p class="vz-sub">One is an aggregate rate across the whole decode set. The other is a deadline on every individual transfer. Satisfying the first tells you nothing about the second.</p>
+<div class="vz-grid2"><div class="vz-card"><h2>SUSTAINABILITY &mdash; an aggregate rate</h2><div class="vz-eq">&Sigma;_{i &isin; decode set} R_KV,i &nbsp; &le; &nbsp; B_tier</div><p class="vz-note">The summed KV consumption rate across <b>all concurrently decoding sequences</b>, not one sequence. Link width and compression act on this term: they raise <span class="vz-eq" style="display:inline;padding:.05rem .3rem">B_tier</span> or lower <span class="vz-eq" style="display:inline;padding:.05rem .3rem">R_KV</span>.</p></div><div class="vz-card"><h2>HIDING &mdash; a per-transfer deadline</h2><div class="vz-eq">T_transfer(chunk) &nbsp; &le; &nbsp; T_compute(previous chunk) + prefetch_slack</div><p class="vz-note"><b>Per transfer, not on average.</b> Prefetch depth, chunk sizing and traversal order act on this term. Adding link width does not fix a missed deadline on one transfer.</p></div></div><div class="vz-card" style="margin-top:1.1rem"><h2>A case where the average is fine and a transfer still stalls</h2><div class="vz-scroll"><svg class="vz-plot" viewBox="0 0 900 156" role="group" aria-label="Aggregate view: the summed KV consumption rate across the decode set sits under the tier bandwidth, so sustainability holds."><defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--text-muted)"/></marker><pattern id="ov" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><rect width="6" height="6" fill="var(--bg-tertiary)"/><line x1="0" y1="0" x2="0" y2="6" stroke="#f85149" stroke-width="3"/></pattern></defs><text x="20" y="24" fill="var(--text-primary)" style="font-family:var(--font-sans);font-size:12.5px;font-weight:600">Aggregate view &mdash; across the whole decode set</text><rect x="20" y="46" width="820" height="40" rx="8" fill="var(--bg-tertiary)" stroke="var(--border-primary)" stroke-width="1"/><rect x="20" y="46" width="170" height="40" rx="7" fill="#58a6ff"/><text x="105" y="71" text-anchor="middle" fill="var(--bg-primary)" style="font-family:var(--font-mono);font-size:11px;font-weight:700">seq 1</text><rect x="192" y="46" width="150" height="40" rx="7" fill="#58a6ff"/><text x="267" y="71" text-anchor="middle" fill="var(--bg-primary)" style="font-family:var(--font-mono);font-size:11px;font-weight:700">seq 2</text><rect x="344" y="46" width="210" height="40" rx="7" fill="#58a6ff"/><text x="449" y="71" text-anchor="middle" fill="var(--bg-primary)" style="font-family:var(--font-mono);font-size:11px;font-weight:700">seq 3</text><rect x="556" y="46" width="120" height="40" rx="7" fill="#58a6ff"/><text x="616" y="71" text-anchor="middle" fill="var(--bg-primary)" style="font-family:var(--font-mono);font-size:11px;font-weight:700">seq 4</text><line x1="840" y1="34" x2="840" y2="98" stroke="#3fb950" stroke-width="2.5"/><text x="834" y="30" text-anchor="end" fill="#3fb950" style="font-family:var(--font-mono);font-size:11px;font-weight:700">B_tier</text><rect x="678" y="46" width="160" height="40" rx="7" fill="none" stroke="#3fb950" stroke-width="1.5" stroke-dasharray="4 4"/><text x="758" y="71" text-anchor="middle" fill="#3fb950" style="font-family:var(--font-sans);font-size:11px">headroom</text><text x="20" y="112" fill="var(--text-secondary)" style="font-family:var(--font-mono);font-size:11px">&Sigma;_{i &isin; decode set} R_KV,i &nbsp;&le;&nbsp; B_tier</text><text x="20" y="132" fill="#3fb950" style="font-family:var(--font-sans);font-size:12px;font-weight:600">&#10003; SUSTAINABILITY HOLDS &mdash; the link is not saturated over this window.</text><text x="20" y="150" fill="var(--text-muted)" style="font-family:var(--font-sans);font-size:10.5px">Schematic: relative widths only, no rate is claimed.</text></svg></div><div class="vz-scroll" style="margin-top:.6rem"><svg class="vz-plot" viewBox="0 0 900 300" role="group" aria-label="Per-transfer view: four transfers against one deadline; the 164 microsecond transfer overruns and exposes a stall."><defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--text-muted)"/></marker><pattern id="ov" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><rect width="6" height="6" fill="var(--bg-tertiary)"/><line x1="0" y1="0" x2="0" y2="6" stroke="#f85149" stroke-width="3"/></pattern></defs><text x="20" y="24" fill="var(--text-primary)" style="font-family:var(--font-sans);font-size:12.5px;font-weight:600">Per-transfer view &mdash; the same window, transfer by transfer</text><rect x="210.0" y="40" width="300.0" height="180" fill="rgba(63,185,80,.06)"/><line x1="510.0" y1="36" x2="510.0" y2="236" stroke="#3fb950" stroke-width="2" stroke-dasharray="6 4"/><text x="570.0" y="32" text-anchor="middle" fill="#3fb950" style="font-family:var(--font-mono);font-size:10.5px;font-weight:700">deadline = T_compute(prev chunk) + prefetch_slack</text><text x="200" y="69" text-anchor="end" fill="var(--text-primary)" style="font-family:var(--font-sans);font-size:11.5px;font-weight:600">transfer 1</text><text x="200" y="83" text-anchor="end" fill="var(--text-muted)" style="font-family:var(--font-mono);font-size:9.5px">121 GB/s</text><rect x="210.0" y="52" width="86.0" height="24" rx="4" fill="#58a6ff"/><text x="308.0" y="69" fill="var(--text-secondary)" style="font-family:var(--font-sans);font-size:11.5px">43 &micro;s &mdash; hidden</text><text x="200" y="111" text-anchor="end" fill="var(--text-primary)" style="font-family:var(--font-sans);font-size:11.5px;font-weight:600">transfer 2</text><text x="200" y="125" text-anchor="end" fill="var(--text-muted)" style="font-family:var(--font-mono);font-size:9.5px">64 GB/s</text><rect x="210.0" y="94" width="164.0" height="24" rx="4" fill="#58a6ff"/><text x="386.0" y="111" fill="var(--text-secondary)" style="font-family:var(--font-sans);font-size:11.5px">82 &micro;s &mdash; hidden</text><text x="200" y="153" text-anchor="end" fill="var(--text-primary)" style="font-family:var(--font-sans);font-size:11.5px;font-weight:600">transfer 3</text><text x="200" y="167" text-anchor="end" fill="var(--text-muted)" style="font-family:var(--font-mono);font-size:9.5px">121 GB/s</text><rect x="210.0" y="136" width="86.0" height="24" rx="4" fill="#58a6ff"/><text x="308.0" y="153" fill="var(--text-secondary)" style="font-family:var(--font-sans);font-size:11.5px">43 &micro;s &mdash; hidden</text><text x="200" y="195" text-anchor="end" fill="var(--text-primary)" style="font-family:var(--font-sans);font-size:11.5px;font-weight:600">transfer 4</text><text x="200" y="209" text-anchor="end" fill="var(--text-muted)" style="font-family:var(--font-mono);font-size:9.5px">32 GB/s, contended</text><rect x="210.0" y="178" width="300.0" height="24" rx="4" fill="#58a6ff"/><rect x="510.0" y="178" width="28.0" height="24" rx="4" fill="url(#ov)" stroke="#f85149" stroke-width="1.5"/><text x="550.0" y="195" fill="#f85149" style="font-family:var(--font-sans);font-size:11.5px;font-weight:600">164 &micro;s &mdash; MISSES the deadline &rarr; exposed stall</text><line class="axis" x1="210.0" y1="238" x2="610.0" y2="238"/><line class="grid" x1="210.0" y1="238" x2="210.0" y2="244"/><text class="ax" x="210.0" y="258" text-anchor="middle">0</text><line class="grid" x1="310.0" y1="238" x2="310.0" y2="244"/><text class="ax" x="310.0" y="258" text-anchor="middle">50</text><line class="grid" x1="410.0" y1="238" x2="410.0" y2="244"/><text class="ax" x="410.0" y="258" text-anchor="middle">100</text><line class="grid" x1="510.0" y1="238" x2="510.0" y2="244"/><text class="ax" x="510.0" y="258" text-anchor="middle">150</text><line class="grid" x1="610.0" y1="238" x2="610.0" y2="244"/><text class="ax" x="610.0" y="258" text-anchor="middle">200</text><text class="ax-title" x="410.0" y="278" text-anchor="middle">&micro;s</text><text x="20" y="292" fill="#f85149" style="font-family:var(--font-sans);font-size:12px;font-weight:600">&#10007; HIDING FAILS &mdash; on one transfer, at an entirely satisfactory average bandwidth.</text></svg></div><div class="vz-legend"><span class="vz-legend-item"><svg width="16" height="12" aria-hidden="true"><rect width="16" height="12" rx="3" fill="#58a6ff"/></svg><span><b>Transfer time inside the deadline</b> &mdash; hidden behind compute</span></span><span class="vz-legend-item"><svg width="16" height="12" aria-hidden="true"><rect width="16" height="12" rx="3" fill="url(#ov)" stroke="#f85149"/></svg><span><b>Overrun</b> &mdash; the part that cannot be hidden, and stalls the pipeline</span></span></div><p class="vz-note">The horizontal scale is set by the three canonical tier-fetch times for one 5.00 MiB block: <b>43 &micro;s</b> at 121 GB/s, <b>82 &micro;s</b> at 64 GB/s and <b>164 &micro;s</b> at 32 GB/s. The deadline position is a <b>scenario parameter, not a measurement</b> &mdash; it is drawn long enough to hide an 82 &micro;s transfer and short enough to miss a 164 &micro;s one, which is the only property it needs. No compute time is claimed here, and no CXL hardware was measured.</p></div><div class="vz-claim warn"><p><span class="vz-claim-h">The two constraints are independent: the first can hold while the second fails.</span>Sustainability is satisfied over the window &mdash; the link has headroom &mdash; and the pipeline still stalls, because one transfer individually exceeded the compute time available to hide it. Both constraints have to be stated because techniques act on <b>different terms</b>: link width and compression raise or relieve sustainability; prefetch depth, chunk sizing and traversal order address hiding. A stall at satisfactory average bandwidth is the diagnostic signature of the second, and no amount of the first will fix it.</p></div>
+<p class="vz-foot">Analytical model &mdash; data/formal_core.md &sect;3.3; fetch times from CANONICAL-NUMBERS.md &sect;4. No CXL hardware was measured.</p>
+</main>
+</body>
+</html>

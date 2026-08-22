@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Movement vs Regeneration</title>
+<link rel="stylesheet" href="../../vendor/fonts.css">
+<link rel="stylesheet" href="../../css/style.css">
+<style>
+/* ---- figure shell: package tokens only, no external assets ---- */
+body{background:var(--bg-primary);color:var(--text-primary);font-family:var(--font-sans);
+     line-height:1.6;font-size:16px;}
+.vz{position:relative;z-index:1;max-width:1120px;margin:0 auto;padding:1.6rem 1.4rem 1.2rem;}
+.vz-eyebrow{font-family:var(--font-mono);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;
+     color:var(--accent-purple);margin:0 0 .4rem;}
+.vz h1{font-family:var(--font-sans);font-size:1.45rem;font-weight:600;line-height:1.25;
+     color:var(--text-primary);margin:0 0 .4rem;letter-spacing:-.01em;}
+.vz h2{font-family:var(--font-sans);font-size:1rem;font-weight:600;color:var(--text-primary);
+     margin:0 0 .5rem;padding:0;border:0;letter-spacing:0;}
+.vz h3{font-family:var(--font-sans);font-size:.86rem;font-weight:600;color:var(--text-secondary);
+     margin:1rem 0 .45rem;padding:0;border:0;letter-spacing:.02em;text-transform:uppercase;}
+.vz-sub{color:var(--text-secondary);font-size:.94rem;max-width:78ch;margin:0 0 1.1rem;}
+.vz-card{background:var(--bg-card);border:1px solid var(--border-primary);border-radius:14px;
+     padding:1.15rem 1.2rem;}
+.vz-card + .vz-card{margin-top:1.1rem;}
+.vz-plot{display:block;width:100%;height:auto;overflow:visible;}
+.vz-scroll{overflow-x:auto;}
+.vz-caveat{display:flex;gap:.7rem;align-items:flex-start;background:rgba(210,153,34,.09);
+     border:1px solid rgba(210,153,34,.4);border-left:4px solid var(--accent-orange);
+     border-radius:0 10px 10px 0;padding:.7rem .9rem;margin:0 0 1.1rem;font-size:.85rem;
+     color:var(--text-secondary);}
+.vz-caveat strong{color:var(--accent-orange);}
+.vz-caveat-icon{font-size:1rem;line-height:1.3;flex:0 0 auto;}
+.vz-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:.75rem;margin:1.1rem 0 0;}
+.vz-tile{background:var(--bg-tertiary);border:1px solid var(--border-primary);border-radius:12px;padding:.8rem .9rem;}
+.vz-tile-v{font-family:var(--font-sans);font-size:1.55rem;font-weight:650;color:var(--text-primary);
+     line-height:1.15;letter-spacing:-.02em;}
+.vz-tile-l{font-size:.775rem;color:var(--text-secondary);margin-top:.28rem;line-height:1.45;}
+.vz-legend{display:flex;flex-wrap:wrap;gap:.4rem 1.4rem;margin:.9rem 0 0;font-size:.85rem;
+     color:var(--text-secondary);}
+.vz-legend-item{display:flex;align-items:center;gap:.5rem;}
+.vz-key{flex:0 0 auto;}
+.vz-legend b{color:var(--text-primary);font-weight:600;}
+.vz-legend .vz-eq{font-family:var(--font-mono);font-size:.8rem;color:var(--text-secondary);}
+.vz-note{font-size:.83rem;color:var(--text-secondary);margin:.9rem 0 0;max-width:82ch;}
+.vz-note b{color:var(--text-primary);}
+.vz-note code{font-family:var(--font-mono);font-size:.79rem;color:var(--text-primary);
+     background:var(--bg-code);border:1px solid var(--border-secondary);border-radius:5px;padding:.05rem .3rem;}
+details.vz-table{margin:1.1rem 0 0;}
+details.vz-table>summary{cursor:pointer;font-size:.83rem;color:var(--accent-cyan);
+     font-family:var(--font-mono);list-style:none;display:inline-flex;align-items:center;gap:.4rem;
+     padding:.3rem .1rem;}
+details.vz-table>summary::-webkit-details-marker{display:none;}
+details.vz-table>summary::before{content:"\25B8";display:inline-block;transition:transform .15s ease;}
+details.vz-table[open]>summary::before{transform:rotate(90deg);}
+details.vz-table table{font-size:.85rem;border-collapse:collapse;width:100%;margin-top:.5rem;}
+details.vz-table td,details.vz-table th{padding:.5rem .7rem;border-bottom:1px solid var(--border-secondary);
+     text-align:left;}
+details.vz-table th{color:var(--text-primary);font-weight:600;font-size:.8rem;}
+details.vz-table td{font-family:var(--font-mono);color:var(--text-secondary);}
+details.vz-table td:first-child{font-family:var(--font-sans);color:var(--text-primary);}
+.vz-foot{margin:1.3rem 0 0;padding-top:.8rem;border-top:1px solid var(--border-secondary);
+     font-family:var(--font-mono);font-size:.74rem;color:var(--text-muted);letter-spacing:.01em;}
+.vz-grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;}
+@media (max-width:860px){.vz-grid2{grid-template-columns:1fr;}}
+/* axis + mark typography inside the SVGs */
+.ax{fill:var(--text-muted);font-family:var(--font-mono);font-size:11px;
+    font-variant-numeric:tabular-nums;}
+.ax-title{fill:var(--text-secondary);font-family:var(--font-sans);font-size:12px;font-weight:500;}
+.lbl{fill:var(--text-primary);font-family:var(--font-sans);font-size:12px;font-weight:600;}
+.lbl-2{fill:var(--text-secondary);font-family:var(--font-sans);font-size:11.5px;}
+.lbl-m{fill:var(--text-secondary);font-family:var(--font-mono);font-size:11px;
+    font-variant-numeric:tabular-nums;}
+.val{fill:var(--text-primary);font-family:var(--font-mono);font-size:11.5px;font-weight:600;
+    font-variant-numeric:tabular-nums;}
+.grid{stroke:var(--border-secondary);stroke-width:1;}
+.axis{stroke:var(--border-primary);stroke-width:1;}
+/* evidence badges */
+.vz-badge{flex:0 0 auto;font-family:var(--font-mono);font-size:.68rem;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;border:1px solid;border-radius:999px;padding:.15rem .5rem;white-space:nowrap;
+  display:inline-block;}
+.ev-sim{color:var(--accent-orange);border-color:var(--accent-orange);}
+.ev-des{color:var(--accent-purple);border-color:var(--accent-purple);}
+.ev-ana{color:var(--accent-cyan);border-color:var(--accent-cyan);}
+.ev-lit{color:var(--accent-teal);border-color:var(--accent-teal);}
+.ev-mea{color:var(--accent-green);border-color:var(--accent-green);}
+.vz-claim{margin:1.1rem 0 0;background:rgba(63,185,80,.07);border:1px solid rgba(63,185,80,.35);
+  border-left:4px solid var(--accent-green);border-radius:0 12px 12px 0;padding:.95rem 1.1rem;}
+.vz-claim p{margin:0;color:var(--text-secondary);font-size:.9rem;line-height:1.6;}
+.vz-claim b{color:var(--text-primary);}
+.vz-claim .vz-claim-h{display:block;color:var(--text-primary);font-size:1.02rem;font-weight:600;
+  margin-bottom:.35rem;line-height:1.45;}
+.vz-claim.neutral{background:rgba(88,166,255,.07);border-color:rgba(88,166,255,.35);
+  border-left-color:var(--accent-cyan);}
+.vz-claim.warn{background:rgba(248,81,73,.07);border-color:rgba(248,81,73,.35);
+  border-left-color:var(--accent-red);}
+.vz-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.6rem;}
+.vz-item{background:var(--bg-tertiary);border:1px solid var(--border-primary);border-radius:12px;
+  padding:.7rem .85rem;}
+.vz-item-top{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.3rem;
+  flex-wrap:wrap;}
+.vz-item-name{font-weight:600;color:var(--text-primary);font-size:.92rem;}
+.vz-item p{margin:0 0 .25rem;font-size:.84rem;color:var(--text-secondary);line-height:1.5;}
+.vz-item p:last-child{margin-bottom:0;}
+.vz-item p b{color:var(--text-primary);}
+.vz-code{font-family:var(--font-mono);font-size:.78rem;line-height:1.65;color:var(--text-primary);
+  background:var(--bg-code);border:1px solid var(--border-primary);border-radius:10px;
+  padding:.75rem .9rem;overflow-x:auto;white-space:pre;margin:.55rem 0 0;}
+.vz-eq{font-family:var(--font-mono);font-size:.9rem;color:var(--text-primary);
+  background:var(--bg-code);border:1px solid var(--border-primary);border-radius:10px;
+  padding:.6rem .8rem;margin:.5rem 0 0;overflow-x:auto;}
+.vz-inline{font-family:var(--font-mono);font-size:.79rem;color:var(--text-primary);
+  background:var(--bg-code);border:1px solid var(--border-secondary);border-radius:5px;
+  padding:.05rem .3rem;white-space:nowrap;}
+.vz-legend .vz-eq{background:none;border:0;padding:0;margin:0;display:inline;font-size:.8rem;}
+.vz-dt{width:100%;border-collapse:collapse;font-size:.84rem;margin:.6rem 0 0;}
+.vz-dt th,.vz-dt td{padding:.5rem .65rem;border-bottom:1px solid var(--border-secondary);
+  text-align:left;vertical-align:top;color:var(--text-secondary);}
+.vz-dt th{color:var(--text-primary);font-weight:600;font-size:.79rem;text-transform:uppercase;
+  letter-spacing:.05em;border-bottom:1px solid var(--border-primary);}
+.vz-dt td b{color:var(--text-primary);}
+.vz-dt td:first-child{color:var(--text-primary);}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;}}
+</style>
+</head>
+<body>
+<main class="vz" role="main">
+<p class="sr-only">Figure: a logarithmic time axis running from 10 microseconds to 100 milliseconds, comparing movement against regeneration for a single 5.00 mebibyte KV block, which is 16 tokens of Llama-3 70B under GQA at 320 kibibytes per token. The movement bar spans 43 microseconds at 121 gigabytes per second, through 82 microseconds at 64 gigabytes per second, to 164 microseconds at 32 gigabytes per second. The regeneration bar spans 9 milliseconds at 50 per cent MFU, through 11 milliseconds at 40 per cent MFU, to 18 milliseconds at 25 per cent MFU, for 16 tokens of forward compute. A labelled span between the two reads two to three orders of magnitude. A third, open-ended hatched bar shows that regenerating an arbitrary interior block costs at least 18 milliseconds and potentially far higher, because interior KV is not independently reproducible: hidden states depend recursively on all preceding context. No precise multiple is claimed, because the two quantities do not measure the same operation; 218 times, from 17.9 milliseconds divided by 82 microseconds, is one point inside the range and must always be quoted with those inputs. This is an analytical model. No CXL hardware was measured.</p>
+<p class="vz-eyebrow">Figure 5.1 &middot; Analytical model</p>
+<h1>Moving a KV block against regenerating it &mdash; per 5.00 MiB block, log scale</h1>
+<p class="vz-sub">Both sides are ranges, because both rest on assumptions rather than measurements. The gap between them is the structural argument for tiering KV state rather than discarding and recomputing it.</p>
+<div class="vz-caveat"><span class="vz-caveat-icon" aria-hidden="true">&#9888;</span><div><strong>Analytical model &mdash; no CXL hardware was measured.</strong> The three tier bandwidths are assumptions (121 GB/s CXL 3.0 &times;16 theoretical one direction; 64 GB/s mid-range; 32 GB/s pessimistic), and the three compute costs rest on assumed MFU. Neither side is a measurement.</div></div><div class="vz-card"><div class="vz-scroll"><svg class="vz-plot" viewBox="0 0 940 352" role="group" aria-label="Log-scale comparison of the cost of moving a 5.00 mebibyte KV block against the cost of regenerating it by forward compute."><defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--text-muted)"/></marker><marker id="ahg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#3fb950"/></marker></defs><defs><pattern id="hatch" width="7" height="7" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><rect width="7" height="7" fill="var(--bg-tertiary)"/><line x1="0" y1="0" x2="0" y2="7" stroke="#d29922" stroke-width="3"/></pattern><marker id="ahb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#d29922"/></marker><marker id="ahs" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--text-secondary)"/></marker><marker id="ahs2" viewBox="0 0 10 10" refX="1" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 10 0 L 0 5 L 10 10 z" fill="var(--text-secondary)"/></marker></defs><line class="grid" x1="90.0" y1="60" x2="90.0" y2="300"/><text class="ax" x="90.0" y="318" text-anchor="middle">10 &micro;s</text><line class="grid" x1="280.0" y1="60" x2="280.0" y2="300"/><text class="ax" x="280.0" y="318" text-anchor="middle">100 &micro;s</text><line class="grid" x1="470.0" y1="60" x2="470.0" y2="300"/><text class="ax" x="470.0" y="318" text-anchor="middle">1 ms</text><line class="grid" x1="660.0" y1="60" x2="660.0" y2="300"/><text class="ax" x="660.0" y="318" text-anchor="middle">10 ms</text><line class="grid" x1="850.0" y1="60" x2="850.0" y2="300"/><text class="ax" x="850.0" y="318" text-anchor="middle">100 ms</text><line class="axis" x1="90.0" y1="300" x2="850.0" y2="300"/><text class="ax-title" x="470.0" y="340" text-anchor="middle">time per 5.00 MiB block &mdash; log scale</text><line x1="324.8" y1="76" x2="647.3" y2="76" stroke="var(--text-secondary)" stroke-width="1.5" marker-start="url(#ahs2)" marker-end="url(#ahs)" aria-hidden="true"/><line x1="320.8" y1="76" x2="320.8" y2="300" stroke="var(--border-highlight)" stroke-width="1" stroke-dasharray="4 4"/><line x1="651.3" y1="76" x2="651.3" y2="300" stroke="var(--border-highlight)" stroke-width="1" stroke-dasharray="4 4"/><rect x="365.1" y="52" width="242" height="18" rx="6" fill="var(--bg-card)"/><text x="486.1" y="66" text-anchor="middle" fill="var(--text-primary)" style="font-family:var(--font-sans);font-size:12px;font-weight:600">two to three orders of magnitude</text><g role="img" aria-label="MOVE the block across the tier boundary. 121 / 64 / 32 GB/s &mdash; no CXL hardware was measured. Range 43 &micro;s to 164 &micro;s, mid 82 &micro;s."><text class="lbl" x="90.0" y="100" style="font-size:12.5px">MOVE the block across the tier boundary</text><text class="lbl-2" x="400.0" y="100" fill="var(--text-muted)" style="font-size:10.5px">121 / 64 / 32 GB/s &mdash; no CXL hardware was measured</text><rect x="210.4" y="112" width="110.5" height="26" rx="4" fill="#58a6ff" stroke="#58a6ff" stroke-width="1"/><line x1="263.6" y1="113" x2="263.6" y2="137" stroke="var(--bg-primary)" stroke-width="2"/><text class="val" x="202.4" y="130" text-anchor="end">43 &micro;s</text><text class="val" x="328.8" y="130" text-anchor="start">164 &micro;s</text><text class="lbl-m" x="263.6" y="152" text-anchor="middle" style="font-size:10px">82 &micro;s</text></g><g role="img" aria-label="REGENERATE it &mdash; forward compute, 16 tokens. 50% / 40% / 25% MFU. Range 9 ms to 18 ms, mid 11 ms."><text class="lbl" x="90.0" y="176" style="font-size:12.5px">REGENERATE it &mdash; forward compute, 16 tokens</text><text class="lbl-2" x="400.0" y="176" fill="var(--text-muted)" style="font-size:10.5px">50% / 40% / 25% MFU</text><rect x="651.3" y="188" width="57.2" height="26" rx="4" fill="#d29922" stroke="#d29922" stroke-width="1"/><line x1="667.9" y1="189" x2="667.9" y2="213" stroke="var(--bg-primary)" stroke-width="2"/><text class="val" x="643.3" y="206" text-anchor="end">9 ms</text><text class="val" x="716.5" y="206" text-anchor="start">18 ms</text><text class="lbl-m" x="667.9" y="228" text-anchor="middle" style="font-size:10px">11 ms</text></g><g role="img" aria-label="An arbitrary interior block: at least 18 milliseconds and potentially far higher. Interior KV is not independently reproducible."><text class="lbl" x="90.0" y="248" style="font-size:12.5px">REGENERATE an arbitrary <tspan font-style="italic">interior</tspan> block</text><text class="lbl-2" x="390.0" y="248" fill="var(--text-muted)" style="font-size:10.5px">hidden states depend recursively on all preceding context</text><rect x="708.5" y="260" width="117.5" height="26" rx="4" fill="url(#hatch)" stroke="#d29922" stroke-width="1"/><line x1="824.0" y1="273" x2="884.0" y2="273" stroke="#d29922" stroke-width="2" marker-end="url(#ahb)" aria-hidden="true"/><text class="val" x="700.5" y="278" text-anchor="end">&ge; 18 ms</text></g></svg></div><div class="vz-legend"><span class="vz-legend-item"><svg width="16" height="12" aria-hidden="true"><rect width="16" height="12" rx="3" fill="#58a6ff"/></svg><span><b>Movement</b> &mdash; fetch a 5.00 MiB block across the tier boundary</span></span><span class="vz-legend-item"><svg width="16" height="12" aria-hidden="true"><rect width="16" height="12" rx="3" fill="#d29922"/></svg><span><b>Regeneration</b> &mdash; re-run the forward pass for those 16 tokens</span></span><span class="vz-legend-item"><svg width="16" height="12" aria-hidden="true"><rect width="16" height="12" rx="3" fill="url(#hatch)" stroke="#d29922"/></svg><span><b>Open-ended</b> &mdash; interior block, floor only</span></span></div><details class="vz-table"><summary>Table view</summary><table><thead><tr><th>Operation</th><th>Assumption</th><th>Cost</th></tr></thead><tbody><tr><td>Tier fetch, 5.00 MiB</td><td>121 GB/s (CXL 3.0 &times;16 theoretical, one direction)</td><td>43 &micro;s</td></tr><tr><td>Tier fetch, 5.00 MiB</td><td>64 GB/s (mid-range &mdash; unmeasured)</td><td>82 &micro;s</td></tr><tr><td>Tier fetch, 5.00 MiB</td><td>32 GB/s (pessimistic)</td><td>164 &micro;s</td></tr><tr><td>Forward compute, 16 tokens</td><td>50% MFU</td><td>9 ms</td></tr><tr><td>Forward compute, 16 tokens</td><td>40% MFU</td><td>11 ms</td></tr><tr><td>Forward compute, 16 tokens</td><td>25% MFU</td><td>18 ms</td></tr><tr><td>Regeneration, arbitrary interior block</td><td>recursive dependency on all preceding context</td><td>&ge; the above, potentially far higher</td></tr></tbody></table></details></div><div class="vz-tiles"><div class="vz-tile"><div class="vz-tile-v">2&ndash;3 orders</div><div class="vz-tile-l">of magnitude cheaper to move a block than to regenerate it. This is the claim.</div></div><div class="vz-tile"><div class="vz-tile-v">no precise multiple</div><div class="vz-tile-l">is claimed. The two quantities do not measure the same operation.</div></div><div class="vz-tile"><div class="vz-tile-v">218&times;</div><div class="vz-tile-l">is <b>one point</b> in that range &mdash; 17.9 ms &divide; 82 &micro;s &mdash; and must always be quoted with those two inputs.</div></div></div><div class="vz-claim neutral"><p><span class="vz-claim-h">Claim the order of magnitude, not the digit.</span>Pick the optimistic ends of both ranges and the ratio is nearer two orders of magnitude; pick the pessimistic ends and it is nearer three. Any single multiple is an artifact of which two assumptions were chosen. And the regeneration side is a <b>floor</b>: an arbitrary <b>interior</b> block may cost far more, because interior KV is not independently reproducible &mdash; a hidden state at position <i>i</i> depends recursively on every token from 0 through <i>i</i>, through every attention layer.</p></div>
+<p class="vz-foot">Analytical model &mdash; CANONICAL-NUMBERS.md &sect;4. No CXL hardware was measured.</p>
+</main>
+</body>
+</html>

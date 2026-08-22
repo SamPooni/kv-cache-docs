@@ -1,1 +1,595 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>KV-State Management Landscape</title><style>*{box-sizing:border-box}body{margin:0;background:#0d1117;color:#e6edf3;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;line-height:1.55}.wrap{max-width:1080px;margin:auto;padding:36px}.ey{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#8b949e}.hero{font-size:42px;line-height:1.06;margin:8px 0 14px}.lead{font-size:18px;color:#b7c2cf;max-width:900px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin:24px 0}.card{background:#161b22;border:1px solid #30363d;border-radius:14px;padding:18px}.n{font:750 27px ui-monospace,Consolas,monospace;color:#58a6ff}.lab{font-weight:650;margin-top:6px}.note{font-size:13px;color:#8b949e;margin-top:6px}.sec{font-size:24px;margin:30px 0 10px}.flow{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:18px 0}.box{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:13px 15px;font-weight:650}.arr{font-size:20px;color:#7d8590}.warn{padding:14px 16px;border-left:4px solid #d29922;background:#1c1912;border-radius:8px}.tbl{width:100%;border-collapse:collapse;margin:16px 0}.tbl th,.tbl td{padding:10px 12px;border-bottom:1px solid #30363d;text-align:left}.tbl th{color:#8b949e;font-size:12px;text-transform:uppercase}.footer{margin-top:34px;padding-top:16px;border-top:1px solid #30363d;color:#7d8590;font-size:12px}</style></head><body><main class="wrap"><div class="ey">Market / research landscape · August 2026</div><h1 class="hero">KV-State Management Landscape</h1><p class="lead">This landscape is intentionally capability-based. Product specifications and research results change quickly; v5 does not use competitor superlatives or vendor-gap claims as technical evidence.</p><div class="grid"><div class="card"><div class="lab">Memory expansion / pooling</div><div class="note">Examples include CXL-attached DRAM and pooled-memory platforms. Their existence establishes additional capacity options, not KV-cache performance.</div></div><div class="card"><div class="lab">Inference runtimes</div><div class="note">Paged KV allocation, prefix caching, batching and scheduling reduce fragmentation/recomputation, but behavior is workload- and version-dependent.</div></div><div class="card"><div class="lab">KV disaggregation research</div><div class="note">Research explores CPU/DRAM/SSD/CXL/remote-memory placement, prefetch and near-memory processing. Results are not directly comparable without matching workloads and hardware.</div></div><div class="card"><div class="lab">Application-aware caching</div><div class="note">Emerging agent workloads expose reuse signals such as session identity, prefixes and tool-return timing. These can inform policy but require independent validation.</div></div></div><div class="warn"><strong>Positioning rule:</strong> v5 claims a measured GB10 observation, a corrected simulator and a KV object/control-plane design. It does not claim to be the first, only or universally superior KV-cache solution.</div><div class="footer">© 2025–2026 Subramaniyam (Sam) Pooni. All Rights Reserved. · Technical Documentation v5.0.2 · August 2026</div></main></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2026 Landscape by Decision</title>
+<link rel="stylesheet" href="../../css/style.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  padding: 2rem;
+  line-height: 1.5;
+}
+.container { max-width: 1100px; margin: 0 auto; }
+h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+.subtitle {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  margin-bottom: 2rem;
+}
+.section {
+  margin-bottom: 2rem;
+}
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.status-badge {
+  padding: 0.4rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.status-badge.available { background: rgba(63, 185, 80, 0.15); color: var(--accent-green); border: 1px solid rgba(63, 185, 80, 0.4); }
+.status-badge.emerging { background: rgba(210, 153, 34, 0.15); color: var(--accent-orange); border: 1px solid rgba(210, 153, 34, 0.4); }
+.status-badge.research { background: rgba(88, 166, 255, 0.15); color: var(--accent-cyan); border: 1px solid rgba(88, 166, 255, 0.4); }
+.status-badge.your-work { background: rgba(163, 113, 247, 0.15); color: var(--accent-purple); border: 1px solid rgba(163, 113, 247, 0.4); }
+.section-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+}
+.card {
+  background: var(--bg-card);
+  border: 2px solid var(--border-primary);
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+.card.highlight {
+  border-color: var(--accent-purple);
+  background: rgba(163, 113, 247, 0.10);
+}
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+}
+.card-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+.card-company {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+.card-type {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-weight: 600;
+}
+.type-hw { background: var(--bg-code); color: var(--text-secondary); border: 1px solid var(--border-primary); }
+.type-sw { background: rgba(88, 166, 255, 0.18); color: var(--accent-cyan); border: 1px solid rgba(88, 166, 255, 0.35); }
+.type-paper { background: rgba(210, 153, 34, 0.18); color: var(--accent-orange); border: 1px solid rgba(210, 153, 34, 0.35); }
+.card-specs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+.spec {
+  font-size: 0.85rem;
+  font-family: var(--font-mono);
+  padding: 0.25rem 0.5rem;
+  background: var(--bg-code);
+  color: var(--text-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: 4px;
+}
+.card-desc {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.75rem;
+}
+.card-gap {
+  font-size: 0.9rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(248, 81, 73, 0.12);
+  border-left: 3px solid var(--accent-red);
+  border-radius: 0 6px 6px 0;
+  color: var(--text-primary);
+}
+.card-gap strong { color: var(--accent-red); }
+.gap-analysis {
+  background: var(--bg-card);
+  border: 2px solid rgba(248, 81, 73, 0.4);
+  border-radius: 14px;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+}
+.gap-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--accent-red);
+  margin-bottom: 1rem;
+}
+.gap-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+}
+.gap-item {
+  background: var(--bg-code);
+  border: 2px solid rgba(248, 81, 73, 0.25);
+  border-radius: 10px;
+  padding: 1rem;
+}
+.gap-item-title {
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: var(--accent-red);
+}
+.gap-item-desc {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+}
+.your-contribution {
+  background: rgba(163, 113, 247, 0.10);
+  border: 3px solid var(--accent-purple);
+  border-radius: 14px;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+}
+.my-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--accent-purple);
+  margin-bottom: 1rem;
+}
+.your-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+.your-item {
+  background: var(--bg-code);
+  border: 2px solid rgba(163, 113, 247, 0.35);
+  border-radius: 10px;
+  padding: 1rem;
+  text-align: center;
+}
+.your-item-title {
+  font-weight: 700;
+  color: var(--accent-purple);
+  margin-bottom: 0.25rem;
+}
+.your-item-desc {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+.timeline {
+  background: var(--bg-card);
+  border: 2px solid var(--border-primary);
+  border-radius: 14px;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+}
+.timeline-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+.timeline-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border-primary);
+}
+.timeline-row:last-child { border-bottom: none; }
+.timeline-year {
+  font-size: 1.1rem;
+  font-weight: 700;
+  width: 60px;
+  font-family: var(--font-mono);
+  color: var(--accent-cyan);
+}
+.timeline-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.timeline-item {
+  font-size: 0.85rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  background: rgba(88, 166, 255, 0.15);
+  color: var(--accent-cyan);
+  border: 1px solid rgba(88, 166, 255, 0.35);
+}
+.timeline-item.hw { background: rgba(63, 185, 80, 0.15); color: var(--accent-green); border-color: rgba(63, 185, 80, 0.35); }
+.timeline-item.research { background: rgba(210, 153, 34, 0.15); color: var(--accent-orange); border-color: rgba(210, 153, 34, 0.35); }
+/* Shared stylesheet also defines .timeline/.timeline-item as a vertical rail;
+   this figure uses those names for a flat table, so cancel the injected rail. */
+.timeline::before { content: none; }
+.timeline-item::before { content: none; }
+.timeline-item { position: static; margin-bottom: 0; }
+</style>
+</head>
+<body>
+<div class="container" role="main">
+  <p class="sr-only">Figure: the 2026 KV-cache landscape in four groups plus a timeline, organised by the decision each system optimises. The field did not leave a gap; it specialised, and the earlier framing on this figure — that no published system did anything sophisticated, and that this package filled the gap — is retired outright. Commercial hardware available today: Samsung CMM-D up to 512 GB per module and CMM-B up to 16 TB per box; XConn Apollo 256-lane CXL switch with MemVerge GISMO pool demos; Astera Labs Leo smart memory controller; Marvell Structera near-memory compute. Software: vLLM with PagedAttention, the allocation and paging baseline every offload layer sits on; LMCache, now a first-class cross-tier KV layer doing pinning, lookup, compression, batched movement, compute and I/O pipelining, cross-engine transfer and prefill-decode disaggregation; SGLang with RadixAttention; NVIDIA Dynamo; Mooncake; FlexGen; InfiniGen; LayerKV; KVPR. TraCT does rack-scale KV sharing and transfer over CXL on NVIDIA Dynamo, with direct GPU-to-CXL operations behind a rack-wide prefix-aware cache — CXL-native KV caching already ships, so this package is not the first or the only one. PNM-KV selects which KV pages are needed before paying the movement cost from a processing-near-memory accelerator behind CXL. CacheWise predicts reuse from agent and tool-call state. Tutti removes the CPU from the GPU-to-NVMe KV I/O path. Research this package builds on rather than competes with: H2O, SnapKV, Scissorhands, PyramidKV, Quest, Ada-KV, HeadKV, InfiniGen, LayerKV, KVPR, PagedAttention. What remains open is a unification, not an implementation: whether one KV-State Control Plane — SELECT, PLACE, MOVE, ATTEND, OBSERVE — should decide relevance, reuse, residency and movement jointly rather than leaving each to a separate subsystem. Nobody has built or tested that, this package included. Its one empirical result sits inside PLACE and is simulated and provisional: letting identity-keyed policy state survive HBM eviction is worth plus 34.15 percentage points to LFU, from 15.56 to 49.71 percent, and plus 24.85 to EMA alpha 0.01, from 31.54 to 56.39 percent, at a 32 gibibyte budget, while EMA alpha 0.15 is unchanged at minus 0.21 percentage points — larger than the spread between policies, and a protocol result testable with no CXL hardware. Retracted from this figure: 640 per-head eviction queues, because every head of every layer is required for every token and evicting a head produces wrong outputs rather than a cache miss, so the unit is a (sequence, token block) of 16 tokens, 5.00 mebibytes, and per-head signals are used only for scoring; alpha = 0.2, never validated, with a simulated optimum near 0.05 and non-monotonic behaviour and no convergence onto LFU as alpha approaches zero; the RoPE prefetch window, because RoPE is a rotation applied to Q and K at compute time and carries no information about which blocks are needed next; and the 97 percent hit rate and 16 times user capacity behind the old opportunity framing. The scoring function is not novel: a decayed-frequency score is LRFU, Lee et al., ACM SIGMETRICS 1999, with alpha its documented LRU-to-LFU knob. No CXL hardware was measured. Simulation numbers are provisional, because a single data-structure defect in Revision 1 inverted four of five findings. The timeline runs 2022 to 2026, colour-coded green for hardware, amber for research and blue for software and specifications.</p>
+  <h1>The 2026 Landscape, by Decision Optimised</h1>
+  <p style="text-align:center;color:var(--text-secondary);margin:-0.5rem 0 1.25rem;">The field did not leave a gap — it <strong>specialised</strong>. These are complementary decisions, not competing claims to one prize.</p>
+  <p class="subtitle">Where KV-cache policy lives today, and the narrow slice this work adds</p>
+
+  <!-- Available Today -->
+  <div class="section">
+    <div class="section-header">
+      <span class="status-badge available">Available Today</span>
+      <span class="section-title">Commercial Hardware</span>
+    </div>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">CMM-D / CMM-B</div>
+            <div class="card-company">Samsung</div>
+          </div>
+          <span class="card-type type-hw">Hardware</span>
+        </div>
+        <div class="card-specs">
+          <span class="spec">CMM-D: up to 512 GB / module</span>
+          <span class="spec">CMM-B: up to 16 TB / box</span>
+          <span class="spec">~60 GB/s (box)</span>
+          <span class="spec">~600 ns loaded</span>
+        </div>
+        <div class="card-desc">CXL Type-3 memory expansion: an E3.S DDR5 module (CMM-D) and a rack-level pooled box (CMM-B). Media management, RAS and interleaving live in the controller.</div>
+        <div class="card-gap"><strong>Where policy lives:</strong> Host/OS tiering decides placement; the device exposes capacity, not an attention-aware cache policy</div>
+      </div>
+      
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Apollo CXL Switch + GISMO</div>
+            <div class="card-company">XConn + MemVerge</div>
+          </div>
+          <span class="card-type type-hw">Hardware</span>
+        </div>
+        <div class="card-specs">
+          <span class="spec">256-lane CXL switch</span>
+          <span class="spec">~100 TB pool demos</span>
+          <span class="spec">Multi-host</span>
+        </div>
+        <div class="card-desc">Switched CXL memory pooling with MemVerge GISMO; demonstrated as a KV-cache tier under NVIDIA Dynamo.</div>
+        <div class="card-gap"><strong>Where policy lives:</strong> Pool allocation in switch + host software; eviction is block/prefix-level, not per-head</div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Leo (P-/E-Series)</div>
+            <div class="card-company">Astera Labs</div>
+          </div>
+          <span class="card-type type-hw">Hardware</span>
+        </div>
+        <div class="card-specs">
+          <span class="spec">CXL smart memory controller</span>
+          <span class="spec">DDR5 expansion + pooling</span>
+          <span class="spec">COSMOS telemetry</span>
+        </div>
+        <div class="card-desc">Astera's CXL line: <strong>Leo</strong> controller, <strong>Scorpio</strong> switch, <strong>Aries</strong> retimer, <strong>Taurus</strong> smart cable module. Leo adds on-controller media management, RAS, security and fleet telemetry.</div>
+        <div class="card-gap"><strong>What it optimises:</strong> Memory-management logic on the device. Note that <strong>TraCT</strong> already runs a rack-scale, prefix-aware KV cache over CXL on NVIDIA Dynamo — CXL-native KV caching is shipping, not missing.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Structera</div>
+            <div class="card-company">Marvell</div>
+          </div>
+          <span class="card-type type-hw">Hardware</span>
+        </div>
+        <div class="card-specs">
+          <span class="spec">CXL near-memory compute</span>
+          <span class="spec">Arm cores on device</span>
+          <span class="spec">Expansion + pooling</span>
+        </div>
+        <div class="card-desc">Puts general-purpose compute next to the DRAM behind CXL — which is why this document does not claim that CXL devices lack on-controller logic.</div>
+        <div class="card-gap"><strong>What it optimises:</strong> General near-memory compute. <strong>PNM-KV</strong> occupies the adjacent KV-specific slot: selecting which pages are needed <em>before</em> paying the movement cost, reporting up to 21.9× throughput in its own benchmarks (arXiv:2511.00321) — <em>their result, not independently verified</em>.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Emerging Software -->
+  <div class="section">
+    <div class="section-header">
+      <span class="status-badge emerging">Emerging</span>
+      <span class="section-title">Software Frameworks</span>
+    </div>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">vLLM + LMCache</div>
+            <div class="card-company">UC Berkeley / Open Source</div>
+          </div>
+          <span class="card-type type-sw">Software</span>
+        </div>
+        <div class="card-specs">
+          <span class="spec">PagedAttention</span>
+          <span class="spec">CPU offload</span>
+          <span class="spec">Prefix caching</span>
+        </div>
+        <div class="card-desc">Block-level KV management with PagedAttention and prefix reuse; LMCache adds CPU/SSD tiers.</div>
+        <div class="card-gap"><strong>Where policy lives:</strong> Serving framework, block granularity — above the kernel, not in the device</div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">SGLang / RadixAttention</div>
+            <div class="card-company">Open Source</div>
+          </div>
+          <span class="card-type type-sw">Software</span>
+        </div>
+        <div class="card-specs">
+          <span class="spec">Radix-tree prefix cache</span>
+          <span class="spec">Automatic KV reuse</span>
+          <span class="spec">Hierarchical tiers</span>
+        </div>
+        <div class="card-desc">Maintains a radix tree over prompt prefixes so shared prefixes are matched and reused automatically, with LRU eviction over the tree.</div>
+        <div class="card-gap"><strong>Where policy lives:</strong> Scheduler, prefix granularity — reuse across requests, not selection within a context</div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Dynamo</div>
+            <div class="card-company">NVIDIA</div>
+          </div>
+          <span class="card-type type-sw">Software</span>
+        </div>
+        <div class="card-specs">
+          <span class="spec">Disaggregated serving</span>
+          <span class="spec">KV-aware routing</span>
+          <span class="spec">Tiered KV offload</span>
+        </div>
+        <div class="card-desc">Distributed inference framework whose KV-cache manager routes requests to workers already holding the relevant blocks and offloads cold blocks to host memory or storage.</div>
+        <div class="card-gap"><strong>What it optimises:</strong> Cluster-level placement and routing at block granularity. TraCT is implemented on it for rack-scale CXL KV sharing.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Mooncake</div>
+            <div class="card-company">Moonshot AI</div>
+          </div>
+          <span class="card-type type-sw">Software</span>
+        </div>
+        <div class="card-specs">
+          <span class="spec">Disaggregated prefill/decode</span>
+          <span class="spec">Global KV store</span>
+        </div>
+        <div class="card-desc">Distributed KV cache pooled across CPU DRAM + SSD, moved over the network.</div>
+        <div class="card-gap"><strong>Where policy lives:</strong> Cluster store; transfers are network-mediated rather than load/store</div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">FlexGen · InfiniGen</div>
+            <div class="card-company">Stanford · SNU (OSDI '24)</div>
+          </div>
+          <span class="card-type type-sw">Software</span>
+        </div>
+        <div class="card-specs">
+          <span class="spec">GPU/CPU/SSD offload</span>
+          <span class="spec">Speculative KV prefetch</span>
+        </div>
+        <div class="card-desc">FlexGen schedules offload for throughput; InfiniGen speculates which KV entries the next layer needs and prefetches them from host memory.</div>
+        <div class="card-gap"><strong>What they optimise:</strong> Host-driven offload and speculative fetch over PCIe. InfiniGen speculates from the model's own next-layer state — a real predictive signal, unlike position geometry. LayerKV and KVPR sit in the same layer.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Research -->
+  <div class="section">
+    <div class="section-header">
+      <span class="status-badge research">Research we build on</span>
+      <span class="section-title">Academic Papers</span>
+    </div>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">PNM-KV</div>
+            <div class="card-company">arXiv:2511.00321 — November 2025</div>
+          </div>
+          <span class="card-type type-paper">Paper</span>
+        </div>
+        <div class="card-specs">
+          <span class="spec">CXL + processing-near-memory</span>
+          <span class="spec">1M tokens</span>
+          <span class="spec">Steady-token selection</span>
+        </div>
+        <div class="card-desc">Offloads token page selection to a PNM accelerator behind CXL — the closest published work to putting KV-cache decisions on the memory device.</div>
+        <div class="card-gap"><strong>What it optimises:</strong> Selecting which KV/token pages are needed <em>before</em> paying the movement cost — conceptually adjacent to the SELECT stage of this package's control plane, not a cruder version of it.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">H2O · SnapKV · Scissorhands · PyramidKV · Quest</div>
+            <div class="card-company">H2O: arXiv:2306.14048 (2023)</div>
+          </div>
+          <span class="card-type type-paper">Paper</span>
+        </div>
+        <div class="card-specs">
+          <span class="spec">Attention-score eviction</span>
+          <span class="spec">Heavy hitters</span>
+          <span class="spec">Query-aware selection</span>
+        </div>
+        <div class="card-desc">Attention-score-based KV eviction and selection is established prior art. This document does not claim to have invented it.</div>
+        <div class="card-gap"><strong>What they evict:</strong> <strong>(head, token)</strong> pairs — the token axis is <em>not</em> optional. A head alone is never an eviction unit: dropping one gives <strong>wrong outputs, not a cache miss</strong>. Token dropping is a <em>lossy</em> relaxation with an accuracy-evaluation burden.</div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Ada-KV · HeadKV</div>
+            <div class="card-company">Ada-KV: arXiv:2407.11550 (2024)</div>
+          </div>
+          <span class="card-type type-paper">Paper</span>
+        </div>
+        <div class="card-specs">
+          <span class="spec">Per-head budgets</span>
+          <span class="spec">Head-type awareness</span>
+          <span class="spec">Retrieval/induction heads</span>
+        </div>
+        <div class="card-desc">Allocating a different cache budget per attention head is likewise established prior art, and is the direct antecedent of the per-head tracking used here.</div>
+        <div class="card-gap"><strong>What they optimise:</strong> Per-head cache budgets on the GPU. This package reads the same per-head signal but aggregates it into <strong>one score per (sequence, token block)</strong> — scoring granularity, never eviction granularity.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Where cache policy lives today -->
+  <div class="gap-analysis">
+    <div class="gap-title"><span aria-hidden="true">🗺</span> Where Cache Policy Lives Today</div>
+    <div class="gap-grid">
+      <div class="gap-item">
+        <div class="gap-item-title">In the serving framework</div>
+        <div class="gap-item-desc">vLLM/PagedAttention, SGLang/RadixAttention, Dynamo, LMCache (a first-class cross-tier KV layer), CacheWise (reuse prediction from tool-call state), Tutti (GPU-direct NVMe movement).</div>
+      </div>
+      <div class="gap-item">
+        <div class="gap-item-title">In the model runtime</div>
+        <div class="gap-item-desc">H2O, SnapKV, Scissorhands, PyramidKV, Quest, Ada-KV, HeadKV: attention-score eviction over <strong>(head, token)</strong> pairs and per-head budgets, on the GPU. Real results this package builds on.</div>
+      </div>
+      <div class="gap-item">
+        <div class="gap-item-title">On the host CPU</div>
+        <div class="gap-item-desc">FlexGen, InfiniGen, LayerKV, KVPR, Mooncake: offload and speculative fetch driven by host software over a driver-mediated PCIe path.</div>
+      </div>
+      <div class="gap-item">
+        <div class="gap-item-title">On the CXL device</div>
+        <div class="gap-item-desc">Astera Leo, Marvell Structera, Samsung CMM, and <strong>TraCT</strong> — a rack-scale, prefix-aware CXL KV cache on Dynamo doing direct GPU↔CXL operations. CXL-native KV caching already ships.</div>
+      </div>
+    </div>
+    <div class="gap-item" style="margin-top: 1rem;">
+      <div class="gap-item-title">What is genuinely open — a unification, not an implementation</div>
+      <div class="gap-item-desc">Every layer above already solves a real, non-trivial sub-problem. What none of them does is decide
+      relevance, reuse, residency and movement <em>jointly</em>. That is the open question this package is oriented
+      around — a <strong>KV-State Control Plane</strong> over SELECT → PLACE → MOVE → ATTEND → OBSERVE — and
+      <strong>nobody has built or tested it, this package included</strong>. Its one empirical result lives inside
+      <strong>PLACE</strong>: identity-keyed policy state surviving HBM eviction, worth <strong>+34.15 pts to LFU</strong>
+      (15.56 → 49.71) and <strong>+24.85 pts to EMA α=0.01</strong> (31.54 → 56.39) at 32 GiB, with EMA α=0.15 unchanged
+      (−0.21 pts). A <strong>protocol</strong> result, testable with <strong>no CXL hardware</strong>. Treating it as
+      validation of the whole pipeline would be a significant overclaim.
+      <span style="font-family:var(--font-mono);font-size:0.72rem;">Simulated (provisional)</span></div>
+    </div>
+  </div>
+
+  <!-- My Contribution -->
+  <div class="your-contribution">
+    <div class="my-title"><span aria-hidden="true">🔬</span> The KV-State Control Plane — where this package fits, and where it does not</div>
+    <div class="your-grid">
+      <div class="your-item">
+        <div class="your-item-title">SELECT — <em>Design / unvalidated</em></div>
+        <div class="your-item-desc">Which regions or blocks are worth considering. Past-only signals (recency, frequency, LRFU decay) and predictive ones (agent/tool state, prefix identity, reuse history) — the slot CacheWise and PNM-KV occupy. Not built here.</div>
+      </div>
+      <div class="your-item">
+        <div class="your-item-title">PLACE — <em>Simulated (provisional)</em></div>
+        <div class="your-item-desc">Which tier a block occupies, and whether its <strong>identity-keyed policy state crosses with it</strong>. <strong>+34.15 pts to LFU · +24.85 pts to EMA α=0.01</strong> at 32 GiB. The only box with evidence. Unit: <strong>(sequence, token block)</strong>, 16 tokens = 5.00 MiB — never a head.</div>
+      </div>
+      <div class="your-item">
+        <div class="your-item-title">MOVE — <em>Design / unvalidated</em></div>
+        <div class="your-item-desc">Scheduling, batching, hiding movement behind compute. <strong>No CXL hardware measured</strong>: a 5.00 MiB block is 164 / 82 / 43 µs at an assumed 32 / 64 / 121 GB/s, against 9 / 11 / 18 ms to regenerate 16 tokens at 50 / 40 / 25% MFU.</div>
+      </div>
+      <div class="your-item">
+        <div class="your-item-title">ATTEND · OBSERVE — <em>Design / unvalidated</em></div>
+        <div class="your-item-desc">The model consumes the placed state; what was attended feeds the next SELECT. Conceptual only. Scoring throughout is <strong>LRFU</strong> (Lee et al., ACM SIGMETRICS 1999) — prior art, α its documented LRU↔LFU knob; α = 0.2 was never validated.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Timeline -->
+  <div class="timeline">
+    <div class="timeline-title">Industry Timeline</div>
+    <div class="timeline-row">
+      <div class="timeline-year">2022</div>
+      <div class="timeline-items">
+        <span class="timeline-item hw" role="img" aria-label="Hardware milestone, Samsung CMM-D prototype">Samsung CMM-D prototype</span>
+        <span class="timeline-item" role="img" aria-label="Software and specification milestone, CXL 3.0 specification">CXL 3.0 specification</span>
+      </div>
+    </div>
+    <div class="timeline-row">
+      <div class="timeline-year">2023</div>
+      <div class="timeline-items">
+        <span class="timeline-item" role="img" aria-label="Software and specification milestone, vLLM PagedAttention">vLLM PagedAttention</span>
+        <span class="timeline-item hw" role="img" aria-label="Hardware milestone, Intel Sapphire Rapids (CXL 1.1)">Intel Sapphire Rapids (CXL 1.1)</span>
+        <span class="timeline-item research" role="img" aria-label="Research milestone, H2O attention-score eviction">H2O attention-score eviction</span>
+        <span class="timeline-item" role="img" aria-label="Software and specification milestone, CXL 3.1 specification">CXL 3.1 specification</span>
+      </div>
+    </div>
+    <div class="timeline-row">
+      <div class="timeline-year">2024</div>
+      <div class="timeline-items">
+        <span class="timeline-item hw" role="img" aria-label="Hardware milestone, Samsung CMM-B (16 TB box)">Samsung CMM-B (16 TB box)</span>
+        <span class="timeline-item hw" role="img" aria-label="Hardware milestone, Astera Labs Leo controllers">Astera Labs Leo controllers</span>
+        <span class="timeline-item" role="img" aria-label="Software and specification milestone, SGLang / RadixAttention">SGLang / RadixAttention</span>
+        <span class="timeline-item research" role="img" aria-label="Research milestone, SnapKV · Quest · InfiniGen">SnapKV · Quest · InfiniGen</span>
+      </div>
+    </div>
+    <div class="timeline-row">
+      <div class="timeline-year">2025</div>
+      <div class="timeline-items">
+        <span class="timeline-item" role="img" aria-label="Software and specification milestone, NVIDIA Dynamo KV manager">NVIDIA Dynamo KV manager</span>
+        <span class="timeline-item hw" role="img" aria-label="Hardware milestone, XConn + MemVerge GISMO pooling">XConn + MemVerge GISMO pooling</span>
+        <span class="timeline-item hw" role="img" aria-label="Hardware milestone, Marvell Structera near-memory compute">Marvell Structera near-memory compute</span>
+        <span class="timeline-item research" role="img" aria-label="Research milestone, Ada-KV / HeadKV per-head budgets">Ada-KV / HeadKV per-head budgets</span>
+        <span class="timeline-item research" role="img" aria-label="Research milestone, PNM-KV (arXiv:2511.00321, Nov 2025)">PNM-KV (arXiv:2511.00321, Nov 2025)</span>
+      </div>
+    </div>
+    <div class="timeline-row">
+      <div class="timeline-year">2026</div>
+      <div class="timeline-items">
+        <span class="timeline-item" role="img" aria-label="Software and specification milestone, CXL 3.x switching broadens">CXL 3.x switching broadens</span>
+        <span class="timeline-item" role="img" aria-label="Software and specification milestone, KV offload becomes a standard serving-stack tier">KV offload becomes a standard serving-stack tier</span>
+        <span class="timeline-item" role="img" aria-label="Software milestone, TraCT: rack-scale CXL KV cache on NVIDIA Dynamo">TraCT: rack-scale CXL KV cache on Dynamo</span>
+        <span class="timeline-item" role="img" aria-label="Software milestone, LMCache becomes a first-class cross-tier KV layer">LMCache: first-class cross-tier KV layer</span>
+        <span class="timeline-item research" role="img" aria-label="Research milestone, CacheWise reuse prediction and Tutti GPU-direct NVMe movement">CacheWise (reuse prediction) · Tutti (GPU-direct NVMe)</span>
+        <span class="timeline-item research" role="img" aria-label="Research milestone, this package: residency-state persistence inside PLACE, simulated and provisional">This package: residency-state persistence in PLACE <em>[Simulated (provisional)]</em></span>
+      </div>
+    </div>
+  </div>
+
+  <p style="text-align:center; color:var(--text-secondary); font-size:0.8rem; margin-top:1.5rem; padding-top:1rem; border-top:1px solid var(--border-primary);">
+    <strong>Evidence labels.</strong> Third-party capabilities are <strong>vendor specifications</strong> or the systems'
+    own <strong>published claims</strong>, cited not reproduced and not independently verified here. This package's
+    persistence result is <strong>Simulated (provisional)</strong>: a single data-structure defect in Revision 1 inverted
+    four of five findings, so Revision 2 is provisional, not settled. Capacity arithmetic is an
+    <strong>Analytical model</strong> and stands — 320 KiB/token, 2.50 GiB at 8K, 40.0 GiB at 128K, crossover with weights
+    ≈ 427,000 tokens. LRFU attribution is <strong>External literature</strong>.
+    <strong>Retracted from this figure:</strong> the 97% hit rate, 16× user capacity, 36% CapEx / $160,000 → $103,000,
+    α = 0.2, per-head eviction, RoPE-informed prefetch, and every "the gap / nobody has" framing.
+    <strong>No CXL hardware was measured.</strong> Canonical numbers v6.0.
+  </p>
+</div>
+</body>
+</html>

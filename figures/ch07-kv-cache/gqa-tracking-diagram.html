@@ -3,17 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GQA Per-Head Tracking</title>
+<title>GQA Per-Head Scoring Streams</title>
+<link rel="stylesheet" href="../../css/style.css">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
-  font-family: 'Segoe UI', system-ui, sans-serif;
-  background: #ffffff;
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
   min-height: 100vh;
-  color: #1a1a1a;
+  color: var(--text-primary);
   padding: 2rem;
 }
-.container { max-width: 1200px; margin: 0 auto; }
+.container { max-width: 1200px; margin: 0 auto; padding: 0; }
 h1 {
   text-align: center;
   font-size: 2.2rem;
@@ -22,7 +23,7 @@ h1 {
 }
 .subtitle {
   text-align: center;
-  color: #555;
+  color: var(--text-secondary);
   font-size: 1.15rem;
   margin-bottom: 2rem;
 }
@@ -31,13 +32,13 @@ h1 {
   font-weight: 700;
   margin: 2rem 0 1rem;
   padding-bottom: 0.5rem;
-  border-bottom: 2px solid #e8e8e8;
+  border-bottom: 2px solid var(--border-primary);
 }
 .gqa-mapping {
-  background: #fafafa;
+  background: var(--bg-card);
   border-radius: 16px;
   padding: 1.5rem;
-  border: 2px solid #e8e8e8;
+  border: 2px solid var(--border-primary);
   margin-bottom: 1.5rem;
 }
 .mapping-row {
@@ -54,34 +55,34 @@ h1 {
 .q-head {
   width: 32px;
   height: 32px;
-  background: #007bff;
+  background: var(--accent-cyan);
   border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: var(--bg-primary);
   font-size: 0.75rem;
   font-weight: 600;
 }
 .arrow-map {
   font-size: 1.5rem;
-  color: #999;
+  color: var(--text-secondary);
 }
 .kv-head-box {
-  background: linear-gradient(135deg, #28a745 50%, #9c27b0 50%);
+  background: linear-gradient(135deg, var(--accent-green) 50%, var(--accent-purple) 50%);
   padding: 0.6rem 1.2rem;
   border-radius: 8px;
-  color: white;
+  color: var(--bg-primary);
   font-weight: 700;
   font-size: 1rem;
 }
 .track-indicator {
-  background: #fff3cd;
-  border: 2px dashed #ffc107;
+  background: rgba(240, 194, 57, 0.12);
+  border: 2px dashed var(--accent-yellow);
   padding: 0.5rem 1rem;
   border-radius: 8px;
   font-size: 0.95rem;
-  color: #856404;
+  color: var(--accent-yellow);
   font-weight: 600;
 }
 .layers-grid {
@@ -91,16 +92,16 @@ h1 {
   margin-bottom: 1.5rem;
 }
 .layer-card {
-  background: #fafafa;
+  background: var(--bg-card);
   border-radius: 12px;
   padding: 1.25rem;
-  border: 2px solid #e8e8e8;
+  border: 2px solid var(--border-primary);
 }
 .layer-header {
   font-size: 1.1rem;
   font-weight: 700;
   margin-bottom: 1rem;
-  color: #333;
+  color: var(--text-primary);
 }
 .kv-heads-row {
   display: flex;
@@ -110,20 +111,20 @@ h1 {
 .kv-mini {
   width: 36px;
   height: 36px;
-  background: linear-gradient(135deg, #28a745 50%, #9c27b0 50%);
+  background: linear-gradient(135deg, var(--accent-green) 50%, var(--accent-purple) 50%);
   border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  color: var(--bg-primary);
   font-size: 0.8rem;
   font-weight: 700;
 }
 .queue-detail {
-  background: #fafafa;
+  background: var(--bg-card);
   border-radius: 16px;
   padding: 1.5rem;
-  border: 2px solid #e8e8e8;
+  border: 2px solid var(--border-primary);
   margin-bottom: 1.5rem;
 }
 .queue-header {
@@ -133,8 +134,9 @@ h1 {
   margin-bottom: 1.25rem;
 }
 .queue-label {
-  background: #333;
-  color: white;
+  background: var(--bg-code);
+  color: var(--text-primary);
+  border: 1px solid var(--border-primary);
   padding: 0.5rem 1rem;
   border-radius: 8px;
   font-weight: 700;
@@ -149,58 +151,58 @@ h1 {
 }
 .lru-entry {
   flex-shrink: 0;
-  background: #fff;
-  border: 2px solid #ddd;
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-primary);
   border-radius: 10px;
   padding: 0.75rem;
   min-width: 110px;
   text-align: center;
 }
 .lru-entry.hot {
-  border-color: #dc3545;
-  background: #fff5f5;
+  border-color: var(--accent-red);
+  background: rgba(248, 81, 73, 0.12);
 }
 .lru-entry.warm {
-  border-color: #ffc107;
-  background: #fffef5;
+  border-color: var(--accent-yellow);
+  background: rgba(240, 194, 57, 0.12);
 }
 .lru-entry.cold {
-  border-color: #6c757d;
-  background: #f8f9fa;
+  border-color: var(--text-muted);
+  background: var(--bg-code);
 }
 .entry-pos {
   font-size: 1.1rem;
   font-weight: 700;
-  color: #333;
+  color: var(--text-primary);
   margin-bottom: 0.25rem;
 }
 .entry-field {
   font-size: 0.85rem;
-  color: #666;
+  color: var(--text-secondary);
   margin: 2px 0;
 }
 .entry-field span {
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
 }
 .lru-arrow {
   font-size: 1.3rem;
-  color: #aaa;
+  color: var(--text-secondary);
   flex-shrink: 0;
 }
 .evict-zone {
-  background: #f8d7da;
-  border: 2px dashed #dc3545;
+  background: rgba(248, 81, 73, 0.12);
+  border: 2px dashed var(--accent-red);
   border-radius: 10px;
   padding: 0.75rem 1rem;
   text-align: center;
-  color: #721c24;
+  color: var(--accent-red);
   font-weight: 600;
   font-size: 0.95rem;
 }
 .summary-box {
-  background: #e7f3ff;
-  border: 2px solid #b6d4fe;
+  background: rgba(88, 166, 255, 0.10);
+  border: 2px solid var(--accent-cyan);
   border-radius: 12px;
   padding: 1.25rem;
   margin-top: 1.5rem;
@@ -209,7 +211,7 @@ h1 {
   font-size: 1.15rem;
   font-weight: 700;
   margin-bottom: 0.75rem;
-  color: #0a58ca;
+  color: var(--accent-cyan);
 }
 .summary-grid {
   display: grid;
@@ -220,28 +222,41 @@ h1 {
   font-size: 1.05rem;
 }
 .summary-item strong {
-  color: #0a58ca;
+  color: var(--accent-cyan);
 }
 .total-calc {
   text-align: center;
   font-size: 1.2rem;
   margin-top: 1rem;
   padding: 1rem;
-  background: #f8f9fa;
+  background: var(--bg-code);
   border-radius: 8px;
-  font-family: 'Fira Code', monospace;
+  font-family: var(--font-mono);
 }
 </style>
 </head>
 <body>
-<div class="container">
-  <h1>Per-Head Tracking with GQA</h1>
-  <p class="subtitle">Llama-70B: 64 Query Heads → 8 KV-Heads × 80 Layers = 640 LRU Queues</p>
+<div class="container" role="main">
+  <p class="sr-only">Figure: GQA per-head attention as scoring streams over Llama-3 70B, where 64 query heads grouped 8 to 1 give 8 KV heads, and 8 KV heads across 80 layers give 640 per-(layer, KV-head) score streams. Query heads Q0 to Q7 map to KV-head 0 and score stream [layer, 0]; Q8 to Q15 map to KV-head 1 and stream [layer, 1]; and so on to Q56 to Q63 mapping to KV-head 7 and stream [layer, 7]. These 640 streams are a scoring granularity, not an eviction granularity. Every head of every layer is required for every token, so evicting a head produces wrong outputs, not a cache miss, and no head has its own eviction queue. All 640 streams are aggregated into a single score per (sequence, token block) — 16 tokens, 5.00 mebibytes at 320 kibibytes per token — and that block is the unit that is placed, moved and evicted, with all 8 KV heads across all 80 layers travelling together. H2O and SnapKV evict (head, token) pairs; the token axis is not optional, and token dropping is a lossy relaxation with an accuracy-evaluation burden, distinct from lossless residency. As an example, the aggregated block scores order hot to cold: block 7993 covering positions 127,888 to 127,903 with 847 touches and score 0.92; block 0 covering positions 0 to 15 with 512 touches and 0.88; block 64 covering 1,024 to 1,039 with 234 touches and 0.45; block 5563 covering 89,008 to 89,023 with 89 touches and 0.31; and block 2854 covering 45,664 to 45,679 with 12 touches and 0.08, which is the eviction candidate. When that block is evicted its identity key and score persist and are restored on re-admission rather than reset — the largest effect in the study, worth plus 34.15 percentage points to LFU, from 15.56 to 49.71 percent, and plus 24.85 to EMA alpha 0.01, from 31.54 to 56.39 percent, at a 32 gibibyte budget, while EMA alpha 0.15 is unchanged at minus 0.21 percentage points. That is larger than the spread between policies, and it is a protocol result testable with no CXL hardware. Per-block state is 64 bytes: a 16-byte identity key, an 8-byte score, an 8-byte touch timestamp, a 4-byte touch count and reserved space. At 128K context there are 131,072 divided by 16 equals 8,192 blocks, so 8,192 times 64 bytes equals 524,288 bytes, or 512 kibibytes, against 40.0 gibibytes of KV — a payload overhead of 0.0012 percent, the same ratio as 64 bytes against one 5.00 mebibyte block. Metadata processing overhead is not established and must be measured. Simulated figures are provisional, because a single data-structure defect in Revision 1 inverted four of five findings.</p>
+  <h1>GQA Per-Head Scoring Streams</h1>
+  <p class="subtitle">Llama-3 70B: 64 query heads → 8 KV heads × 80 layers = <strong>640 score streams</strong>, aggregated into <strong>one score per (sequence, token block)</strong></p>
 
-  <div class="section-title">1. GQA Grouping Defines Tracking Unit</div>
+  <div class="callout warning" style="margin-bottom:1.5rem;">
+    <div class="callout-title">640 scoring streams — <em>not</em> 640 eviction queues</div>
+    <p><strong>Every head of every layer is required for every token.</strong> Evicting a head produces
+    <strong>wrong outputs, not a cache miss</strong>, so no head has its own eviction queue. The 640 streams are a
+    <strong>scoring</strong> granularity; they are aggregated into one score per
+    <strong>(sequence, token block)</strong> — 16 tokens, 5.00 MiB — and the block is what is placed, moved and
+    evicted, with all 8 KV heads × 80 layers travelling together.</p>
+    <p>H2O and SnapKV evict <strong>(head, token)</strong> pairs — the token axis is not optional. Token dropping is a
+    <em>lossy</em> relaxation carrying an accuracy-evaluation burden; it is a different claim from lossless residency.
+    <span class="mono">External literature</span></p>
+  </div>
+
+  <div class="section-title">1. GQA Grouping Defines the <em>Scoring</em> Unit</div>
   <div class="gqa-mapping">
     <div class="mapping-row">
-      <div class="q-group">
+      <div class="q-group" role="img" aria-label="Query heads Q0 through Q7">
         <div class="q-head">Q0</div>
         <div class="q-head">Q1</div>
         <div class="q-head">Q2</div>
@@ -251,13 +266,13 @@ h1 {
         <div class="q-head">Q6</div>
         <div class="q-head">Q7</div>
       </div>
-      <div class="arrow-map">→</div>
+      <div class="arrow-map" aria-hidden="true">→</div>
       <div class="kv-head-box">KV-Head 0</div>
-      <div class="arrow-map">→</div>
-      <div class="track-indicator">LRU Queue [layer, 0]</div>
+      <div class="arrow-map" aria-hidden="true">→</div>
+      <div class="track-indicator">Score stream [layer, 0]</div>
     </div>
     <div class="mapping-row">
-      <div class="q-group">
+      <div class="q-group" role="img" aria-label="Query heads Q8 through Q15">
         <div class="q-head">Q8</div>
         <div class="q-head">Q9</div>
         <div class="q-head">Q10</div>
@@ -267,14 +282,14 @@ h1 {
         <div class="q-head">Q14</div>
         <div class="q-head">Q15</div>
       </div>
-      <div class="arrow-map">→</div>
+      <div class="arrow-map" aria-hidden="true">→</div>
       <div class="kv-head-box">KV-Head 1</div>
-      <div class="arrow-map">→</div>
-      <div class="track-indicator">LRU Queue [layer, 1]</div>
+      <div class="arrow-map" aria-hidden="true">→</div>
+      <div class="track-indicator">Score stream [layer, 1]</div>
     </div>
-    <div style="text-align:center;color:#888;font-size:1.1rem;margin:0.5rem 0">⋮</div>
+    <div aria-hidden="true" style="text-align:center;color:var(--text-secondary);font-size:1.1rem;margin:0.5rem 0">⋮</div>
     <div class="mapping-row">
-      <div class="q-group">
+      <div class="q-group" role="img" aria-label="Query heads Q56 through Q63">
         <div class="q-head">Q56</div>
         <div class="q-head">Q57</div>
         <div class="q-head">Q58</div>
@@ -284,18 +299,18 @@ h1 {
         <div class="q-head">Q62</div>
         <div class="q-head">Q63</div>
       </div>
-      <div class="arrow-map">→</div>
+      <div class="arrow-map" aria-hidden="true">→</div>
       <div class="kv-head-box">KV-Head 7</div>
-      <div class="arrow-map">→</div>
-      <div class="track-indicator">LRU Queue [layer, 7]</div>
+      <div class="arrow-map" aria-hidden="true">→</div>
+      <div class="track-indicator">Score stream [layer, 7]</div>
     </div>
   </div>
 
-  <div class="section-title">2. 640 Independent LRU Queues</div>
+  <div class="section-title">2. 640 Score Streams — all feeding one block score</div>
   <div class="layers-grid">
     <div class="layer-card">
       <div class="layer-header">Layer 0</div>
-      <div class="kv-heads-row">
+      <div class="kv-heads-row" role="img" aria-label="Layer 0: KV heads 0 through 7, each contributing its own score stream">
         <div class="kv-mini">0</div>
         <div class="kv-mini">1</div>
         <div class="kv-mini">2</div>
@@ -308,7 +323,7 @@ h1 {
     </div>
     <div class="layer-card">
       <div class="layer-header">Layer 1</div>
-      <div class="kv-heads-row">
+      <div class="kv-heads-row" role="img" aria-label="Layer 1: KV heads 0 through 7, each contributing its own score stream">
         <div class="kv-mini">0</div>
         <div class="kv-mini">1</div>
         <div class="kv-mini">2</div>
@@ -321,7 +336,7 @@ h1 {
     </div>
     <div class="layer-card">
       <div class="layer-header">Layer 2 ... 79</div>
-      <div class="kv-heads-row">
+      <div class="kv-heads-row" role="img" aria-label="Layers 2 to 79: KV heads 0 through 7, each contributing its own score stream">
         <div class="kv-mini">0</div>
         <div class="kv-mini">1</div>
         <div class="kv-mini">2</div>
@@ -334,58 +349,101 @@ h1 {
     </div>
   </div>
 
-  <div class="section-title">3. What Each Queue Tracks</div>
+  <div class="section-title">3. What the Aggregated Score Orders — <em>blocks</em>, not heads</div>
   <div class="queue-detail">
     <div class="queue-header">
-      <div class="queue-label">Queue [Layer 42, KV-Head 3]</div>
-      <span style="color:#666;font-size:1rem">← One of 640 queues</span>
+      <div class="queue-label">Aggregated block score — all 640 streams combined</div>
+      <span style="color:var(--text-secondary);font-size:1rem"><span aria-hidden="true">←</span> One ordering per sequence, over blocks</span>
     </div>
     <div class="lru-visual">
-      <div class="lru-entry hot">
-        <div class="entry-pos">pos: 127891</div>
-        <div class="entry-field">access: <span>847</span></div>
-        <div class="entry-field">attn: <span>0.92</span></div>
+      <div class="lru-entry hot" role="img" aria-label="Block 7993, covering positions 127888 to 127903, 847 touches, score 0.92, hottest">
+        <div class="entry-pos">block 7993</div>
+        <div class="entry-field">pos: <span>127888–903</span></div>
+        <div class="entry-field">touches: <span>847</span></div>
+        <div class="entry-field">score: <span>0.92</span></div>
       </div>
-      <div class="lru-arrow">→</div>
-      <div class="lru-entry hot">
-        <div class="entry-pos">pos: 0</div>
-        <div class="entry-field">access: <span>512</span></div>
-        <div class="entry-field">attn: <span>0.88</span></div>
+      <div class="lru-arrow" aria-hidden="true">→</div>
+      <div class="lru-entry hot" role="img" aria-label="Block 0, covering positions 0 to 15, 512 touches, score 0.88, hot">
+        <div class="entry-pos">block 0</div>
+        <div class="entry-field">pos: <span>0–15</span></div>
+        <div class="entry-field">touches: <span>512</span></div>
+        <div class="entry-field">score: <span>0.88</span></div>
       </div>
-      <div class="lru-arrow">→</div>
-      <div class="lru-entry warm">
-        <div class="entry-pos">pos: 1024</div>
-        <div class="entry-field">access: <span>234</span></div>
-        <div class="entry-field">attn: <span>0.45</span></div>
+      <div class="lru-arrow" aria-hidden="true">→</div>
+      <div class="lru-entry warm" role="img" aria-label="Block 64, covering positions 1024 to 1039, 234 touches, score 0.45, warm">
+        <div class="entry-pos">block 64</div>
+        <div class="entry-field">pos: <span>1024–1039</span></div>
+        <div class="entry-field">touches: <span>234</span></div>
+        <div class="entry-field">score: <span>0.45</span></div>
       </div>
-      <div class="lru-arrow">→</div>
-      <div class="lru-entry warm">
-        <div class="entry-pos">pos: 89012</div>
-        <div class="entry-field">access: <span>89</span></div>
-        <div class="entry-field">attn: <span>0.31</span></div>
+      <div class="lru-arrow" aria-hidden="true">→</div>
+      <div class="lru-entry warm" role="img" aria-label="Block 5563, covering positions 89008 to 89023, 89 touches, score 0.31, warm">
+        <div class="entry-pos">block 5563</div>
+        <div class="entry-field">pos: <span>89008–023</span></div>
+        <div class="entry-field">touches: <span>89</span></div>
+        <div class="entry-field">score: <span>0.31</span></div>
       </div>
-      <div class="lru-arrow">→</div>
-      <div class="lru-entry cold">
-        <div class="entry-pos">pos: 45678</div>
-        <div class="entry-field">access: <span>12</span></div>
-        <div class="entry-field">attn: <span>0.08</span></div>
+      <div class="lru-arrow" aria-hidden="true">→</div>
+      <div class="lru-entry cold" role="img" aria-label="Block 2854, covering positions 45664 to 45679, 12 touches, score 0.08, coldest, next to be evicted. Its identity key and score persist across the eviction and are restored on re-admission.">
+        <div class="entry-pos">block 2854</div>
+        <div class="entry-field">pos: <span>45664–679</span></div>
+        <div class="entry-field">touches: <span>12</span></div>
+        <div class="entry-field">score: <span>0.08</span></div>
       </div>
-      <div class="lru-arrow">→</div>
-      <div class="evict-zone">EVICT<br>CANDIDATES</div>
+      <div class="lru-arrow" aria-hidden="true">→</div>
+      <div class="evict-zone">EVICT<br>CANDIDATE<br><span style="font-size:0.7rem;font-weight:400;">state persists</span></div>
     </div>
   </div>
 
   <div class="summary-box">
-    <div class="summary-title">Per-Entry Metadata (8 bytes)</div>
+    <div class="summary-title">Per-<em>block</em> state (64 bytes)</div>
     <div class="summary-grid">
-      <div class="summary-item"><strong>position_id</strong> — u32 (4B)</div>
-      <div class="summary-item"><strong>access_count</strong> — u16 (2B)</div>
-      <div class="summary-item"><strong>attention_score</strong> — fp16 (2B)</div>
+      <div class="summary-item"><strong>identity key</strong> — 16 B (survives eviction)</div>
+      <div class="summary-item"><strong>score</strong> — 8 B</div>
+      <div class="summary-item"><strong>touch timestamp</strong> — 8 B</div>
+      <div class="summary-item"><strong>touch count + reserved</strong> — 32 B</div>
     </div>
     <div class="total-calc">
-      640 queues × 131,072 positions × 8 bytes = <strong>640 MB</strong> metadata
+      8,192 blocks × 64 bytes = 524,288 B = <strong>512 KiB</strong> against <strong>40.0 GiB</strong> of KV
+      &nbsp;→&nbsp; <strong>0.0012% payload overhead</strong> (the same ratio as 64 B against one 5.00 MiB block)
+    </div>
+    <div class="summary-grid" style="margin-top:1rem">
+      <div class="summary-item">
+        <strong>Why 640 streams but no 640 queues?</strong> Llama-3 70B has <strong>80 layers × 8 KV heads</strong>
+        (64 Q heads grouped 8:1 by GQA), so there are 640 places to <em>read</em> attention from. There are not 640
+        places to evict from: every head of every layer is needed for every token, so all 640 streams collapse into
+        <strong>one score per block</strong>.
+      </div>
+      <div class="summary-item">
+        <strong>Why 8,192 blocks?</strong> A 128 K context is 2<sup>17</sup> = 131,072 positions; at 16 tokens per
+        block that is <strong>131,072 ÷ 16 = 8,192 blocks</strong>, each 5.00 MiB at 320 KiB/token, totalling
+        <strong>40.0 GiB</strong>. Block granularity is what makes the state small.
+      </div>
+      <div class="summary-item">
+        <strong>Why it is affordable — and what is not yet known.</strong> 512 KiB against 40.0 GiB is
+        <strong>0.0012%</strong>, so the <em>payload</em> overhead is negligible.
+        <strong>Metadata processing overhead is not established and must be measured.</strong>
+      </div>
+      <div class="summary-item">
+        <strong>What the state buys.</strong> Keeping it <em>identity-keyed and persistent</em> across an eviction —
+        rather than re-admitting a block as if newly created — is the largest effect in the study:
+        <strong>LFU 15.56 → 49.71 (+34.15 pts)</strong>, <strong>EMA α=0.01 31.54 → 56.39 (+24.85 pts)</strong> at
+        32 GiB, EMA α=0.15 unchanged (−0.21 pts). A <strong>protocol</strong> result — no CXL hardware required.
+        <span class="mono">Simulated (provisional)</span>
+      </div>
     </div>
   </div>
+
+  <p style="text-align:center;color:var(--text-secondary);font-size:0.8rem;margin-top:1.5rem;padding-top:0.75rem;border-top:1px solid var(--border-primary);">
+    <strong>Analytical model</strong> — stream counts, block counts and state sizes are derived from the model
+    configuration (80 layers, 8 KV heads, head_dim 128, fp16 → 320 KiB/token, 5.00 MiB blocks, 40.0 GiB at 128K).
+    The score ordering shown is <strong>Illustrative</strong>, never a result. The persistence deltas are
+    <strong>Simulated (provisional)</strong>: one data-structure defect in Revision 1 inverted four of five findings,
+    so Revision 2 is provisional, not settled. <strong>Retracted from this figure:</strong> per-head eviction queues
+    and the 640 MiB / 1.5% metadata footprint that followed from tracking every position in every head. Work built on,
+    cited not competed with: H2O, SnapKV, Scissorhands, PyramidKV, Quest, Ada-KV, HeadKV, InfiniGen, LayerKV, KVPR,
+    PagedAttention. Canonical numbers v6.0.
+  </p>
 </div>
 </body>
 </html>

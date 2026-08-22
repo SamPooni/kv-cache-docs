@@ -1,1 +1,83 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>KV Tier Architecture — Corrected</title><style>body{margin:0;background:#0d1117;color:#e6edf3;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}.w{max-width:1040px;margin:auto;padding:30px}.ey{font:600 11px system-ui;letter-spacing:.12em;text-transform:uppercase;color:#8b949e}.h{font-size:31px;font-weight:760;margin:7px 0 10px}.p{color:#aab4c0;line-height:1.55}.flow{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:20px 0}.b{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:14px 16px;font-weight:650}.a{color:#7d8590;font-size:20px}.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:20px 0}.c{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:16px}.n{font:700 24px ui-monospace,Consolas,monospace;color:#58a6ff}.l{font-weight:650;margin-top:5px}.s{font-size:13px;color:#8b949e;margin-top:6px;line-height:1.4}.warn{border-left:4px solid #d29922;background:#1d1a12;padding:13px 15px;border-radius:8px;line-height:1.5}.t{width:100%;border-collapse:collapse;margin:18px 0}.t td,.t th{padding:9px 11px;border-bottom:1px solid #30363d;text-align:left}.t th{color:#8b949e;font-size:11px;text-transform:uppercase}</style></head><body><main class="w"><div class="ey">Design illustration · unmeasured external tier</div><div class="h">KV Control Plane and Memory-Tier Boundary</div><p class="p">The v5 architecture separates a portable KV object and placement policy from the mechanism that executes movement. External memory can add capacity, but its latency, bandwidth and GPU-access path must be measured on the target platform.</p><div class="flow"><div class="b">Serving scheduler</div><div class="a">→</div><div class="b">KV identity + policy</div><div class="a">→</div><div class="b">Residency intent</div><div class="a">→</div><div class="b">Runtime / device mechanism</div><div class="a">→</div><div class="b">HBM ↔ external tier</div></div><div class="g"><div class="c"><div class="n">HBM</div><div class="l">Fast resident tier</div><div class="s">Capacity and HBM-side KV bandwidth are separate constraints.</div></div><div class="c"><div class="n">TBD</div><div class="l">External-tier latency</div><div class="s">No canonical 200–250 ns number is asserted by v5.</div></div><div class="c"><div class="n">TBD</div><div class="l">External-tier bandwidth</div><div class="s">Arithmetic PCIe/CXL link rates are not achieved end-to-end bandwidth.</div></div></div><div class="warn"><b>Evidence boundary:</b> no CXL endpoint, direct-GPU CXL path, TCO saving or production speedup was measured in v5.</div></main></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CXL Architecture Diagram</title>
+<script src="../../vendor/react.production.min.js"></script>
+<script src="../../vendor/react-dom.production.min.js"></script>
+<script src="../../vendor/babel.min.js"></script>
+<link rel="stylesheet" href="../../vendor/fonts.css">
+<link rel="stylesheet" href="../../css/style.css">
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: var(--font-sans); background: var(--bg-primary); min-height: 100vh; color: var(--text-primary); }</style>
+</head>
+<body>
+<div id="root" role="main"></div>
+<script type="text/babel">
+const { useState } = React;
+function CXLArchitecture() {
+  const [highlight, setHighlight] = useState(null);
+  const components = [
+    { id: 'gpu', name: 'GPU (B200)', x: 50, y: 50, w: 150, h: 80, color: 'var(--accent-green)', desc: '192GB HBM3e, 8TB/s bandwidth' },
+    { id: 'switch', name: 'CXL Switch', x: 250, y: 150, w: 120, h: 60, color: 'var(--accent-blue)', desc: 'PCIe Gen5 x16 lanes' },
+    { id: 'ep1', name: 'Endpoint 1', x: 50, y: 280, w: 100, h: 60, color: 'var(--accent-purple)', desc: '256GB DDR5 + 4TB NVMe' },
+    { id: 'ep2', name: 'Endpoint 2', x: 180, y: 280, w: 100, h: 60, color: 'var(--accent-purple)', desc: '256GB DDR5 + 4TB NVMe' },
+    { id: 'ep3', name: 'Endpoint 3', x: 310, y: 280, w: 100, h: 60, color: 'var(--accent-purple)', desc: '256GB DDR5 + 4TB NVMe' },
+    { id: 'ep4', name: 'Endpoint 4', x: 440, y: 280, w: 100, h: 60, color: 'var(--accent-purple)', desc: '256GB DDR5 + 4TB NVMe' }
+  ];
+  const styles = {
+    container: { maxWidth: '700px', margin: '0 auto', padding: '2rem' },
+    header: { textAlign: 'center', marginBottom: '2rem' },
+    diagram: { background: 'var(--bg-card)', borderRadius: '16px', padding: '1rem', position: 'relative', height: 400 },
+    box: (c, highlighted) => ({ position: 'absolute', left: c.x, top: c.y, width: c.w, height: c.h, background: highlighted ? c.color : 'var(--bg-code)', border: `2px solid ${c.color}`, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', fontSize: '0.8rem', fontWeight: 600, textAlign: 'center' }),
+    line: { position: 'absolute', background: 'var(--text-secondary)', zIndex: 0 },
+    info: { background: 'var(--bg-code)', borderRadius: '12px', padding: '1rem', marginTop: '1rem' },
+    stats: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.5rem', marginTop: '1rem' },
+    stat: { background: 'var(--bg-card)', borderRadius: '8px', padding: '0.75rem', textAlign: 'center' },
+    statVal: { fontSize: '1.1rem', fontWeight: 700, color: 'var(--accent-cyan)' },
+    statLabel: { fontSize: '0.7rem', color: 'var(--text-secondary)' }
+  };
+  return (
+    <div style={styles.container}>
+      <p className="sr-only">Figure: the CXL system topology. One B200 GPU with 192 GB of HBM3e at 8 TB/s connects through a CXL switch on PCIe Gen5 x16 lanes to four Type-3 endpoints, each holding 256 GB of DDR5 and 4 TB of NVMe. Four endpoints therefore add 1 TB of DRAM and 16 TB of flash at 256 GB/s aggregate and 200 nanoseconds of latency, for $20,000 — four endpoints at $5,000 each. All values are an analytical model, not measured.</p>
+      <div style={styles.header}>
+        <h1 style={{fontSize: '1.5rem', fontWeight: 700}}>CXL System Architecture</h1>
+        <p style={{color: 'var(--text-secondary)', fontSize: '0.875rem'}}>Click components to learn more</p>
+      </div>
+      <div style={styles.diagram}>
+        <div style={{...styles.line, left: 125, top: 130, width: 2, height: 50}} aria-hidden="true"></div>
+        <div style={{...styles.line, left: 125, top: 180, width: 185, height: 2}} aria-hidden="true"></div>
+        <div style={{...styles.line, left: 310, top: 180, width: 2, height: 100}} aria-hidden="true"></div>
+        {[100, 230, 360, 490].map((x, i) => (
+          <div key={i} style={{...styles.line, left: x, top: 210, width: 2, height: 70}} aria-hidden="true"></div>
+        ))}
+        {components.map(c => (
+          <div key={c.id} style={styles.box(c, highlight === c.id)} role="img" aria-label={`${c.name}: ${c.desc}`} onClick={() => setHighlight(c.id)} onMouseEnter={() => setHighlight(c.id)} onMouseLeave={() => setHighlight(null)}>
+            {c.name}
+          </div>
+        ))}
+      </div>
+      <div style={styles.info}>
+        {highlight ? (
+          <div><strong style={{color: components.find(c => c.id === highlight)?.color}}>{components.find(c => c.id === highlight)?.name}</strong>: {components.find(c => c.id === highlight)?.desc}</div>
+        ) : (
+          <div style={{color: 'var(--text-secondary)'}}>Hover over components for details</div>
+        )}
+      </div>
+      <div style={styles.stats}>
+        <div style={styles.stat}><div style={styles.statVal}>1 TB</div><div style={styles.statLabel}>Total DRAM</div></div>
+        <div style={styles.stat}><div style={styles.statVal}>256 GB/s</div><div style={styles.statLabel}>Aggregate BW</div></div>
+        <div style={styles.stat}><div style={styles.statVal}>200 ns</div><div style={styles.statLabel}>Latency</div></div>
+        <div style={styles.stat}><div style={styles.statVal}>$20K</div><div style={styles.statLabel}>4 × $5,000 endpoints</div></div>
+      </div>
+      <div style={{fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '1rem', textAlign: 'center', lineHeight: 1.6}}>
+        4 endpoints × 256 GB DDR5 = 1 TB; × 4 TB NVMe = 16 TB; × 64 GB/s = 256 GB/s aggregate.
+        <br />Analytical model — no hardware benchmark was run.
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<CXLArchitecture />);
+</script>
+</body>
+</html>

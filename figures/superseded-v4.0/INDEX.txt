@@ -1,153 +1,118 @@
 ==============================================================================
-superseded-v4.0 - SUPERSEDED (v4.0) — RETAINED FOR THE RECORD
+SUPERSEDED v4.0 — ARCHIVE INDEX
 ==============================================================================
 
-These figures illustrate claims WITHDRAWN in v5.0. They are retained only so the
-retraction stays checkable. Every file carries a banner saying so. Do not cite them.
-See RETRACTIONS.md, Appendix L (measurements) and Appendix N (simulation).
+Generated from the filesystem on 2026-08-22.
 
-  bandwidth-aggregation.html
-      Title:    Bandwidth Aggregation
-      Embedded: (record only — not embedded)
+RETRACTED. Retained unmodified for one reason: so the retraction stays checkable.
+See RETRACTIONS.md and CANONICAL-NUMBERS.md §7. Do not cite anything in this folder.
 
-  cache-management-placement.html
-      Title:    Cache Management Placement
-      Embedded: (record only — not embedded)
+bandwidth-aggregation.html
+      Bandwidth Aggregation
 
-  competitive-landscape.html
-      Title:    KV-Cache Offloading: Competitive Landscape
-      Embedded: (record only — not embedded)
+cache-management-placement.html
+      Cache Management Placement
 
-  cover-page.html
-      Title:    KV Cache Offloadingfor LLM Inference
-      Embedded: (record only — not embedded)
+competitive-landscape.html
+      KV-Cache Offloading: Competitive Landscape
 
-  current-approaches-comparison.html
-      Title:    Current Approaches Comparison
-      Embedded: (record only — not embedded)
+cover-page.html
+      Distributed Endpoint Architecture
 
-  diagram-architecture-html.html
-      Title:    Distributed Endpoint Architecture
-      Embedded: (record only — not embedded)
+current-approaches-comparison.html
+      Current Approaches Comparison
 
-  diagram-ema-scoring-html.html
-      Title:    EMA-Based Attention Scoring
-      Embedded: appendix/k-methodology.html
+diagram-architecture-html.html
+      Distributed Endpoint Architecture
 
-  diagram-latency-path-html.html
-      Title:    Memory Access Path Comparison
-      Embedded: (record only — not embedded)
+diagram-ema-scoring-html.html
+      EMA Attention Scoring
 
-  diagram-memory-wall-html.html
-      Title:    Why Attention Has Locality — The RoPE Effect
-      Embedded: (record only — not embedded)
+diagram-latency-path-html.html
+      CXL.mem vs PCIe Latency Paths
 
-  diagram-per-head-html.html
-      Title:    Per-Head Attention Tracking
-      Embedded: (record only — not embedded)
+diagram-memory-wall-html.html
+      Attention Patterns & RoPE Locality
 
-  distributed-endpoint-diagrams.html
-      Title:    The Bandwidth-Compute Gap
-      Embedded: appendix/k-methodology.html
+diagram-per-head-html.html
+      Per-Head Attention Tracking
 
-  effective-latency-analysis.html
-      Title:    Effective Latency Analysis
-      Embedded: (record only — not embedded)
+distributed-endpoint-diagrams.html
+      Distributed endpoint diagrams
 
-  ema-calculation.html
-      Title:    EMA + Eviction Priority
-      Embedded: appendix/k-methodology.html
+effective-latency-analysis.html
+      Effective Latency Analysis
 
-  ema-eviction.html
-      Title:    Attention-Aware Cache Eviction
-      Embedded: appendix/k-methodology.html
+ema-calculation.html
+      EMA Calculation
 
-  figure-11-1-full-architecture.html
-      Title:    Figure 11.1 — Full Architecture
-      Embedded: (record only — not embedded)
+ema-eviction.html
+      Attention-Aware Eviction
 
-  figure-11-2-performance-benchmarks.html
-      Title:    Figure 11.2 — Modeled System Comparison
-      Embedded: (record only — not embedded)
+figure-11-1-full-architecture.html
+      Figure 11.1 — Full Architecture
 
-  figure-2-4-roofline.html
-      Title:    Figure 2.4 — Roofline Model
-      Embedded: (record only — not embedded)
+figure-11-2-performance-benchmarks.html
+      Figure 11.2 — Modeled System Comparison
 
-  figure-3-1-cxl-architecture.html
-      Title:    CXL Architecture Diagram
-      Embedded: (record only — not embedded)
+figure-2-4-roofline.html
+      Figure 2.4 — Roofline Model
 
-  figure-3-2-memory-hierarchy.html
-      Title:    Figure 3.2 — Memory Hierarchy
-      Embedded: (record only — not embedded)
+figure-3-1-cxl-architecture.html
+      CXL Architecture Diagram
 
-  figure-4-3-latency-waterfall.html
-      Title:    Figure 4.3 — Latency Waterfall
-      Embedded: (record only — not embedded)
+figure-3-2-memory-hierarchy.html
+      Figure 3.2 — Memory Hierarchy
 
-  figure-7-10-rope-prefetch.html
-      Title:    Figure 7.10 — RoPE Prefetch
-      Embedded: (record only — not embedded)
+figure-4-3-latency-waterfall.html
+      Figure 4.3 — Latency Waterfall
 
-  figure-7-2-attention-locality.html
-      Title:    Figure 7.2 — Attention Locality Patterns
-      Embedded: (record only — not embedded)
+figure-7-10-rope-prefetch.html
+      Figure 7.10 — RoPE Prefetch
 
-  figure-7-9-ema-eviction-policy.html
-      Title:    Figure 7.9 — EMA Eviction Policy
-      Embedded: appendix/k-methodology.html
+figure-7-2-attention-locality.html
+      Figure 7.2 — Attention Locality Patterns
 
-  gpu-cxl-kvcache.html
-      Title:    GPU-CXL KV-Cache Interaction
-      Embedded: (record only — not embedded)
+figure-7-9-ema-eviction-policy.html
+      Figure 7.9 — EMA Eviction Policy
 
-  gpu-integration.html
-      Title:    GPU Integration
-      Embedded: (record only — not embedded)
+gpu-cxl-kvcache.html
+      Gpu cxl kvcache
 
-  gqa-explainer.html
-      Title:    Grouped Query Attention
-      Embedded: (record only — not embedded)
+gpu-integration.html
+      GPU Integration
 
-  gqa-tracking-diagram.html
-      Title:    Per-Head Tracking with GQA
-      Embedded: (record only — not embedded)
+gqa-explainer.html
+      Grouped Query Attention
 
-  kv-cache-diagrams-html.html
-      Title:    KV Cache Offloadingfor LLM Inference
-      Embedded: (record only — not embedded)
+gqa-tracking-diagram.html
+      GQA Per-Head Tracking
 
-  kv-cache-landscape.html
-      Title:    KV Cache Offloading Landscape
-      Embedded: (record only — not embedded)
+kv-cache-diagrams-html.html
+      KV Cache Offloading - Visual Diagrams & Architecture
 
-  latency-calculations.html
-      Title:    Latency Calculations
-      Embedded: (record only — not embedded)
+kv-cache-landscape.html
+      KV Cache Offloading: Market Landscape
 
-  market-landscape.html
-      Title:    KV Cache Offloading: Market Landscape
-      Embedded: (record only — not embedded)
+latency-calculations.html
+      Latency Calculations
 
-  per-head-tracking.html
-      Title:    Per-Head Tracking Rationale
-      Embedded: (record only — not embedded)
+market-landscape.html
+      Market Landscape
 
-  preprocessing-offload.html
-      Title:    Preprocessing Offload
-      Embedded: (record only — not embedded)
+per-head-tracking.html
+      Per-Head Tracking Rationale
 
-  rope-prefetch-example.html
-      Title:    RoPE Prefetch: Worked Example
-      Embedded: (record only — not embedded)
+preprocessing-offload.html
+      Preprocessing Offload
 
-  rope-prefetch.html
-      Title:    RoPE-Aware Prefetching
-      Embedded: appendix/k-methodology.html
+rope-prefetch-example.html
+      RoPE Prefetch - Worked Example
 
-  visual-appendix.html
-      Title:    Technical Appendix
-      Embedded: appendix/k-methodology.html
+rope-prefetch.html
+      RoPE Prefetch Strategy
 
-TOTAL: 36 file(s).
+visual-appendix.html
+      Visual appendix
+
+TOTAL: 36 archived files

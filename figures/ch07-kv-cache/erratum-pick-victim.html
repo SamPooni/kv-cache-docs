@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Erratum: _pick_victim()</title>
+<link rel="stylesheet" href="../../vendor/fonts.css">
+<link rel="stylesheet" href="../../css/style.css">
+<style>
+/* ---- figure shell: package tokens only, no external assets ---- */
+body{background:var(--bg-primary);color:var(--text-primary);font-family:var(--font-sans);
+     line-height:1.6;font-size:16px;}
+.vz{position:relative;z-index:1;max-width:1120px;margin:0 auto;padding:1.6rem 1.4rem 1.2rem;}
+.vz-eyebrow{font-family:var(--font-mono);font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;
+     color:var(--accent-purple);margin:0 0 .4rem;}
+.vz h1{font-family:var(--font-sans);font-size:1.45rem;font-weight:600;line-height:1.25;
+     color:var(--text-primary);margin:0 0 .4rem;letter-spacing:-.01em;}
+.vz h2{font-family:var(--font-sans);font-size:1rem;font-weight:600;color:var(--text-primary);
+     margin:0 0 .5rem;padding:0;border:0;letter-spacing:0;}
+.vz h3{font-family:var(--font-sans);font-size:.86rem;font-weight:600;color:var(--text-secondary);
+     margin:1rem 0 .45rem;padding:0;border:0;letter-spacing:.02em;text-transform:uppercase;}
+.vz-sub{color:var(--text-secondary);font-size:.94rem;max-width:78ch;margin:0 0 1.1rem;}
+.vz-card{background:var(--bg-card);border:1px solid var(--border-primary);border-radius:14px;
+     padding:1.15rem 1.2rem;}
+.vz-card + .vz-card{margin-top:1.1rem;}
+.vz-plot{display:block;width:100%;height:auto;overflow:visible;}
+.vz-scroll{overflow-x:auto;}
+.vz-caveat{display:flex;gap:.7rem;align-items:flex-start;background:rgba(210,153,34,.09);
+     border:1px solid rgba(210,153,34,.4);border-left:4px solid var(--accent-orange);
+     border-radius:0 10px 10px 0;padding:.7rem .9rem;margin:0 0 1.1rem;font-size:.85rem;
+     color:var(--text-secondary);}
+.vz-caveat strong{color:var(--accent-orange);}
+.vz-caveat-icon{font-size:1rem;line-height:1.3;flex:0 0 auto;}
+.vz-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:.75rem;margin:1.1rem 0 0;}
+.vz-tile{background:var(--bg-tertiary);border:1px solid var(--border-primary);border-radius:12px;padding:.8rem .9rem;}
+.vz-tile-v{font-family:var(--font-sans);font-size:1.55rem;font-weight:650;color:var(--text-primary);
+     line-height:1.15;letter-spacing:-.02em;}
+.vz-tile-l{font-size:.775rem;color:var(--text-secondary);margin-top:.28rem;line-height:1.45;}
+.vz-legend{display:flex;flex-wrap:wrap;gap:.4rem 1.4rem;margin:.9rem 0 0;font-size:.85rem;
+     color:var(--text-secondary);}
+.vz-legend-item{display:flex;align-items:center;gap:.5rem;}
+.vz-key{flex:0 0 auto;}
+.vz-legend b{color:var(--text-primary);font-weight:600;}
+.vz-legend .vz-eq{font-family:var(--font-mono);font-size:.8rem;color:var(--text-secondary);}
+.vz-note{font-size:.83rem;color:var(--text-secondary);margin:.9rem 0 0;max-width:82ch;}
+.vz-note b{color:var(--text-primary);}
+.vz-note code{font-family:var(--font-mono);font-size:.79rem;color:var(--text-primary);
+     background:var(--bg-code);border:1px solid var(--border-secondary);border-radius:5px;padding:.05rem .3rem;}
+details.vz-table{margin:1.1rem 0 0;}
+details.vz-table>summary{cursor:pointer;font-size:.83rem;color:var(--accent-cyan);
+     font-family:var(--font-mono);list-style:none;display:inline-flex;align-items:center;gap:.4rem;
+     padding:.3rem .1rem;}
+details.vz-table>summary::-webkit-details-marker{display:none;}
+details.vz-table>summary::before{content:"\25B8";display:inline-block;transition:transform .15s ease;}
+details.vz-table[open]>summary::before{transform:rotate(90deg);}
+details.vz-table table{font-size:.85rem;border-collapse:collapse;width:100%;margin-top:.5rem;}
+details.vz-table td,details.vz-table th{padding:.5rem .7rem;border-bottom:1px solid var(--border-secondary);
+     text-align:left;}
+details.vz-table th{color:var(--text-primary);font-weight:600;font-size:.8rem;}
+details.vz-table td{font-family:var(--font-mono);color:var(--text-secondary);}
+details.vz-table td:first-child{font-family:var(--font-sans);color:var(--text-primary);}
+.vz-foot{margin:1.3rem 0 0;padding-top:.8rem;border-top:1px solid var(--border-secondary);
+     font-family:var(--font-mono);font-size:.74rem;color:var(--text-muted);letter-spacing:.01em;}
+.vz-grid2{display:grid;grid-template-columns:1fr 1fr;gap:1.1rem;}
+@media (max-width:860px){.vz-grid2{grid-template-columns:1fr;}}
+/* axis + mark typography inside the SVGs */
+.ax{fill:var(--text-muted);font-family:var(--font-mono);font-size:11px;
+    font-variant-numeric:tabular-nums;}
+.ax-title{fill:var(--text-secondary);font-family:var(--font-sans);font-size:12px;font-weight:500;}
+.lbl{fill:var(--text-primary);font-family:var(--font-sans);font-size:12px;font-weight:600;}
+.lbl-2{fill:var(--text-secondary);font-family:var(--font-sans);font-size:11.5px;}
+.lbl-m{fill:var(--text-secondary);font-family:var(--font-mono);font-size:11px;
+    font-variant-numeric:tabular-nums;}
+.val{fill:var(--text-primary);font-family:var(--font-mono);font-size:11.5px;font-weight:600;
+    font-variant-numeric:tabular-nums;}
+.grid{stroke:var(--border-secondary);stroke-width:1;}
+.axis{stroke:var(--border-primary);stroke-width:1;}
+/* evidence badges */
+.vz-badge{flex:0 0 auto;font-family:var(--font-mono);font-size:.68rem;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;border:1px solid;border-radius:999px;padding:.15rem .5rem;white-space:nowrap;
+  display:inline-block;}
+.ev-sim{color:var(--accent-orange);border-color:var(--accent-orange);}
+.ev-des{color:var(--accent-purple);border-color:var(--accent-purple);}
+.ev-ana{color:var(--accent-cyan);border-color:var(--accent-cyan);}
+.ev-lit{color:var(--accent-teal);border-color:var(--accent-teal);}
+.ev-mea{color:var(--accent-green);border-color:var(--accent-green);}
+.vz-claim{margin:1.1rem 0 0;background:rgba(63,185,80,.07);border:1px solid rgba(63,185,80,.35);
+  border-left:4px solid var(--accent-green);border-radius:0 12px 12px 0;padding:.95rem 1.1rem;}
+.vz-claim p{margin:0;color:var(--text-secondary);font-size:.9rem;line-height:1.6;}
+.vz-claim b{color:var(--text-primary);}
+.vz-claim .vz-claim-h{display:block;color:var(--text-primary);font-size:1.02rem;font-weight:600;
+  margin-bottom:.35rem;line-height:1.45;}
+.vz-claim.neutral{background:rgba(88,166,255,.07);border-color:rgba(88,166,255,.35);
+  border-left-color:var(--accent-cyan);}
+.vz-claim.warn{background:rgba(248,81,73,.07);border-color:rgba(248,81,73,.35);
+  border-left-color:var(--accent-red);}
+.vz-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:.6rem;}
+.vz-item{background:var(--bg-tertiary);border:1px solid var(--border-primary);border-radius:12px;
+  padding:.7rem .85rem;}
+.vz-item-top{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.3rem;
+  flex-wrap:wrap;}
+.vz-item-name{font-weight:600;color:var(--text-primary);font-size:.92rem;}
+.vz-item p{margin:0 0 .25rem;font-size:.84rem;color:var(--text-secondary);line-height:1.5;}
+.vz-item p:last-child{margin-bottom:0;}
+.vz-item p b{color:var(--text-primary);}
+.vz-code{font-family:var(--font-mono);font-size:.78rem;line-height:1.65;color:var(--text-primary);
+  background:var(--bg-code);border:1px solid var(--border-primary);border-radius:10px;
+  padding:.75rem .9rem;overflow-x:auto;white-space:pre;margin:.55rem 0 0;}
+.vz-eq{font-family:var(--font-mono);font-size:.9rem;color:var(--text-primary);
+  background:var(--bg-code);border:1px solid var(--border-primary);border-radius:10px;
+  padding:.6rem .8rem;margin:.5rem 0 0;overflow-x:auto;}
+.vz-inline{font-family:var(--font-mono);font-size:.79rem;color:var(--text-primary);
+  background:var(--bg-code);border:1px solid var(--border-secondary);border-radius:5px;
+  padding:.05rem .3rem;white-space:nowrap;}
+.vz-legend .vz-eq{background:none;border:0;padding:0;margin:0;display:inline;font-size:.8rem;}
+.vz-dt{width:100%;border-collapse:collapse;font-size:.84rem;margin:.6rem 0 0;}
+.vz-dt th,.vz-dt td{padding:.5rem .65rem;border-bottom:1px solid var(--border-secondary);
+  text-align:left;vertical-align:top;color:var(--text-secondary);}
+.vz-dt th{color:var(--text-primary);font-weight:600;font-size:.79rem;text-transform:uppercase;
+  letter-spacing:.05em;border-bottom:1px solid var(--border-primary);}
+.vz-dt td b{color:var(--text-primary);}
+.vz-dt td:first-child{color:var(--text-primary);}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;}}
+</style>
+</head>
+<body>
+<main class="vz" role="main">
+<p class="sr-only">Figure: the _pick_victim defect in Revision 1 of the KV tiering simulator. Before the fix, _pick_victim popped a heap entry and re-inserted it only when its recomputed score exceeded the stored key. That is correct for LFU, where counts rise so stored keys are stale-low, and wrong for a decaying EMA, where scores fall so stored keys are stale-high and the popped entry is returned without checking whether another block decayed further. Audited against a brute-force argmin: EMA alpha 0.15 chose 114,114 wrong victims out of 114,528 evictions, a rate of 99.6 per cent; EMA alpha 0.01 chose 73,650 wrong out of 74,987, or 98.2 per cent; LFU chose 0 wrong out of 74,987, or 0 per cent. After the fix, which uses the exact order-preserving key K equals the natural log of S touch plus t touch times minus the natural log of 1 minus alpha, the re-audit found 0 wrong out of 78,860 evictions. The Revision 1 to Revision 2 status table: R1, EMA alpha 0.15 worst at every budget, was reversed; R2, monotone convergence onto LFU, was withdrawn; R3, LRU wins the scan workload, was withdrawn; R4, EMA wins the cyclic sweep 2.2 times, was withdrawn; R5, 97 per cent of stall is recompute, was withdrawn; C1, the 2.50 gibibyte KV correction, stands. The lesson is that Revision 2 is therefore provisional too: it has had no equivalent audit of its remaining assumptions.</p>
+<p class="vz-eyebrow">Figure 7.3 &middot; Simulated (provisional)</p>
+<h1>The defect that inverted the study &mdash; <code style="font-size:.9em">_pick_victim()</code></h1>
+<p class="vz-sub">A lazy heap re-evaluation that is correct when scores rise and wrong when they fall. It chose the wrong victim on 99.6% of evictions under EMA &alpha;=0.15, and nothing in the output looked broken.</p>
+<div class="vz-caveat"><span class="vz-caveat-icon" aria-hidden="true">&#9888;</span><div><strong>Revision&nbsp;2 is provisional too.</strong> A single data-structure defect inverted four of five findings once already. Nothing about the fix makes the remaining gaps go away: no Belady bound, no bandwidth/queueing model, whole-context residency assumed, synthetic workload, 2&ndash;3 seeds, no hardware validation. Revision&nbsp;1 (<code>kv_tiering_sim_rev1_retained_for_audit.py</code>) is retained unmodified so the defect and its effect stay independently checkable.</div></div><div class="vz-grid2"><div class="vz-card"><h2>Before &mdash; the defect</h2><div class="vz-code">def _pick_victim(self):
+    key, blk = heappop(self.heap)
+    score = self.recompute(blk)
+    if score &gt; key:            # &#9888; re-insert ONLY when the
+        heappush(self.heap,     #    recomputed score EXCEEDS
+                 (score, blk))  #    the stored key
+        return self._pick_victim()
+    return blk</div><p class="vz-note"><b>Correct for LFU.</b> Counts only rise, so a stored key is stale-<i>low</i>; a popped entry whose recomputed score exceeds its key must go back and the search continues.</p><p class="vz-note"><b>Wrong for a decaying EMA.</b> Scores only fall, so a stored key is stale-<i>high</i>. The popped entry is returned without ever checking whether another block has decayed further &mdash; so the victim is almost never the argmin.</p></div><div class="vz-card"><h2>After &mdash; the fix</h2><div class="vz-code">K = ln S_touch + t_touch &middot; ( &minus;ln(1&minus;&alpha;) )</div><p class="vz-note">An <b>exact, order-preserving key</b>: it orders identically to the current decayed score at any time, so no lazy re-evaluation is needed and the heap min is always the true argmin.</p><h3>Audited against brute-force argmin</h3><table class="vz-dt"><thead><tr><th>Policy</th><th>Wrong victims</th><th>Evictions</th><th>Rate</th></tr></thead><tbody><tr><td>EMA &alpha;=0.15</td><td>114,114</td><td>114,528</td><td><b style="color:#f85149">99.6%</b></td></tr><tr><td>EMA &alpha;=0.01</td><td>73,650</td><td>74,987</td><td><b style="color:#f85149">98.2%</b></td></tr><tr><td>LFU</td><td>0</td><td>74,987</td><td><b style="color:#3fb950">0.0%</b></td></tr><tr><td><b>After the fix</b> (re-audit)</td><td><b>0</b></td><td>78,860</td><td><b style="color:#3fb950">0.0%</b></td></tr></tbody></table><p class="vz-note"><code>bug_check.py</code> produced the first three rows; <code>bug_check2.py</code> the fourth. Source: <code>data/ERRATUM.md</code>.</p></div></div><div class="vz-card" style="margin-top:1.1rem"><h2>Why it went wrong in opposite directions</h2><div class="vz-scroll"><svg class="vz-plot" viewBox="0 0 860 250" role="group" aria-label="Schematic of why the heap key goes stale in opposite directions for LFU and for a decaying EMA."><defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="var(--text-muted)"/></marker></defs><text x="20" y="22" fill="var(--text-primary)" style="font-family:var(--font-sans);font-size:12.5px;font-weight:600">LFU &mdash; counts rise</text><text x="20" y="40" fill="var(--text-secondary)" style="font-family:var(--font-sans);font-size:11px">stored keys are stale-LOW: true score &ge; key</text><rect x="38" y="130" width="26" height="40" rx="4" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-dasharray="3 3"/><rect x="68" y="108" width="26" height="62" rx="4" fill="#3fb950"/><text x="67" y="186" text-anchor="middle" fill="var(--text-muted)" style="font-family:var(--font-mono);font-size:9.5px">b1</text><rect x="122" y="108" width="26" height="62" rx="4" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-dasharray="3 3"/><rect x="152" y="78" width="26" height="92" rx="4" fill="#3fb950"/><text x="151" y="186" text-anchor="middle" fill="var(--text-muted)" style="font-family:var(--font-mono);font-size:9.5px">b2</text><rect x="206" y="140" width="26" height="30" rx="4" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-dasharray="3 3"/><rect x="236" y="114" width="26" height="56" rx="4" fill="#3fb950"/><text x="235" y="186" text-anchor="middle" fill="var(--text-muted)" style="font-family:var(--font-mono);font-size:9.5px">b3</text><rect x="290" y="118" width="26" height="52" rx="4" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-dasharray="3 3"/><rect x="320" y="84" width="26" height="86" rx="4" fill="#3fb950"/><text x="319" y="186" text-anchor="middle" fill="var(--text-muted)" style="font-family:var(--font-mono);font-size:9.5px">b4</text><line x1="30" y1="170" x2="370" y2="170" stroke="var(--border-primary)" stroke-width="1"/><text x="20" y="216" fill="#3fb950" style="font-family:var(--font-sans);font-size:11.5px;font-weight:600">&#10003; re-insert when recomputed &gt; key is CORRECT</text><text x="450" y="22" fill="var(--text-primary)" style="font-family:var(--font-sans);font-size:12.5px;font-weight:600">Decaying EMA &mdash; scores fall</text><text x="450" y="40" fill="var(--text-secondary)" style="font-family:var(--font-sans);font-size:11px">stored keys are stale-HIGH: true score &le; key</text><rect x="468" y="130" width="26" height="40" rx="4" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-dasharray="3 3"/><rect x="498" y="152" width="26" height="18" rx="4" fill="#f85149"/><text x="497" y="186" text-anchor="middle" fill="var(--text-muted)" style="font-family:var(--font-mono);font-size:9.5px">b1</text><rect x="552" y="108" width="26" height="62" rx="4" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-dasharray="3 3"/><rect x="582" y="138" width="26" height="32" rx="4" fill="#f85149"/><text x="581" y="186" text-anchor="middle" fill="var(--text-muted)" style="font-family:var(--font-mono);font-size:9.5px">b2</text><rect x="636" y="140" width="26" height="30" rx="4" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-dasharray="3 3"/><rect x="666" y="166" width="26" height="4" rx="4" fill="#f85149"/><text x="665" y="186" text-anchor="middle" fill="var(--text-muted)" style="font-family:var(--font-mono);font-size:9.5px">b3</text><rect x="720" y="118" width="26" height="52" rx="4" fill="none" stroke="var(--text-muted)" stroke-width="1.5" stroke-dasharray="3 3"/><rect x="750" y="152" width="26" height="18" rx="4" fill="#f85149"/><text x="749" y="186" text-anchor="middle" fill="var(--text-muted)" style="font-family:var(--font-mono);font-size:9.5px">b4</text><line x1="460" y1="170" x2="800" y2="170" stroke="var(--border-primary)" stroke-width="1"/><text x="450" y="216" fill="#f85149" style="font-family:var(--font-sans);font-size:11.5px;font-weight:600">&#10007; the same test returns a victim that is not the argmin</text><text x="20" y="242" fill="var(--text-muted)" style="font-family:var(--font-sans);font-size:10.5px">Schematic &mdash; relative heights only, no values are claimed. The audit counts below are the evidence.</text></svg></div><div class="vz-legend"><span class="vz-legend-item"><svg width="16" height="12" aria-hidden="true"><rect width="16" height="12" rx="3" fill="none" stroke="#8b949e" stroke-width="1.5" stroke-dasharray="3 3"/></svg><span><b>Stored heap key</b> &mdash; the value written at push time</span></span><span class="vz-legend-item"><svg width="16" height="12" aria-hidden="true"><rect width="16" height="12" rx="3" fill="#3fb950"/></svg><span><b>True score now</b>, LFU &mdash; higher than the key</span></span><span class="vz-legend-item"><svg width="16" height="12" aria-hidden="true"><rect width="16" height="12" rx="3" fill="#f85149"/></svg><span><b>True score now</b>, decaying EMA &mdash; lower than the key</span></span></div></div><div class="vz-card" style="margin-top:1.1rem"><h2>Revision&nbsp;1 &rarr; Revision&nbsp;2 &mdash; how each finding fared</h2><table class="vz-dt"><thead><tr><th>Revision 1 finding</th><th>Status</th><th>Revision 2</th></tr></thead><tbody><tr><td>R1 &mdash; EMA &alpha;=0.15 worst at every budget</td><td><span class="vz-badge" style="color:#f85149;border-color:#f85149">Reversed</span></td><td>R1&prime; &mdash; EMA &alpha;=0.15 <i>best</i> at 4 of 5 budgets (44.18% vs LRU 38.34% @32 GiB)</td></tr><tr><td>R2 &mdash; hit rate monotone as &alpha;&rarr;0, converges exactly onto LFU</td><td><span class="vz-badge" style="color:#d29922;border-color:#d29922">Withdrawn</span></td><td>R3&prime; &mdash; non-monotonic, interior optimum &alpha;&asymp;0.05; no convergence onto LFU</td></tr><tr><td>R3 &mdash; LRU wins the scan workload</td><td><span class="vz-badge" style="color:#d29922;border-color:#d29922">Withdrawn</span></td><td>EMA &alpha;=0.01 leads scan (36.26% vs 31.51%)</td></tr><tr><td>R4 &mdash; EMA wins the cyclic sweep 2.2&times;</td><td><span class="vz-badge" style="color:#d29922;border-color:#d29922">Withdrawn</span></td><td>Only LFU survives loop (22.06%); EMA tracks LRU at 9.83%</td></tr><tr><td>R5 &mdash; 97% of stall is recompute; policy nearly irrelevant</td><td><span class="vz-badge" style="color:#d29922;border-color:#d29922">Withdrawn</span></td><td>R5&prime; &mdash; warm recompute is 50&ndash;67%; policy spread reaches 86% at 128 GiB</td></tr><tr><td>C1 &mdash; 8K Llama-3 70B KV is 2.50 GiB, not 20 GB</td><td><span class="vz-badge" style="color:#3fb950;border-color:#3fb950">Stands</span></td><td>Unchanged; analytic, simulator-independent</td></tr></tbody></table><p class="vz-note">Quoted verbatim from <code>data/ERRATUM.md</code>. The package&rsquo;s standing caveat states the same fact in one line: <b>&ldquo;a single data-structure defect in Revision 1 inverted four of five findings&rdquo;</b> (CANONICAL-NUMBERS.md &sect;3). Where the erratum and the canonical spec differ &mdash; the erratum quotes 55.93% for the &alpha; optimum against the spec&rsquo;s 55.96%, and 50&ndash;67% for warm recompute against the spec&rsquo;s 44&ndash;89% &mdash; <b>the spec is authoritative</b>: it is computed directly from <code>results_v2.json</code>.</p></div><div class="vz-claim warn"><p><span class="vz-claim-h">The lesson, and it applies to Revision 2 as well.</span>One data-structure defect, invisible to code review, inverted four of five findings and produced a coherent, publishable, entirely wrong story. It was caught by an <b>independent brute-force audit</b>, not by inspection &mdash; the same way the 342.9 GB/s bandwidth bug was caught by a physical bound rather than by reading the code. Revision&nbsp;2 has had no such audit of its remaining assumptions. <b>Treat it as provisional, not settled.</b></p></div>
+<p class="vz-foot">Simulated (provisional) &mdash; data/ERRATUM.md (bug_check.py, bug_check2.py); CANONICAL-NUMBERS.md &sect;3 for the standing caveat</p>
+</main>
+</body>
+</html>

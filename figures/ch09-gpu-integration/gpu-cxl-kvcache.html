@@ -1,1 +1,424 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GPU Integration — Corrected</title><style>body{margin:0;background:#0d1117;color:#e6edf3;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}.w{max-width:1040px;margin:auto;padding:30px}.ey{font:600 11px system-ui;letter-spacing:.12em;text-transform:uppercase;color:#8b949e}.h{font-size:31px;font-weight:760;margin:7px 0 10px}.p{color:#aab4c0;line-height:1.55}.flow{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:20px 0}.b{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:14px 16px;font-weight:650}.a{color:#7d8590;font-size:20px}.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:20px 0}.c{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:16px}.n{font:700 24px ui-monospace,Consolas,monospace;color:#58a6ff}.l{font-weight:650;margin-top:5px}.s{font-size:13px;color:#8b949e;margin-top:6px;line-height:1.4}.warn{border-left:4px solid #d29922;background:#1d1a12;padding:13px 15px;border-radius:8px;line-height:1.5}.t{width:100%;border-collapse:collapse;margin:18px 0}.t td,.t th{padding:9px 11px;border-bottom:1px solid #30363d;text-align:left}.t th{color:#8b949e;font-size:11px;text-transform:uppercase}</style></head><body><main class="w"><div class="ey">GPU integration · platform dependent</div><div class="h">Do Not Assume a Universal Direct GPU↔CXL Path</div><p class="p">GPU access to external memory depends on CPU/GPU/CXL topology, addressability, drivers, runtime support and transfer mechanism. v5 specifies the control interface but does not claim direct load/store access on all platforms.</p><div class="flow"><div class="b">GPU attention</div><div class="a">↔</div><div class="b">runtime / allocator</div><div class="a">↔</div><div class="b">host / fabric path</div><div class="a">↔</div><div class="b">external memory</div></div><table class="t"><tr><th>Must be measured</th><th>Why</th></tr><tr><td>HBM↔host / external bandwidth</td><td>Defines movement sustainability.</td></tr><tr><td>Transfer latency by block size</td><td>Defines whether prefetch can hide movement.</td></tr><tr><td>Overlap with decode compute</td><td>Determines observed stall, not just raw link bandwidth.</td></tr><tr><td>Page-fault / migration behavior</td><td>Platform software can dominate the path.</td></tr></table></main></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GPU–Tier KV-Cache Interaction</title>
+<link rel="stylesheet" href="../../css/style.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  padding: 32px;
+  line-height: 1.4;
+}
+h1 { font-size: 1.875rem; font-weight: 700; text-align: center; margin-bottom: 8px; }
+.subtitle { color: var(--text-secondary); font-size: 1.125rem; text-align: center; margin-bottom: 32px; }
+.stack { display: flex; flex-direction: column; gap: 24px; }
+
+/* Cards */
+.card { border-radius: 16px; padding: 24px; box-shadow: var(--shadow-lg); }
+.card-title { color: var(--text-primary); font-weight: 700; font-size: 1.5rem; text-align: center; margin-bottom: 16px; }
+
+/* GPU Section */
+.gpu { background: linear-gradient(to right, rgba(63, 185, 80, 0.18), rgba(63, 185, 80, 0.08)); border: 1px solid var(--accent-green); }
+.gpu-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.gpu-box { background: var(--bg-card); border-radius: 12px; padding: 16px; text-align: center; }
+.gpu-box.hbm { background: var(--bg-code); border: 4px solid var(--accent-yellow); }
+.gpu-label { color: var(--text-secondary); font-size: 1rem; font-weight: 600; }
+.gpu-value { color: var(--text-primary); font-size: 1.5rem; font-weight: 700; margin-top: 8px; }
+.gpu-sub { color: var(--accent-green); font-size: 0.875rem; }
+.gpu-sub.yellow { color: var(--accent-yellow); font-weight: 600; }
+.hbm-inner { margin-top: 8px; background: rgba(240, 194, 57, 0.15); border: 1px solid var(--accent-yellow); border-radius: 8px; padding: 8px; }
+.hbm-inner-label { color: var(--accent-yellow); font-size: 0.75rem; }
+.hbm-inner-value { color: var(--text-primary); font-size: 0.875rem; font-weight: 700; }
+
+/* CXL Connection */
+.cxl-conn { display: flex; justify-content: center; align-items: center; }
+.cxl-conn-inner { display: flex; flex-direction: column; align-items: center; }
+.cxl-conn-row { display: flex; align-items: center; gap: 16px; }
+.cxl-bar { width: 12px; height: 64px; background: var(--accent-blue); border-radius: 4px; }
+.cxl-label { text-align: center; }
+.cxl-label-title { color: var(--accent-cyan); font-weight: 700; font-size: 1.125rem; }
+.cxl-label-sub { color: var(--text-secondary); font-size: 0.875rem; }
+.cxl-arrows { display: flex; gap: 32px; margin-top: 8px; }
+.cxl-arrow { text-align: center; }
+.cxl-arrow-label { font-size: 0.875rem; font-weight: 600; }
+.cxl-arrow-label.green { color: var(--accent-green); }
+.cxl-arrow-label.blue { color: var(--accent-cyan); }
+.cxl-arrow-sub { color: var(--text-secondary); font-size: 0.75rem; }
+
+/* CXL Switch */
+.cxl-switch { background: rgba(163, 113, 247, 0.18); border: 1px solid var(--accent-purple); border-radius: 12px; padding: 16px; margin: 0 64px; box-shadow: var(--shadow-md); }
+.cxl-switch-title { color: var(--text-primary); font-weight: 700; font-size: 1.25rem; text-align: center; }
+.cxl-switch-sub { color: var(--accent-purple); font-size: 0.875rem; text-align: center; }
+
+/* Switch Lines */
+.switch-lines { display: flex; justify-content: space-around; margin: 0 64px; }
+.switch-line { width: 8px; height: 32px; background: var(--accent-purple); border-radius: 4px; }
+
+/* Endpoints Grid */
+.endpoints { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 0 16px; }
+.endpoint { background: linear-gradient(to bottom, rgba(88, 166, 255, 0.16), rgba(88, 166, 255, 0.07)); border: 1px solid var(--accent-cyan); border-radius: 16px; padding: 16px; box-shadow: var(--shadow-lg); }
+.endpoint-title { color: var(--text-primary); font-weight: 700; font-size: 1.125rem; text-align: center; margin-bottom: 12px; }
+.endpoint-tier { border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+.endpoint-tier.warm { background: rgba(210, 153, 34, 0.12); border: 2px solid var(--accent-orange); }
+.endpoint-tier.cold { background: var(--bg-code); border: 2px solid var(--border-primary); }
+.tier-label { font-size: 0.875rem; font-weight: 600; text-align: center; }
+.tier-label.warm { color: var(--text-primary); }
+.tier-label.cold { color: var(--text-primary); }
+.tier-value { color: var(--text-primary); font-size: 1.25rem; font-weight: 700; text-align: center; }
+.tier-latency { font-size: 0.75rem; text-align: center; font-weight: 600; }
+.tier-latency.warm { color: var(--accent-orange); }
+.tier-latency.cold { color: var(--text-secondary); }
+.tier-inner { margin-top: 8px; border-radius: 8px; padding: 8px; }
+.tier-inner.warm { background: rgba(210, 153, 34, 0.18); }
+.tier-inner.cold { background: var(--bg-tertiary); }
+.tier-inner-label { font-size: 0.75rem; text-align: center; }
+.tier-inner.warm .tier-inner-label { color: var(--accent-orange); }
+.tier-inner.cold .tier-inner-label { color: var(--text-secondary); }
+.tier-inner-value { color: var(--text-primary); font-size: 0.75rem; text-align: center; }
+.tier-inner.cold .tier-inner-value { color: var(--text-secondary); }
+.endpoint-ctrl { margin-top: 12px; background: var(--bg-code); border-radius: 8px; padding: 8px; }
+.endpoint-ctrl-title { color: var(--accent-cyan); font-size: 0.75rem; text-align: center; font-weight: 600; }
+.endpoint-ctrl-sub { color: var(--text-secondary); font-size: 0.75rem; text-align: center; }
+
+/* Access Flow */
+.flow { background: var(--bg-card); border-radius: 16px; padding: 24px; border: 2px solid var(--border-primary); box-shadow: var(--shadow-md); }
+.flow-title { color: var(--text-primary); font-weight: 700; font-size: 1.25rem; text-align: center; margin-bottom: 16px; }
+.flow-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.flow-step { border-radius: 12px; padding: 12px; border: 2px solid; }
+.flow-step.s1 { background: rgba(63, 185, 80, 0.12); border-color: var(--accent-green); }
+.flow-step.s2 { background: rgba(240, 194, 57, 0.12); border-color: var(--accent-yellow); }
+.flow-step.s3 { background: rgba(88, 166, 255, 0.12); border-color: var(--accent-cyan); }
+.flow-step.s4 { background: rgba(163, 113, 247, 0.12); border-color: var(--accent-purple); }
+.flow-step-title { font-weight: 700; font-size: 1rem; text-align: center; }
+.flow-step.s1 .flow-step-title { color: var(--accent-green); }
+.flow-step.s2 .flow-step-title { color: var(--accent-yellow); }
+.flow-step.s3 .flow-step-title { color: var(--accent-cyan); }
+.flow-step.s4 .flow-step-title { color: var(--accent-purple); }
+.flow-step-desc { font-size: 0.875rem; text-align: center; margin-top: 8px; }
+.flow-step.s1 .flow-step-desc { color: var(--text-primary); }
+.flow-step.s2 .flow-step-desc { color: var(--text-primary); }
+.flow-step.s3 .flow-step-desc { color: var(--text-primary); }
+.flow-step.s4 .flow-step-desc { color: var(--text-primary); }
+
+/* Cache Policy */
+.policy { background: linear-gradient(to right, rgba(210, 153, 34, 0.20), rgba(210, 153, 34, 0.08)); border: 1px solid var(--accent-orange); }
+.policy-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.policy-box { background: var(--bg-code); border-radius: 12px; padding: 16px; }
+.policy-title { color: var(--accent-orange); font-weight: 700; font-size: 1rem; text-align: center; margin-bottom: 8px; }
+.policy-list { color: var(--text-primary); font-size: 0.875rem; }
+
+/* Capacity Summary */
+.capacity { background: var(--bg-card); border: 1px solid var(--border-primary); }
+.capacity-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.cap-box { border-radius: 12px; padding: 16px; text-align: center; }
+.cap-box.hot { background: rgba(240, 194, 57, 0.16); border: 1px solid var(--accent-yellow); }
+.cap-box.warm { background: rgba(210, 153, 34, 0.16); border: 1px solid var(--accent-orange); }
+.cap-box.cold { background: var(--bg-code); border: 1px solid var(--border-primary); }
+.cap-box.total { background: rgba(63, 185, 80, 0.16); border: 1px solid var(--accent-green); }
+.cap-label { font-weight: 600; }
+.cap-box.hot .cap-label { color: var(--accent-yellow); }
+.cap-box.warm .cap-label { color: var(--accent-orange); }
+.cap-box.cold .cap-label { color: var(--text-primary); }
+.cap-box.total .cap-label { color: var(--accent-green); }
+.cap-value { color: var(--text-primary); font-size: 1.5rem; font-weight: 700; }
+.cap-sub { font-size: 0.875rem; }
+.cap-box.hot .cap-sub { color: var(--text-secondary); }
+.cap-box.warm .cap-sub { color: var(--text-secondary); }
+.cap-box.cold .cap-sub { color: var(--text-secondary); }
+.cap-box.total .cap-sub { color: var(--text-secondary); }
+
+/* Key Insight */
+.insight { background: linear-gradient(to right, var(--bg-secondary), var(--bg-tertiary)); border: 4px solid var(--border-primary); }
+.insight-label { color: var(--text-secondary); font-size: 1.125rem; text-align: center; margin-bottom: 8px; }
+.insight-title { color: var(--text-primary); font-size: 1.25rem; font-weight: 700; text-align: center; }
+.insight-desc { color: var(--text-secondary); font-size: 1rem; text-align: center; margin-top: 12px; }
+</style>
+</head>
+<body role="main">
+<p class="sr-only">Figure: GPU-tier KV-cache interaction across a tiered memory architecture. A B200 GPU holds the hot tier — 192 GB of HBM3e at 8 TB/s carrying resident KV blocks — and on a fault issues a CXL.mem request with load/store semantics and no per-access driver. A CXL 3.0 switch routes to four endpoints, each holding a 256 GB DRAM warm tier and a 4 TB NVMe cold tier, under a controller running the PLACE and MOVE stages of the KV-State Control Plane. No CXL hardware was measured anywhere in this package, so no tier latency on this page is a measurement. The former 200 nanosecond CXL access is demoted to an unmeasured assumption inside a 32 to 121 gigabytes per second effective-bandwidth range: one 5.00 mebibyte block of 16 tokens transfers in 164, 82 or 43 microseconds at an assumed 32, 64 or 121 gigabytes per second. The tier's value is avoiding regeneration, since forward compute for the same 16 tokens is 9, 11 or 18 milliseconds at 50, 40 or 25 percent model FLOPs utilisation — two to three orders of magnitude, with no precise multiple claimed. The 65 times single-access latency ratio, formed by dividing a hypothetical 200 nanosecond load-store path into a 13.0 microsecond driver-mediated DMA path, is retracted as a headline: the two paths are not the same operation and neither was measured. The access flow is: the attention kernel asks for the KV block covering position P; an HBM hit returns from HBM and a miss raises a CXL.mem fault; the endpoint returns the block from DRAM or NVMe, and because NVMe is a complete backing store there is no miss path; the block is then admitted with its identity key and score restored from the state that survived its last eviction, rather than reset. There is no RoPE-driven prefetch step: RoPE is a rotation applied to Q and K at compute time and carries no information about which blocks are needed next, so the earlier fourth step, prefetching positions P minus W to P plus W on RoPE locality, is withdrawn. Cache policy tracks a (sequence, token block) of 16 tokens, 5.00 mebibytes, not a head: every head of every layer is required for every token, so evicting a head produces wrong outputs, not a cache miss, and the 640 per-layer-per-KV-head streams are a scoring signal only. Per-block state is 64 bytes, so 8,192 blocks at 128K context is 512 kibibytes against 40.0 gibibytes of KV, a payload overhead of 0.0012 percent; metadata processing overhead is not established and must be measured. The scoring rule is LRFU — Lee et al., ACM SIGMETRICS 1999 — established prior art with alpha as its documented LRU-to-LFU knob; alpha = 0.2 was never validated and is withdrawn, the simulated optimum is about 0.05, and alpha is non-monotonic with no convergence onto LFU as alpha approaches zero. The largest effect in the study is the persistence of that state across the tier boundary: at a 32 gibibyte budget, LFU rises from 15.56 to 49.71 percent, plus 34.15 percentage points, and EMA alpha 0.01 from 31.54 to 56.39 percent, plus 24.85 percentage points, while EMA alpha 0.15 is unchanged at minus 0.21 percentage points. That is a protocol result, testable with no CXL hardware, and it is provisional because a single data-structure defect in Revision 1 inverted four of five findings. Total tiered capacity is 192 GB hot, 1 TB warm across 4 times 256 GB, and 16 TB cold across 4 times 4 TB, about 17 TB against 192 GB for HBM alone — arithmetic over stated capacities, which stands.</p>
+
+<h1>GPU–Tier KV-Cache Interaction</h1>
+<p class="subtitle">Tiered Memory Architecture for Large Context Inference</p>
+
+<div class="stack">
+
+  <!-- GPU Section -->
+  <div class="card gpu">
+    <div class="card-title">GPU (B200)</div>
+    <div class="gpu-grid">
+      <div class="gpu-box">
+        <div class="gpu-label">Tensor Cores</div>
+        <div class="gpu-value">2,250 TFLOPS</div>
+        <div class="gpu-sub">BF16 dense (4,500 TFLOPS is the 2:4-sparsity figure)</div>
+      </div>
+      <div class="gpu-box hbm">
+        <div class="gpu-label">HBM3e (Hot Tier)</div>
+        <div class="gpu-value">192 GB</div>
+        <div class="gpu-sub yellow">8 TB/s</div>
+        <div class="hbm-inner">
+          <div class="hbm-inner-label">Active KV-Cache</div>
+          <div class="hbm-inner-value">Current Attention Window</div>
+        </div>
+      </div>
+      <div class="gpu-box">
+        <div class="gpu-label">GPU MMU</div>
+        <div class="gpu-value">Page Fault</div>
+        <div class="gpu-sub"><span aria-hidden="true">→</span> CXL.mem Request</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CXL Connection -->
+  <div class="cxl-conn">
+    <div class="cxl-conn-inner">
+      <div class="cxl-conn-row">
+        <div class="cxl-bar" aria-hidden="true"></div>
+        <div class="cxl-label">
+          <div class="cxl-label-title">CXL.mem</div>
+          <div class="cxl-label-sub">Load/Store Semantics</div>
+          <div class="cxl-label-sub">No Driver Per-Access</div>
+        </div>
+        <div class="cxl-bar" aria-hidden="true"></div>
+      </div>
+      <div class="cxl-arrows">
+        <div class="cxl-arrow">
+          <div class="cxl-arrow-label green"><span aria-hidden="true">→</span> Data Response</div>
+          <div class="cxl-arrow-sub">Cache Line (64B)</div>
+        </div>
+        <div class="cxl-arrow">
+          <div class="cxl-arrow-label blue"><span aria-hidden="true">↓</span> Read Request</div>
+          <div class="cxl-arrow-sub">Physical Address</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CXL Switch -->
+  <div class="cxl-switch">
+    <div class="cxl-switch-title">CXL 3.0 Switch</div>
+    <div class="cxl-switch-sub">Address Routing | Coherency Management | Multi-Endpoint Aggregation</div>
+  </div>
+
+  <!-- Switch Lines -->
+  <div class="switch-lines">
+    <div class="switch-line" aria-hidden="true"></div>
+    <div class="switch-line" aria-hidden="true"></div>
+    <div class="switch-line" aria-hidden="true"></div>
+    <div class="switch-line" aria-hidden="true"></div>
+  </div>
+
+  <!-- Endpoints -->
+  <div class="endpoints">
+    <div class="endpoint">
+      <div class="endpoint-title">Endpoint 0</div>
+      <div class="endpoint-tier warm" role="img" aria-label="Warm tier: 256 GB of DRAM holding KV blocks with a high score. Bandwidth is assumed, not measured: a 5.00 mebibyte block transfers in 164, 82 or 43 microseconds at an assumed 32, 64 or 121 gigabytes per second. No CXL hardware was measured.">
+        <div class="tier-label warm">DRAM (Warm Tier)</div>
+        <div class="tier-value">256 GB</div>
+        <div class="tier-latency warm">bandwidth <em>assumed</em>: 32/64/121 GB/s</div>
+        <div class="tier-inner warm">
+          <div class="tier-inner-label">KV-Cache Entries</div>
+          <div class="tier-inner-value">High attention score</div>
+        </div>
+      </div>
+      <div class="endpoint-tier cold" role="img" aria-label="Cold tier: 4 TB of NVMe, latency assumed and not measured, holding evicted KV blocks with a low score. An evicted block keeps its identity key and score, which are restored on re-admission.">
+        <div class="tier-label cold">NVMe (Cold Tier)</div>
+        <div class="tier-value">4 TB</div>
+        <div class="tier-latency cold">latency assumed, not measured</div>
+        <div class="tier-inner cold">
+          <div class="tier-inner-label">Evicted KV blocks</div>
+          <div class="tier-inner-value">Low score — <strong>state persists</strong></div>
+        </div>
+      </div>
+      <div class="endpoint-ctrl">
+        <div class="endpoint-ctrl-title">Tier Controller</div>
+        <div class="endpoint-ctrl-sub">PLACE | MOVE | persistent identity-keyed block state</div>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="endpoint-title">Endpoint 1</div>
+      <div class="endpoint-tier warm" role="img" aria-label="Warm tier: 256 GB of DRAM holding KV blocks with a high score. Bandwidth is assumed, not measured: a 5.00 mebibyte block transfers in 164, 82 or 43 microseconds at an assumed 32, 64 or 121 gigabytes per second. No CXL hardware was measured.">
+        <div class="tier-label warm">DRAM (Warm Tier)</div>
+        <div class="tier-value">256 GB</div>
+        <div class="tier-latency warm">bandwidth <em>assumed</em>: 32/64/121 GB/s</div>
+        <div class="tier-inner warm">
+          <div class="tier-inner-label">KV-Cache Entries</div>
+          <div class="tier-inner-value">High attention score</div>
+        </div>
+      </div>
+      <div class="endpoint-tier cold" role="img" aria-label="Cold tier: 4 TB of NVMe, latency assumed and not measured, holding evicted KV blocks with a low score. An evicted block keeps its identity key and score, which are restored on re-admission.">
+        <div class="tier-label cold">NVMe (Cold Tier)</div>
+        <div class="tier-value">4 TB</div>
+        <div class="tier-latency cold">latency assumed, not measured</div>
+        <div class="tier-inner cold">
+          <div class="tier-inner-label">Evicted KV blocks</div>
+          <div class="tier-inner-value">Low score — <strong>state persists</strong></div>
+        </div>
+      </div>
+      <div class="endpoint-ctrl">
+        <div class="endpoint-ctrl-title">Tier Controller</div>
+        <div class="endpoint-ctrl-sub">PLACE | MOVE | persistent identity-keyed block state</div>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="endpoint-title">Endpoint 2</div>
+      <div class="endpoint-tier warm" role="img" aria-label="Warm tier: 256 GB of DRAM holding KV blocks with a high score. Bandwidth is assumed, not measured: a 5.00 mebibyte block transfers in 164, 82 or 43 microseconds at an assumed 32, 64 or 121 gigabytes per second. No CXL hardware was measured.">
+        <div class="tier-label warm">DRAM (Warm Tier)</div>
+        <div class="tier-value">256 GB</div>
+        <div class="tier-latency warm">bandwidth <em>assumed</em>: 32/64/121 GB/s</div>
+        <div class="tier-inner warm">
+          <div class="tier-inner-label">KV-Cache Entries</div>
+          <div class="tier-inner-value">High attention score</div>
+        </div>
+      </div>
+      <div class="endpoint-tier cold" role="img" aria-label="Cold tier: 4 TB of NVMe, latency assumed and not measured, holding evicted KV blocks with a low score. An evicted block keeps its identity key and score, which are restored on re-admission.">
+        <div class="tier-label cold">NVMe (Cold Tier)</div>
+        <div class="tier-value">4 TB</div>
+        <div class="tier-latency cold">latency assumed, not measured</div>
+        <div class="tier-inner cold">
+          <div class="tier-inner-label">Evicted KV blocks</div>
+          <div class="tier-inner-value">Low score — <strong>state persists</strong></div>
+        </div>
+      </div>
+      <div class="endpoint-ctrl">
+        <div class="endpoint-ctrl-title">Tier Controller</div>
+        <div class="endpoint-ctrl-sub">PLACE | MOVE | persistent identity-keyed block state</div>
+      </div>
+    </div>
+    <div class="endpoint">
+      <div class="endpoint-title">Endpoint 3</div>
+      <div class="endpoint-tier warm" role="img" aria-label="Warm tier: 256 GB of DRAM holding KV blocks with a high score. Bandwidth is assumed, not measured: a 5.00 mebibyte block transfers in 164, 82 or 43 microseconds at an assumed 32, 64 or 121 gigabytes per second. No CXL hardware was measured.">
+        <div class="tier-label warm">DRAM (Warm Tier)</div>
+        <div class="tier-value">256 GB</div>
+        <div class="tier-latency warm">bandwidth <em>assumed</em>: 32/64/121 GB/s</div>
+        <div class="tier-inner warm">
+          <div class="tier-inner-label">KV-Cache Entries</div>
+          <div class="tier-inner-value">High attention score</div>
+        </div>
+      </div>
+      <div class="endpoint-tier cold" role="img" aria-label="Cold tier: 4 TB of NVMe, latency assumed and not measured, holding evicted KV blocks with a low score. An evicted block keeps its identity key and score, which are restored on re-admission.">
+        <div class="tier-label cold">NVMe (Cold Tier)</div>
+        <div class="tier-value">4 TB</div>
+        <div class="tier-latency cold">latency assumed, not measured</div>
+        <div class="tier-inner cold">
+          <div class="tier-inner-label">Evicted KV blocks</div>
+          <div class="tier-inner-value">Low score — <strong>state persists</strong></div>
+        </div>
+      </div>
+      <div class="endpoint-ctrl">
+        <div class="endpoint-ctrl-title">Tier Controller</div>
+        <div class="endpoint-ctrl-sub">PLACE | MOVE | persistent identity-keyed block state</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Access Flow -->
+  <div class="flow">
+    <div class="flow-title">KV-Cache Access Flow</div>
+    <div class="flow-grid">
+      <div class="flow-step s1">
+        <div class="flow-step-title">1. Request</div>
+        <div class="flow-step-desc">GPU attention kernel needs the KV <strong>block</strong> covering position P (16 tokens = 5.00 MiB)</div>
+      </div>
+      <div class="flow-step s2">
+        <div class="flow-step-title">2. HBM Check</div>
+        <div class="flow-step-desc">Hit → return from HBM<br/>Miss → CXL.mem fault</div>
+      </div>
+      <div class="flow-step s3">
+        <div class="flow-step-title">3. Endpoint Lookup</div>
+        <div class="flow-step-desc">Block transfer, 5.00 MiB: <strong>164 / 82 / 43 µs</strong> at an <em>assumed</em> 32 / 64 / 121 GB/s — <strong>no CXL hardware was measured</strong><br/>No miss path: NVMe is a complete backing store, so a block is never lost</div>
+      </div>
+      <div class="flow-step s4">
+        <div class="flow-step-title">4. Admit with restored state</div>
+        <div class="flow-step-desc">The block's <strong>identity key and score persist</strong> and are restored — it is <em>not</em> re-admitted as newly created.<br/><strong>No RoPE prefetch step:</strong> RoPE is a rotation applied to Q/K at compute time and carries no information about which blocks are needed next.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cache Policy -->
+  <div class="card policy">
+    <div class="card-title">Endpoint Cache Policy — per <em>(sequence, token block)</em>, never per head</div>
+    <div class="policy-grid">
+      <div class="policy-box">
+        <div class="policy-title">Access Tracking</div>
+        <div class="policy-list">
+          • 640 <strong>scoring</strong> streams (80 layers × 8 KV heads) — a scoring granularity, <strong>not</strong> an eviction one<br/>
+          • Evicting a head gives <strong>wrong outputs, not a cache miss</strong>: every head of every layer is needed for every token<br/>
+          • Tracked unit: <strong>(sequence, block)</strong>, 16 tokens = 5.00 MiB<br/>
+          • State: 64 B/block → 8,192 blocks × 64 B = <strong>512 KiB</strong> vs 40.0 GiB KV = <strong>0.0012%</strong><br/>
+          • Processing overhead is <strong>not established and must be measured</strong>
+        </div>
+      </div>
+      <div class="policy-box">
+        <div class="policy-title">Score Integration</div>
+        <div class="policy-list">
+          • Attention signals via CXL.io mailbox<br/>
+          • <strong>LRFU</strong> (Lee et al., ACM SIGMETRICS 1999) — established prior art, α its documented LRU↔LFU knob<br/>
+          • score = 0.05 × new + 0.95 × old (α = 0.05, half-life 13.5 steps)<br/>
+          • <strong>α = 0.2 was never validated</strong>; α is non-monotonic (32 GiB: 0.5→37.20, 0.15→44.33, 0.05→55.96, 0.01→31.54, 0.001→24.44), no convergence onto LFU as α→0
+        </div>
+      </div>
+      <div class="policy-box">
+        <div class="policy-title">Eviction Priority</div>
+        <div class="policy-list">
+          • f(recency_rank, score) over <strong>blocks</strong><br/>
+          • Low score + old → NVMe<br/>
+          • <strong>Identity key + score survive the eviction</strong> and are restored on re-admission — worth <strong>+34.15 pts to LFU</strong> and <strong>+24.85 pts to EMA α=0.01</strong> at 32 GiB <span style="font-family:var(--font-mono);font-size:0.7rem;">Simulated (provisional)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Capacity Summary -->
+  <div class="card capacity">
+    <div class="card-title">Tiered Capacity (4 Endpoints)</div>
+    <div class="capacity-grid">
+      <div class="cap-box hot" role="img" aria-label="Hot tier in HBM, 192 gigabytes at 8 terabytes per second">
+        <div class="cap-label">Hot (HBM)</div>
+        <div class="cap-value">192 GB</div>
+        <div class="cap-sub">8 TB/s</div>
+      </div>
+      <div class="cap-box warm" role="img" aria-label="Warm tier in CXL DRAM, 1 terabyte, four times 256 gigabytes. Bandwidth is assumed, not measured.">
+        <div class="cap-label">Warm (CXL DRAM)</div>
+        <div class="cap-value">1 TB</div>
+        <div class="cap-sub">4 × 256 GB · bandwidth assumed</div>
+      </div>
+      <div class="cap-box cold" role="img" aria-label="Cold tier in NVMe, 16 terabytes, four times 4 terabytes. Latency is assumed, not measured.">
+        <div class="cap-label">Cold (NVMe)</div>
+        <div class="cap-value">16 TB</div>
+        <div class="cap-sub">4 × 4 TB · latency assumed</div>
+      </div>
+      <div class="cap-box total" role="img" aria-label="Total tiered capacity, about 17 terabytes, against 192 gigabytes for HBM only">
+        <div class="cap-label">Total</div>
+        <div class="cap-value">~17 TB</div>
+        <div class="cap-sub">vs 192 GB HBM-only</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Key Insight -->
+  <div class="card insight">
+    <div class="insight-label">KEY INSIGHT</div>
+    <div class="insight-title">GPU sees unified address space. Endpoint manages tier placement transparently.</div>
+    <div class="insight-desc">CXL.mem provides load/store semantics — no explicit I/O commands.<br/>Host owns policy; device owns mechanism. Whether the controller must be <em>on the device</em> is <strong>open</strong>: of four falsifiable claims, only the fourth — policy state surviving eviction — needs device residency at all.</div>
+  </div>
+
+
+  <p style="text-align:center;color:var(--text-secondary);font-size:0.8rem;margin:24px 16px 0;padding-top:12px;border-top:1px solid var(--border-primary);">
+    <strong>Analytical model</strong> — capacities are arithmetic over vendor specifications and stand.
+    <strong>No CXL hardware was measured.</strong> Every tier latency here is an <em>assumption</em> across
+    32 / 64 / 121 GB/s → 164 / 82 / 43 µs for a 5.00 MiB block; the tier's value is <strong>avoiding
+    regeneration</strong> (9 / 11 / 18 ms of forward compute for 16 tokens at 50 / 40 / 25% MFU), two to three orders
+    of magnitude, <strong>no precise multiple claimed</strong>. Hit-rate deltas are
+    <strong>Simulated (provisional)</strong>: one data-structure defect in Revision 1 inverted four of five findings,
+    so Revision 2 is provisional, not settled. <strong>Retracted from this figure:</strong> 200 ns CXL access,
+    177 ns effective latency, 65×, the 97% hit rate, α = 0.2, per-head eviction queues, and RoPE-driven prefetch.
+    Canonical numbers v6.0.
+  </p>
+</div>
+</body>
+</html>

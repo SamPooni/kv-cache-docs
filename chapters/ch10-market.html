@@ -4,8 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chapter 10: The 2026 Landscape — KV-Cache Offloading Architecture</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../vendor/fonts.css">
   <link rel="stylesheet" href="../css/style.css">
   <style>
     .decision-table { width: 100%; border-collapse: collapse; margin: 1.25rem 0 2rem; font-size: 0.92rem; }
@@ -13,13 +12,13 @@
     .decision-table thead th { background: var(--surface-alt, rgba(127,127,127,0.08)); font-weight: 600; }
     .decision-table tr.self td { font-weight: 600; background: rgba(47,143,78,0.08); }
     .callout { border-left: 4px solid #c9860a; background: rgba(201,134,10,0.08); padding: 0.9rem 1.2rem; margin: 1.5rem 0; border-radius: 4px; font-size: 0.95rem; }
-    .callout-title { font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.78rem; margin-bottom: 0.35rem; color: #c9860a; }
-    .callout.open { border-left-color: #7a5fc4; background: rgba(122,95,196,0.08); }
-    .callout.open .callout-title { color: #7a5fc4; }
+    .callout-title { font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.78rem; margin-bottom: 0.35rem; color: var(--accent-orange); }
+    .callout.open { border-left-color: var(--accent-purple); background: rgba(122,95,196,0.08); }
+    .callout.open .callout-title { color: var(--accent-purple); }
     .pipeline { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; margin: 1.5rem 0 2rem; }
     .pipeline .step { border: 1px solid var(--border, #33383f); border-radius: 8px; padding: 0.7rem 0.9rem; font-size: 0.85rem; font-family: 'IBM Plex Mono', monospace; font-weight: 600; }
     .pipeline .arrow { color: var(--text-muted); font-size: 1.1rem; }
-    .pipeline .step.plane { border-color: #7a5fc4; color: #7a5fc4; }
+    .pipeline .step.plane { border-color: var(--accent-purple); color: var(--accent-purple); }
   </style>
 </head>
 <body>
@@ -79,6 +78,15 @@
       </table>
 
       <p>Read this way, the claim that this field handles every KV block with one uniform policy does not hold up. CacheWise treats reuse as a prediction problem informed by agent state. PNM-KV treats selection as a near-memory decision made before movement, not after. LMCache treats the KV object itself as something to be pinned, moved, compressed, and shared across engines and tiers. TraCT treats CXL as rack-scale shared transport with its own prefix cache. Tutti treats the GPU-NVMe path as an I·O-scheduling problem, not a cache-policy problem. None of these reduce to a single generic recency, randomized, or fixed-rule policy — that older characterization no longer describes the field, if it ever fully did.</p>
+
+      
+      <div class="figure-embed tall">
+        <div class="figure-embed-header">
+          <span class="figure-embed-label">Figure 10.1 &mdash; The 2026 landscape, placed by the decision each system optimises</span>
+          <a class="figure-embed-link" href="../figures/ch10-market/landscape-2026.html" target="_blank" rel="noopener">Open Full Screen &#8599;</a>
+        </div>
+        <iframe src="../figures/ch10-market/landscape-2026.html" title="Five specialised 2026 systems mapped onto the SELECT, PLACE, MOVE, ATTEND and OBSERVE stages by the decision each one optimises, with each system's own reported figures" loading="lazy" style="height:900px;background:var(--bg-primary)"></iframe>
+      </div>
 
       <h2>10.3 What is genuinely still open</h2>
       <p>The pieces above are specialized, but they are not unified. CacheWise's tool-call-driven reuse prediction lives inside vLLM's eviction path; it does not decide where a block should physically reside once predicted useful. PNM-KV's near-memory selection avoids wasted recalls, but selection and cross-tier movement policy are still separate concerns in its design. LMCache spans tiers and engines but does not itself predict future reuse from agent or tool signals the way CacheWise does. TraCT solves rack-wide CXL transport but is not, on its own, a relevance-prediction or selection system. Tutti's contribution is squarely at the GPU↔NVMe movement layer.</p>

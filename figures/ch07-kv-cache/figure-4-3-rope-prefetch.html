@@ -1,1 +1,101 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RoPE Prefetch — Corrected</title><style>body{margin:0;background:#0d1117;color:#e6edf3;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}.w{max-width:1040px;margin:auto;padding:30px}.ey{font:600 11px system-ui;letter-spacing:.12em;text-transform:uppercase;color:#8b949e}.h{font-size:31px;font-weight:760;margin:7px 0 10px}.p{color:#aab4c0;line-height:1.55}.flow{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:20px 0}.b{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:14px 16px;font-weight:650}.a{color:#7d8590;font-size:20px}.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:20px 0}.c{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:16px}.n{font:700 24px ui-monospace,Consolas,monospace;color:#58a6ff}.l{font-weight:650;margin-top:5px}.s{font-size:13px;color:#8b949e;margin-top:6px;line-height:1.4}.warn{border-left:4px solid #d29922;background:#1d1a12;padding:13px 15px;border-radius:8px;line-height:1.5}.t{width:100%;border-collapse:collapse;margin:18px 0}.t td,.t th{padding:9px 11px;border-bottom:1px solid #30363d;text-align:left}.t th{color:#8b949e;font-size:11px;text-transform:uppercase}</style></head><body><main class="w"><div class="ey">Prefetch policy · hypothesis</div><div class="h">RoPE Is Not a Universal Locality Guarantee</div><p class="p">Position can be one input to a prefetch heuristic, but RoPE itself does not prove that a fixed ±W window captures a fixed fraction of future attention. Any locality window and hit-rate benefit must be learned or measured from real attention traces.</p><div class="flow"><div class="b">attention trace</div><div class="a">+</div><div class="b">position / distance</div><div class="a">+</div><div class="b">reuse history</div><div class="a">→</div><div class="b">prefetch score</div><div class="a">→</div><div class="b">validate precision / recall / stall</div></div><div class="warn"><b>Removed:</b> the earlier +4%, 70%, 72%, 85% and 90% locality/hit-rate figures were not measured results.</div></main></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Figure 7.10 — RoPE Distance Bound</title>
+<script src="../../vendor/react.production.min.js"></script>
+<script src="../../vendor/react-dom.production.min.js"></script>
+<script src="../../vendor/babel.min.js"></script>
+<link rel="stylesheet" href="../../css/style.css">
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: var(--font-sans); background: linear-gradient(135deg, var(--bg-primary), var(--bg-card)); min-height: 100vh; color: var(--text-primary); }</style>
+</head>
+<body>
+<div id="root" role="main"></div>
+<script type="text/babel">
+const { useState } = React;
+function RoPEDistanceBound() {
+  const [currentPos, setCurrentPos] = useState(50);
+  const windowSize = 20;
+  const styles = {
+    container: { maxWidth: '800px', margin: '0 auto', padding: '2rem' },
+    header: { textAlign: 'center', marginBottom: '2rem' },
+    slider: { background: 'var(--bg-card)', borderRadius: '12px', padding: '1.5rem', marginBottom: '1.5rem' },
+    timeline: { display: 'flex', gap: 2, marginBottom: '1rem', overflowX: 'auto', padding: '0.5rem 0' },
+    token: (pos, current) => {
+      const dist = Math.abs(pos - current);
+      const inWindow = dist <= windowSize;
+      const isNear = dist > 0 && dist <= windowSize;
+      return {
+        width: 12, height: 40, borderRadius: 2, flexShrink: 0,
+        background: pos === current ? 'var(--accent-green)' : isNear ? 'var(--accent-cyan)' : inWindow ? 'var(--accent-purple)' : 'var(--border-primary)',
+        opacity: inWindow ? 1 : 0.3
+      };
+    },
+    legend: { display: 'flex', justifyContent: 'center', gap: '2rem', marginBottom: '1.5rem', fontSize: '0.875rem' },
+    dot: (color) => ({ width: 12, height: 12, borderRadius: 2, background: color, display: 'inline-block', marginRight: 8 }),
+    formula: { background: 'var(--bg-primary)', borderRadius: '12px', padding: '1.5rem', textAlign: 'center' },
+    formulaText: { fontFamily: 'var(--font-mono)', color: 'var(--accent-cyan)', marginBottom: '0.5rem' },
+    insight: { background: 'var(--bg-card)', borderRadius: '12px', padding: '1rem', marginTop: '1.5rem' }
+  };
+  return (
+    <div style={styles.container}>
+      <p className="sr-only">Figure: a RoPE explainer, showing where rotary position embedding does and does not bound attention magnitude, over a 100-position timeline. A slider sets the query position m, 50 by default and adjustable from 20 to 80; positions within 20 either side are highlighted as the band where the distance bound is loosest, and positions beyond it are shown faded, where the bound is tighter. The bound is: the magnitude of the inner product of q_m and k_n is at most B of the absolute distance m minus n, with B non-increasing. That is an upper-bound envelope on magnitude, not a decay law. It is never proportional to cosine of (m minus n) times theta: the RoPE inner product is a sum over d over 2 frequency pairs, each rotated by its own theta_i, so it does not decay monotonically and a distant position can still attend strongly. Critically, RoPE is a rotation applied to the query and key vectors at compute time. It carries no information about which blocks will be needed next, so it cannot drive prefetch. The earlier claim on this figure — that RoPE-aware prefetch contributes plus 4 percentage points of hit rate, taking a cumulative 93 percent to 97 percent — is retracted in full, along with the whole 72 to 80 to 87 to 93 to 97 ladder, which was never run as an ablation and whose increments were assumed additive and independent. No single hit rate exists: across budgets, policies and workloads the simulated range is 8.5 to 91.6 percent. This figure now claims only the geometry: an upper bound, labelled Analytical model, and nothing about cache behaviour.</p>
+      <div style={styles.header}>
+        <div style={{display: 'inline-block', padding: '0.25rem 0.75rem', background: 'rgba(59,130,246,0.2)', color: 'var(--accent-cyan)', fontSize: '0.75rem', fontFamily: 'var(--font-mono)', borderRadius: '20px', marginBottom: '0.5rem'}}>FIGURE 7.10</div>
+        <h1 style={{fontSize: '1.5rem', fontWeight: 700}}>RoPE — What the Distance Bound Does and Does Not Say</h1>
+        <p style={{color: 'var(--text-secondary)', fontSize: '0.875rem'}}>RoPE gives an <strong>upper-bound envelope</strong> on attention magnitude by distance. It is not a decay law, and it is <strong>not a prefetch signal</strong>.</p>
+      </div>
+      <div style={styles.slider}>
+        <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem'}}>
+          <span>Query position m</span><span style={{color: 'var(--accent-green)', fontWeight: 600}}>{currentPos}</span>
+        </div>
+        <input type="range" min="20" max="80" value={currentPos} onChange={e => setCurrentPos(+e.target.value)} style={{width: '100%'}} />
+      </div>
+      <div style={styles.timeline} role="img" aria-label={`Timeline of 100 key positions n against a query at position m equals ${currentPos}. Positions ${Math.max(0, currentPos - windowSize)} to ${Math.min(99, currentPos + windowSize)} lie within a distance of ${windowSize}, the band where the bound B of the absolute distance is loosest and a large inner product is permitted. Beyond that band the bound is tighter, but it is only a bound: a distant position may still attend strongly, and nothing here predicts which positions will be read next.`}>
+        {Array.from({length: 100}, (_, i) => <div key={i} aria-hidden="true" style={styles.token(i, currentPos)}></div>)}
+      </div>
+      <div style={styles.legend}>
+        <span><span aria-hidden="true" style={styles.dot('var(--accent-green)')}></span>Query position m</span>
+        <span><span aria-hidden="true" style={styles.dot('var(--accent-cyan)')}></span>|m − n| ≤ 20 — bound is loosest</span>
+        <span><span aria-hidden="true" style={styles.dot('var(--border-primary)')}></span>|m − n| &gt; 20 — bound is tighter (still only a bound)</span>
+      </div>
+      <div style={styles.formula}>
+        <div style={styles.formulaText}>|⟨q_m, k_n⟩| ≤ B(|m − n|),&nbsp; B non-increasing</div>
+        <div style={{color: 'var(--text-secondary)', fontSize: '0.875rem'}}>
+          The RoPE inner product is a <strong>sum over d/2 frequency pairs</strong>, each rotated by its own
+          θ_i — it is not a single cosine of the distance and it does not decay monotonically.
+          What RoPE gives is an <strong>upper-bound envelope</strong> B on the magnitude as distance grows.
+        </div>
+        <div style={{...styles.formulaText, marginTop: '1rem', color: 'var(--accent-red)'}}>NOT&nbsp; |⟨q_m, k_n⟩| ∝ cos((m − n)·θ)</div>
+        <div style={{color: 'var(--text-secondary)', fontSize: '0.875rem'}}>
+          The inner product is never proportional to a single cosine of the distance. Writing it that way turns an
+          <strong> upper bound</strong> into a <strong>decay law</strong>, which is the error that made a prefetch
+          heuristic look derivable from the geometry.
+        </div>
+      </div>
+      <div style={{...styles.insight, borderLeft: '4px solid var(--accent-red)'}}>
+        <div style={{fontWeight: 600, color: 'var(--accent-red)', marginBottom: '0.5rem'}}>RoPE cannot drive prefetch</div>
+        <div style={{color: 'var(--text-secondary)', fontSize: '0.875rem'}}>
+          RoPE is a <strong>rotation applied to Q and K at compute time</strong>. It carries no information about which
+          blocks are needed next — the rotation is a function of position alone, known in advance for every position,
+          and identical whether a block is resident or evicted. A bound on magnitude by distance is not a prediction of
+          access. The earlier claim on this figure — <strong>+4 pts of hit rate, 93% → 97% cumulative</strong> — is
+          <strong> retracted</strong>, together with the whole 72→80→87→93→97 ladder, which was never run as an
+          ablation and whose +8/+7/+6/+4 increments were assumed additive and independent.
+        </div>
+      </div>
+      <div style={{textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '1.5rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-primary)'}}>
+        <strong>Analytical model</strong> — the bound |⟨q_m, k_n⟩| ≤ B(|m − n|) follows from the RoPE construction.
+        Nothing on this page is a cache result. No single hit rate exists; the simulated range is 8.5–91.6% across
+        budgets, policies and workloads <span style={{fontFamily: 'var(--font-mono)'}}>Simulated (provisional)</span>,
+        and a single data-structure defect in Revision 1 inverted four of five findings, so Revision 2 is provisional,
+        not settled. Canonical numbers v6.0.
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<RoPEDistanceBound />);
+</script>
+</body>
+</html>

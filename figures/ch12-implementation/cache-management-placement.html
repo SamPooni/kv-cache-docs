@@ -4,12 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cache Management Placement</title>
+<link rel="stylesheet" href="../../css/style.css">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
-  font-family: 'Segoe UI', system-ui, sans-serif;
-  background: #ffffff;
-  color: #1a1a1a;
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
+  color: var(--text-primary);
   padding: 2rem;
   line-height: 1.5;
 }
@@ -22,13 +23,13 @@ h1 {
 }
 .subtitle {
   text-align: center;
-  color: #555;
+  color: var(--text-secondary);
   font-size: 1.15rem;
   margin-bottom: 2rem;
 }
 .architecture {
-  background: #fafafa;
-  border: 2px solid #e8e8e8;
+  background: var(--bg-card);
+  border: 2px solid var(--border-primary);
   border-radius: 16px;
   padding: 2rem;
   margin-bottom: 2rem;
@@ -54,8 +55,8 @@ h1 {
   width: 100%;
 }
 .component {
-  background: #fff;
-  border: 3px solid #e0e0e0;
+  background: var(--bg-code);
+  border: 3px solid var(--border-primary);
   border-radius: 12px;
   padding: 1.25rem;
   min-width: 180px;
@@ -63,20 +64,20 @@ h1 {
   position: relative;
 }
 .component.gpu {
-  border-color: #28a745;
-  background: #f0fff4;
+  border-color: var(--accent-green);
+  background: rgba(63, 185, 80, 0.12);
 }
 .component.cpu {
-  border-color: #007bff;
-  background: #f0f7ff;
+  border-color: var(--accent-cyan);
+  background: rgba(88, 166, 255, 0.12);
 }
 .component.cxl {
-  border-color: #6f42c1;
-  background: #f8f5ff;
+  border-color: var(--accent-purple);
+  background: rgba(163, 113, 247, 0.12);
 }
 .component.nvme {
-  border-color: #e67700;
-  background: #fff8f0;
+  border-color: var(--accent-orange);
+  background: rgba(210, 153, 34, 0.12);
 }
 .comp-icon {
   font-size: 1.8rem;
@@ -88,7 +89,8 @@ h1 {
 }
 .comp-detail {
   font-size: 0.9rem;
-  color: #666;
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
   margin-top: 0.25rem;
 }
 .placement-badge {
@@ -103,28 +105,29 @@ h1 {
   justify-content: center;
   font-size: 0.85rem;
   font-weight: 700;
-  color: white;
+  color: var(--bg-primary);
 }
-.placement-badge.a { background: #dc3545; }
-.placement-badge.b { background: #007bff; }
-.placement-badge.c { background: #6f42c1; }
-.placement-badge.d { background: #e67700; }
+.placement-badge.a { background: var(--accent-red); }
+.placement-badge.b { background: var(--accent-cyan); }
+.placement-badge.c { background: var(--accent-purple); }
+.placement-badge.d { background: var(--accent-orange); }
 .connector {
   display: flex;
   flex-direction: column;
   align-items: center;
-  color: #999;
+  color: var(--text-secondary);
 }
 .conn-line {
   width: 3px;
   height: 30px;
-  background: #ddd;
+  background: var(--border-highlight);
 }
 .conn-label {
   font-size: 0.85rem;
-  color: #888;
+  color: var(--text-secondary);
   padding: 0.25rem 0.5rem;
-  background: #f5f5f5;
+  background: var(--bg-code);
+  border: 1px solid var(--border-secondary);
   border-radius: 4px;
 }
 .options-grid {
@@ -134,15 +137,15 @@ h1 {
   margin-top: 1.5rem;
 }
 .option-card {
-  background: #fff;
-  border: 3px solid #e0e0e0;
+  background: var(--bg-card);
+  border: 3px solid var(--border-primary);
   border-radius: 14px;
   padding: 1.25rem;
   position: relative;
 }
 .option-card.recommended {
-  border-color: #6f42c1;
-  background: #fdfbff;
+  border-color: var(--accent-purple);
+  background: rgba(163, 113, 247, 0.10);
 }
 .option-header {
   display: flex;
@@ -159,23 +162,23 @@ h1 {
   justify-content: center;
   font-size: 1rem;
   font-weight: 700;
-  color: white;
+  color: var(--bg-primary);
 }
-.option-badge.a { background: #dc3545; }
-.option-badge.b { background: #007bff; }
-.option-badge.c { background: #6f42c1; }
-.option-badge.d { background: #e67700; }
+.option-badge.a { background: var(--accent-red); }
+.option-badge.b { background: var(--accent-cyan); }
+.option-badge.c { background: var(--accent-purple); }
+.option-badge.d { background: var(--accent-orange); }
 .option-title {
   font-size: 1.15rem;
   font-weight: 700;
 }
-.option-card.recommended .option-title { color: #6f42c1; }
+.option-card.recommended .option-title { color: var(--accent-purple); }
 .rec-badge {
   position: absolute;
   top: -10px;
   right: 12px;
-  background: #6f42c1;
-  color: white;
+  background: var(--accent-purple);
+  color: var(--bg-primary);
   font-size: 0.75rem;
   font-weight: 600;
   padding: 0.25rem 0.6rem;
@@ -183,14 +186,14 @@ h1 {
 }
 .option-where {
   font-size: 0.95rem;
-  color: #555;
+  color: var(--text-secondary);
   margin-bottom: 1rem;
   padding: 0.5rem;
-  background: #f8f9fa;
+  background: var(--bg-code);
   border-radius: 6px;
 }
 .option-where strong {
-  color: #333;
+  color: var(--text-primary);
 }
 .pros-cons {
   display: flex;
@@ -205,17 +208,17 @@ h1 {
 }
 .pro::before {
   content: "✓";
-  color: #28a745;
+  color: var(--accent-green);
   font-weight: 700;
 }
 .con::before {
   content: "✗";
-  color: #dc3545;
+  color: var(--accent-red);
   font-weight: 700;
 }
 .metadata-section {
-  background: #fafafa;
-  border: 2px solid #e8e8e8;
+  background: var(--bg-card);
+  border: 2px solid var(--border-primary);
   border-radius: 16px;
   padding: 1.5rem;
   margin-top: 1.5rem;
@@ -231,29 +234,29 @@ h1 {
   gap: 1rem;
 }
 .meta-item {
-  background: #fff;
-  border: 2px solid #e0e0e0;
+  background: var(--bg-code);
+  border: 2px solid var(--border-primary);
   border-radius: 10px;
   padding: 1rem;
 }
 .meta-label {
   font-size: 0.9rem;
-  color: #666;
+  color: var(--text-secondary);
   margin-bottom: 0.25rem;
 }
 .meta-value {
   font-size: 1.1rem;
   font-weight: 700;
-  font-family: 'Fira Code', monospace;
+  font-family: var(--font-mono);
 }
 .meta-note {
   font-size: 0.85rem;
-  color: #888;
+  color: var(--text-secondary);
   margin-top: 0.25rem;
 }
 .hybrid-section {
-  background: #f8f5ff;
-  border: 2px solid #d4c4f0;
+  background: rgba(163, 113, 247, 0.10);
+  border: 2px solid rgba(163, 113, 247, 0.35);
   border-radius: 16px;
   padding: 1.5rem;
   margin-top: 1.5rem;
@@ -261,7 +264,7 @@ h1 {
 .hybrid-title {
   font-size: 1.2rem;
   font-weight: 700;
-  color: #6f42c1;
+  color: var(--accent-purple);
   margin-bottom: 1rem;
 }
 .hybrid-flow {
@@ -278,33 +281,34 @@ h1 {
   font-weight: 600;
   text-align: center;
 }
-.flow-box.gpu { background: #d4edda; color: #155724; }
-.flow-box.cxl { background: #e7d4f7; color: #4a1a7a; }
-.flow-box.nvme { background: #ffe5cc; color: #8a4500; }
+.flow-box.gpu { background: rgba(63, 185, 80, 0.15); color: var(--accent-green); border: 1px solid rgba(63, 185, 80, 0.4); }
+.flow-box.cxl { background: rgba(163, 113, 247, 0.15); color: var(--accent-purple); border: 1px solid rgba(163, 113, 247, 0.4); }
+.flow-box.nvme { background: rgba(210, 153, 34, 0.15); color: var(--accent-orange); border: 1px solid rgba(210, 153, 34, 0.4); }
 .flow-arrow {
   font-size: 1.3rem;
-  color: #999;
+  color: var(--text-secondary);
 }
 .hybrid-desc {
   font-size: 1rem;
-  color: #555;
+  color: var(--text-secondary);
   margin-top: 1rem;
   text-align: center;
 }
 </style>
 </head>
 <body>
-<div class="container">
+<div class="container" role="main">
+  <p class="sr-only">Figure: where the per-block policy state of the PLACE stage should live, across four candidate placements in a memory hierarchy. The tracked unit is a (sequence, token block) pair — 16 tokens, 5.00 mebibytes — not a head: every head of every layer is required for every token, so a head is a scoring granularity, never an eviction granularity. A, GPU HBM: 192 GB at 8 TB/s — lowest-latency decisions, but policy state dies with the block when HBM evicts it, which is exactly the failure the persistence result identifies. B, host CPU: DDR5 at about 400 GB/s over NVLink or PCIe 5.0 — easy to implement, survives HBM eviction, but adds a host round trip per decision. C, CXL or tier controller: state sits with the tier, so it survives HBM eviction by construction; tier bandwidth is assumed, not measured, at 32, 64 or 121 gigabytes per second, under which a 5.00 mebibyte block transfer takes 164, 82 or 43 microseconds; the cost is custom hardware. D, computational storage on NVMe SSD at about 14 GB/s — offloads the host but sits on the highest-latency path. The placement tradeoff is dominated by one result: at a 32 gibibyte HBM budget, letting identity-keyed policy state survive HBM eviction raises LFU from 15.56 to 49.71 percent hit rate, a gain of 34.15 percentage points, and EMA alpha 0.01 from 31.54 to 56.39 percent, a gain of 24.85 percentage points, while EMA alpha 0.15 is unchanged at minus 0.21 percentage points. That is larger than the spread between scoring functions, and it is a protocol result, testable with no CXL hardware — which is why B, C and D are all viable and A alone is disqualified on the mechanism rather than on speed. Metadata payload is negligible: 64 bytes of state against a 5.00 mebibyte block is 0.0012 percent, or about 512 kibibytes of state for the 8,192 blocks of a 128K context whose KV is 40.0 gibibytes. Metadata processing overhead is not established and must be measured. Simulation values are provisional: a single data-structure defect in Revision 1 inverted four of five findings. No CXL hardware was measured.</p>
   <h1>Cache Management Placement</h1>
-  <p class="subtitle">Where do the 640 LRU queues + EMA tracking live?</p>
+  <p class="subtitle">Where does the per-block policy state of <strong>PLACE</strong> live — and does it survive HBM eviction?</p>
 
   <div class="architecture">
     <div class="arch-title">System Architecture</div>
     <div class="system-diagram">
       <div class="tier">
-        <div class="component gpu">
-          <div class="placement-badge a">A</div>
-          <div class="comp-icon">🎮</div>
+        <div class="component gpu" role="img" aria-label="Placement A, GPU HBM: 192 GB at 8 TB/s">
+          <div class="placement-badge a" aria-hidden="true">A</div>
+          <div class="comp-icon" aria-hidden="true">🎮</div>
           <div class="comp-name">GPU HBM</div>
           <div class="comp-detail">192GB · 8 TB/s</div>
         </div>
@@ -317,17 +321,18 @@ h1 {
       </div>
       
       <div class="tier">
-        <div class="component cpu">
-          <div class="placement-badge b">B</div>
-          <div class="comp-icon">🖥</div>
+        <div class="component cpu" role="img" aria-label="Placement B, host CPU: DDR5 at about 400 GB per second">
+          <div class="placement-badge b" aria-hidden="true">B</div>
+          <div class="comp-icon" aria-hidden="true">🖥</div>
           <div class="comp-name">Host CPU</div>
           <div class="comp-detail">DDR5 · ~400 GB/s</div>
         </div>
-        <div class="component cxl">
-          <div class="placement-badge c">C</div>
-          <div class="comp-icon">🔌</div>
-          <div class="comp-name">CXL Controller</div>
-          <div class="comp-detail">Type 2/3 · ~64 GB/s</div>
+        <div class="component cxl" role="img" aria-label="Placement C, CXL or tier controller, Type 2 or 3. Tier bandwidth is assumed, not measured: 32, 64 or 121 gigabytes per second, under which a 5.00 mebibyte block transfer is 164, 82 or 43 microseconds.">
+          <div class="placement-badge c" aria-hidden="true">C</div>
+          <div class="comp-icon" aria-hidden="true">🔌</div>
+          <div class="comp-name">CXL / Tier Controller</div>
+          <div class="comp-detail">Type 2/3 · 32 / 64 / 121 GB/s <em>assumed</em></div>
+          <div class="comp-detail">5.00 MiB block → 164 / 82 / 43 µs</div>
         </div>
       </div>
       
@@ -338,9 +343,9 @@ h1 {
       </div>
       
       <div class="tier">
-        <div class="component nvme">
-          <div class="placement-badge d">D</div>
-          <div class="comp-icon">💾</div>
+        <div class="component nvme" role="img" aria-label="Placement D, computational storage: NVMe SSD at about 14 GB per second">
+          <div class="placement-badge d" aria-hidden="true">D</div>
+          <div class="comp-icon" aria-hidden="true">💾</div>
           <div class="comp-name">Computational Storage</div>
           <div class="comp-detail">NVMe SSD · ~14 GB/s</div>
         </div>
@@ -351,101 +356,158 @@ h1 {
   <div class="options-grid">
     <div class="option-card">
       <div class="option-header">
-        <div class="option-badge a">A</div>
+        <div class="option-badge a" role="img" aria-label="Option A">A</div>
         <div class="option-title">GPU-Side</div>
       </div>
       <div class="option-where"><strong>Where:</strong> CUDA kernel / HBM reservation</div>
       <div class="pros-cons">
         <div class="pro">Lowest latency decisions</div>
         <div class="pro">Attention scores already on GPU</div>
-        <div class="con">Burns HBM for metadata (640 MB)</div>
+        <div class="con"><strong>Policy state dies with the block.</strong> A block evicted from HBM is re-admitted as if newly created — the exact reset worth −34.15 pts to LFU</div>
         <div class="con">Kernel complexity for async I/O</div>
       </div>
     </div>
 
     <div class="option-card">
       <div class="option-header">
-        <div class="option-badge b">B</div>
+        <div class="option-badge b" role="img" aria-label="Option B">B</div>
         <div class="option-title">Host CPU</div>
       </div>
       <div class="option-where"><strong>Where:</strong> Userspace daemon / driver</div>
       <div class="pros-cons">
-        <div class="pro">Easy to implement & debug</div>
+        <div class="pro">Easy to implement &amp; debug</div>
         <div class="pro">Flexible policy changes</div>
-        <div class="con">PCIe round-trip per decision</div>
+        <div class="pro"><strong>State survives HBM eviction</strong> — the mechanism the result turns on, with no custom hardware</div>
+        <div class="con">Host round-trip per decision</div>
         <div class="con">CPU becomes bottleneck at scale</div>
       </div>
     </div>
 
     <div class="option-card recommended">
-      <div class="rec-badge">Best for CXL</div>
+      <div class="rec-badge">Open question</div>
       <div class="option-header">
-        <div class="option-badge c">C</div>
-        <div class="option-title">CXL Controller</div>
+        <div class="option-badge c" role="img" aria-label="Option C, CXL or tier controller — an open question, not a recommendation">C</div>
+        <div class="option-title">CXL / Tier Controller</div>
       </div>
       <div class="option-where"><strong>Where:</strong> CXL Type-2 device FPGA/ASIC</div>
       <div class="pros-cons">
         <div class="pro">Near-memory processing</div>
         <div class="pro">Intercepts all CXL.mem traffic</div>
-        <div class="pro">Can prefetch to device-local DRAM</div>
+        <div class="pro">State lives with the tier, so it survives HBM eviction by construction</div>
         <div class="con">Custom hardware required</div>
+        <div class="con"><strong>Whether the controller must be on the device is open.</strong> Of four falsifiable claims, only the fourth — policy state surviving eviction — needs device residency at all, and B already provides it</div>
       </div>
     </div>
 
     <div class="option-card">
       <div class="option-header">
-        <div class="option-badge d">D</div>
+        <div class="option-badge d" role="img" aria-label="Option D">D</div>
         <div class="option-title">Computational Storage</div>
       </div>
       <div class="option-where"><strong>Where:</strong> NVMe SSD controller ARM cores</div>
       <div class="pros-cons">
         <div class="pro">Offloads host entirely</div>
-        <div class="pro">Near-storage prefetch decisions</div>
-        <div class="con">Higher latency path</div>
+        <div class="pro">State survives every tier boundary above it</div>
+        <div class="con">Highest latency path</div>
         <div class="con">Limited compute on SSD controller</div>
       </div>
     </div>
   </div>
 
+  <div class="hybrid-section" style="border-color: rgba(163,113,247,0.55);">
+    <div class="hybrid-title">What decides the placement: does policy state survive eviction?</div>
+    <p style="color: var(--text-secondary); font-size: 0.95rem; margin-bottom: 1rem;">
+      The largest effect in the study is not the scoring function and not the latency of any placement. It is whether
+      identity-keyed policy state survives the round trip out of HBM. That is a <strong>protocol</strong> property, not a
+      hardware one — which is why it is testable with no CXL hardware, and why placements B, C and D all satisfy it while A does not.
+    </p>
+    <table style="width:100%; border-collapse:collapse; font-size:0.92rem;">
+      <caption class="sr-only">Hit rate at a 32 GiB HBM budget with policy metadata reset on eviction versus persisting across it.</caption>
+      <thead>
+        <tr>
+          <th scope="col" style="text-align:left; padding:0.45rem 0.6rem; border-bottom:1px solid var(--border-primary); color:var(--text-secondary);">Policy</th>
+          <th scope="col" style="text-align:left; padding:0.45rem 0.6rem; border-bottom:1px solid var(--border-primary); color:var(--text-secondary);">Metadata reset (placement A)</th>
+          <th scope="col" style="text-align:left; padding:0.45rem 0.6rem; border-bottom:1px solid var(--border-primary); color:var(--text-secondary);">Metadata persists (B / C / D)</th>
+          <th scope="col" style="text-align:left; padding:0.45rem 0.6rem; border-bottom:1px solid var(--border-primary); color:var(--text-secondary);">Δ</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td style="padding:0.45rem 0.6rem; border-bottom:1px solid var(--border-secondary);">LFU</td><td style="padding:0.45rem 0.6rem; border-bottom:1px solid var(--border-secondary);">15.56%</td><td style="padding:0.45rem 0.6rem; border-bottom:1px solid var(--border-secondary);">49.71%</td><td style="padding:0.45rem 0.6rem; border-bottom:1px solid var(--border-secondary); color:var(--accent-green); font-weight:700;">+34.15 pts</td></tr>
+        <tr><td style="padding:0.45rem 0.6rem; border-bottom:1px solid var(--border-secondary);">EMA (LRFU) α=0.01</td><td style="padding:0.45rem 0.6rem; border-bottom:1px solid var(--border-secondary);">31.54%</td><td style="padding:0.45rem 0.6rem; border-bottom:1px solid var(--border-secondary);">56.39%</td><td style="padding:0.45rem 0.6rem; border-bottom:1px solid var(--border-secondary); color:var(--accent-green); font-weight:700;">+24.85 pts</td></tr>
+        <tr><td style="padding:0.45rem 0.6rem;">EMA (LRFU) α=0.15</td><td style="padding:0.45rem 0.6rem;">44.33%</td><td style="padding:0.45rem 0.6rem;">44.12%</td><td style="padding:0.45rem 0.6rem; color:var(--text-muted);">−0.21 pts</td></tr>
+      </tbody>
+    </table>
+    <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 0.75rem;">
+      32 GiB HBM · <strong>Simulated (provisional)</strong>. Standing caveat: a single data-structure defect in Revision 1
+      inverted four of five findings, so Revision 2 is provisional, not settled.
+    </p>
+  </div>
+
   <div class="metadata-section">
-    <div class="meta-title">Metadata Footprint (Llama-70B, 128K context)</div>
+    <div class="meta-title">Metadata footprint — the tracked unit is a (sequence, token block), not a head</div>
+    <p style="color: var(--text-secondary); font-size: 0.92rem; margin-bottom: 1rem;">
+      Every head of every layer is required for every token, so evicting a head produces <strong>wrong outputs, not a cache
+      miss</strong>. Per-head signals are a <em>scoring</em> granularity; the unit that is placed, moved and evicted is a block
+      of 16 tokens. H2O and SnapKV evict <strong>(head, token)</strong> pairs — the token axis is not optional.
+    </p>
     <div class="meta-grid">
       <div class="meta-item">
-        <div class="meta-label">LRU Queues</div>
-        <div class="meta-value">640</div>
-        <div class="meta-note">8 KV-heads × 80 layers</div>
+        <div class="meta-label">Tracked unit</div>
+        <div class="meta-value">(seq, block)</div>
+        <div class="meta-note">16 tokens = 5.00 MiB</div>
       </div>
       <div class="meta-item">
-        <div class="meta-label">Entries per Queue</div>
-        <div class="meta-value">131,072</div>
-        <div class="meta-note">Max sequence length</div>
+        <div class="meta-label">Blocks at 128K context</div>
+        <div class="meta-value">8,192</div>
+        <div class="meta-note">131,072 ÷ 16</div>
       </div>
       <div class="meta-item">
-        <div class="meta-label">Bytes per Entry</div>
-        <div class="meta-value">8 B</div>
-        <div class="meta-note">pos + ema + last_access</div>
+        <div class="meta-label">State per block</div>
+        <div class="meta-value">64 B</div>
+        <div class="meta-note">identity key + score + touch time</div>
       </div>
       <div class="meta-item">
-        <div class="meta-label">Total Metadata</div>
-        <div class="meta-value">640 MB</div>
-        <div class="meta-note">~1.6% of KV cache</div>
+        <div class="meta-label">Payload overhead</div>
+        <div class="meta-value">0.0012%</div>
+        <div class="meta-note">64 B against 5.00 MiB · ≈512 KiB against 40.0 GiB of KV</div>
       </div>
     </div>
+    <p style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 1rem;">
+      <strong>Analytical model.</strong> Payload overhead is negligible; <strong>metadata processing overhead is not
+      established and must be measured.</strong>
+    </p>
   </div>
 
   <div class="hybrid-section">
-    <div class="hybrid-title">Recommended: Hybrid Approach</div>
+    <div class="hybrid-title">Hybrid split — a design direction, not a recommendation</div>
     <div class="hybrid-flow">
-      <div class="flow-box gpu">GPU<br><small>EMA updates</small></div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-box cxl">CXL Controller<br><small>Eviction + Prefetch</small></div>
-      <div class="flow-arrow">→</div>
-      <div class="flow-box nvme">NVMe<br><small>Cold storage</small></div>
+      <div class="flow-box gpu" role="img" aria-label="OBSERVE, on the GPU: record what was actually attended">OBSERVE<span aria-hidden="true"> · GPU</span><br><small>what was actually attended</small></div>
+      <div class="flow-arrow" aria-hidden="true">→</div>
+      <div class="flow-box cxl" role="img" aria-label="PLACE, at the tier controller: score with persistent identity-keyed state and decide the tier">PLACE<span aria-hidden="true"> · tier controller</span><br><small>persistent identity-keyed state</small></div>
+      <div class="flow-arrow" aria-hidden="true">→</div>
+      <div class="flow-box nvme" role="img" aria-label="MOVE, to NVMe: execute the transfer to cold storage">MOVE<span aria-hidden="true"> · NVMe</span><br><small>execute the transfer</small></div>
     </div>
     <div class="hybrid-desc">
-      GPU computes attention → streams scores to CXL controller → controller updates EMA, makes eviction/prefetch decisions → issues async NVMe reads
+      GPU computes attention and reports what it touched → the tier controller updates each block's score against
+      <strong>state that survived the block's last eviction</strong> and decides the tier → transfers are issued asynchronously.
+      Host owns policy; device owns mechanism. Scoring is <strong>LRFU</strong> (Lee et al., ACM SIGMETRICS 1999),
+      established prior art, with α its documented LRU↔LFU knob — <em>External literature</em>. α = 0.2 was never validated;
+      the simulated optimum is <strong>α ≈ 0.05</strong>, and α is non-monotonic
+      (0.5→37.20, 0.3→38.84, 0.15→44.33, 0.05→55.96, 0.01→31.54, 0.003→25.47, 0.001→24.44), with no convergence onto LFU as α→0.
+      Everything in this row except PLACE's persistence mechanism is <strong>Design / unvalidated</strong>.
     </div>
   </div>
+
+  <p style="color:var(--text-secondary); font-size:0.85rem; margin-top:1.5rem; padding-top:1rem; border-top:1px solid var(--border-primary);">
+    <strong>Evidence labels.</strong> Capacities and the metadata footprint are an <strong>Analytical model</strong>; the
+    persistence result is <strong>Simulated (provisional)</strong>; the LRFU attribution is <strong>External literature</strong>;
+    every tier latency on this page is an <em>assumption</em>. <strong>No CXL hardware was measured</strong> — the earlier
+    200 ns CXL access figure is withdrawn and demoted to an unmeasured assumption inside a 32–121 GB/s range, under which a
+    5.00 MiB block transfer is 43–164 µs. The tier's value is <strong>avoiding regeneration</strong>: forward compute for 16
+    tokens is 9 / 11 / 18 ms at 50 / 40 / 25% MFU, two to three orders of magnitude above the transfer — no precise multiple
+    is claimed. There is no RoPE-driven prefetch in this design: RoPE is a rotation applied to Q/K at compute time and carries
+    no information about which blocks are needed next.
+  </p>
 </div>
 </body>
 </html>

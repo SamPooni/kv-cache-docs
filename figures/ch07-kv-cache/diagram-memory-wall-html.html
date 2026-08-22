@@ -4,18 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Attention Patterns & RoPE Locality</title>
+    <link rel="stylesheet" href="../../css/style.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
-            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #0a0a12 0%, #1a1a2e 100%);
+            font-family: var(--font-sans);
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
             min-height: 100vh;
-            color: #e0e0e0;
+            color: var(--text-primary);
             padding: 40px 20px;
         }
         
-        .container { max-width: 1000px; margin: 0 auto; }
+        .container { max-width: 1000px; margin: 0 auto; padding: 0; }
         
         h1 {
             font-size: 1.8rem;
@@ -28,7 +29,7 @@
         
         .subtitle {
             text-align: center;
-            color: #666;
+            color: var(--text-secondary);
             margin-bottom: 40px;
             font-size: 0.95rem;
         }
@@ -44,7 +45,7 @@
         .section-title {
             font-size: 1.1rem;
             font-weight: 600;
-            color: #a78bfa;
+            color: var(--accent-purple);
             margin-bottom: 20px;
             display: flex;
             align-items: center;
@@ -92,7 +93,7 @@
             align-items: center;
             justify-content: flex-end;
             padding-right: 8px;
-            color: #888;
+            color: var(--text-secondary);
             font-size: 0.7rem;
         }
         
@@ -101,7 +102,7 @@
             align-items: flex-end;
             justify-content: center;
             padding-bottom: 5px;
-            color: #888;
+            color: var(--text-secondary);
             font-size: 0.65rem;
             writing-mode: vertical-rl;
             text-orientation: mixed;
@@ -121,7 +122,7 @@
         
         .legend-title {
             font-size: 0.85rem;
-            color: #888;
+            color: var(--text-secondary);
             margin-bottom: 5px;
         }
         
@@ -141,16 +142,16 @@
             display: flex;
             justify-content: space-between;
             font-size: 0.7rem;
-            color: #666;
+            color: var(--text-secondary);
         }
         
         .legend-insight {
             font-size: 0.8rem;
-            color: #a78bfa;
+            color: var(--accent-purple);
             padding: 12px;
             background: rgba(139, 92, 246, 0.1);
             border-radius: 8px;
-            border-left: 3px solid #8b5cf6;
+            border-left: 3px solid var(--accent-purple);
             margin-top: 10px;
         }
         
@@ -178,19 +179,19 @@
             background: rgba(0,0,0,0.4);
             padding: 20px;
             border-radius: 12px;
-            font-family: 'SF Mono', monospace;
+            font-family: var(--font-mono);
             font-size: 0.85rem;
         }
         
         .rope-formula .main {
-            color: #f59e0b;
+            color: var(--accent-orange);
             margin-bottom: 10px;
         }
         
         .rope-formula .explanation {
-            color: #888;
+            color: var(--text-secondary);
             font-size: 0.75rem;
-            font-family: 'SF Pro Display', sans-serif;
+            font-family: var(--font-sans);
         }
         
         /* Distance decay chart */
@@ -211,7 +212,7 @@
         .decay-label {
             width: 120px;
             font-size: 0.8rem;
-            color: #888;
+            color: var(--text-secondary);
             text-align: right;
         }
         
@@ -239,7 +240,7 @@
         
         .decay-value {
             font-size: 0.8rem;
-            color: #888;
+            color: var(--text-secondary);
             width: 60px;
             text-align: right;
         }
@@ -254,7 +255,7 @@
         }
         
         .insight-box h3 {
-            color: #22c55e;
+            color: var(--accent-green);
             font-size: 0.95rem;
             margin-bottom: 10px;
             display: flex;
@@ -263,19 +264,20 @@
         }
         
         .insight-box p {
-            color: #94a3b8;
+            color: var(--text-secondary);
             font-size: 0.85rem;
             line-height: 1.6;
         }
         
         .highlight {
-            color: #fbbf24;
+            color: var(--accent-yellow);
             font-weight: 600;
         }
     </style>
 </head>
 <body>
-    <div class="container">
+<div class="container" role="main">
+        <p class="sr-only">Figure: why attention has locality, the RoPE effect. For a token generated at position 1000 looking back, the assumed attention distribution is 45 percent to the last 10 tokens at positions 990 to 999, 28 percent to tokens 11 to 100 at positions 900 to 989, 18 percent to tokens 101 to 500 at positions 500 to 899, 7 percent to tokens 501 to 950 at positions 50 to 499, and 2 percent to the first 50 tokens at positions 0 to 49. So 45 plus 28 equals 73 percent of attention falls on the last 10 percent of tokens. The bound behind this is that the magnitude of the inner product of q_m and k_n is at most B of the absolute distance m minus n, where B is a non-increasing envelope, not a monotonic cosine decay. The caching consequence claimed earlier on this figure — a modelled 97 / 2.7 / 0.3 tier split across HBM at 100 nanoseconds, CXL DRAM at 200 nanoseconds and flash at 25 microseconds, giving an effective access latency of 177 nanoseconds — is retracted in full. It rested on the 97 percent hit rate, which was never measured, and on a 200 nanosecond CXL access that no hardware ever produced: no CXL hardware was measured anywhere in this package. No single hit rate exists; across budgets, policies and workloads the simulated range is 8.5 to 91.6 percent. Tier latency is now an assumption across 32, 64 and 121 gigabytes per second, under which one 5.00 mebibyte block of 16 tokens transfers in 164, 82 or 43 microseconds; the tier's value is avoiding regeneration, since forward compute for the same 16 tokens is 9, 11 or 18 milliseconds at 50, 40 or 25 percent model FLOPs utilisation — two to three orders of magnitude, with no precise multiple claimed. Two further cautions apply to the locality argument itself. First, the attention distribution shown is an assumption, not a measured trace, and it is model-, layer-, head- and workload-dependent. Second, attention sparsity and cache hit rate are different claims with different obligations: the earlier reading of a 5.4 percent hot set as capturing 97 percent of accesses conflated them and is withdrawn. Lossless residency requires every block that is read at a step to be present, and under dense attention every block of an active sequence is read every step; treating sparsity as a substitute is a lossy relaxation that carries an accuracy-evaluation burden. Simulation values are provisional, because a single data-structure defect in Revision 1 inverted four of five findings.</p>
         <h1>Why Attention Has Locality — The RoPE Effect</h1>
         <p class="subtitle">Understanding why recent tokens receive more attention than distant ones</p>
         
@@ -284,14 +286,14 @@
             
             <div class="heatmap-container">
                 <div class="heatmap">
-                    <p style="color: #888; font-size: 0.8rem; margin-bottom: 15px;">
+                    <p style="color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 15px;">
                         Attention weights when generating the 1000th token:
                     </p>
                     <div class="decay-chart">
                         <div class="decay-bar-container">
                             <div class="decay-label">Last 10 tokens</div>
                             <div class="decay-bar-bg">
-                                <div class="decay-bar" style="width: 45%; background: linear-gradient(90deg, #f59e0b, #f97316);">
+                                <div class="decay-bar" role="img" aria-label="the last 10 tokens, positions 990 to 999, receive 45 percent of attention" style="width: 45%; background: linear-gradient(90deg, #f59e0b, #f97316);">
                                     45%
                                 </div>
                             </div>
@@ -300,7 +302,7 @@
                         <div class="decay-bar-container">
                             <div class="decay-label">Tokens 11-100</div>
                             <div class="decay-bar-bg">
-                                <div class="decay-bar" style="width: 28%; background: linear-gradient(90deg, #a855f7, #8b5cf6);">
+                                <div class="decay-bar" role="img" aria-label="tokens 11 to 100, positions 900 to 989, receive 28 percent of attention" style="width: 28%; background: linear-gradient(90deg, #a855f7, #8b5cf6);">
                                     28%
                                 </div>
                             </div>
@@ -309,7 +311,7 @@
                         <div class="decay-bar-container">
                             <div class="decay-label">Tokens 101-500</div>
                             <div class="decay-bar-bg">
-                                <div class="decay-bar" style="width: 18%; background: linear-gradient(90deg, #6366f1, #4f46e5);">
+                                <div class="decay-bar" role="img" aria-label="tokens 101 to 500, positions 500 to 899, receive 18 percent of attention" style="width: 18%; background: linear-gradient(90deg, #6366f1, #4f46e5);">
                                     18%
                                 </div>
                             </div>
@@ -318,7 +320,7 @@
                         <div class="decay-bar-container">
                             <div class="decay-label">Tokens 501-950</div>
                             <div class="decay-bar-bg">
-                                <div class="decay-bar" style="width: 7%; background: linear-gradient(90deg, #3b82f6, #2563eb);">
+                                <div class="decay-bar" role="img" aria-label="tokens 501 to 950, positions 50 to 499, receive 7 percent of attention" style="width: 7%; background: linear-gradient(90deg, #3b82f6, #2563eb);">
                                     7%
                                 </div>
                             </div>
@@ -327,7 +329,7 @@
                         <div class="decay-bar-container">
                             <div class="decay-label">First 50 tokens</div>
                             <div class="decay-bar-bg">
-                                <div class="decay-bar" style="width: 2%; background: linear-gradient(90deg, #22d3ee, #06b6d4);">
+                                <div class="decay-bar" role="img" aria-label="the first 50 tokens, positions 0 to 49, receive 2 percent of attention" style="width: 2%; background: linear-gradient(90deg, #22d3ee, #06b6d4);">
                                 </div>
                             </div>
                             <div class="decay-value">pos 0-49</div>
@@ -338,10 +340,12 @@
                 <div class="legend">
                     <div class="legend-title">Key Observation</div>
                     <div class="legend-insight">
-                        <strong>73%</strong> of attention goes to the <strong>last 10%</strong> of tokens
+                        <strong>45% + 28% = 73%</strong> of attention goes to the <strong>last 10%</strong> of tokens (pos 900–999)
                     </div>
-                    <div class="legend-insight" style="margin-top: 8px; background: rgba(245, 158, 11, 0.1); border-color: #f59e0b;">
-                        This is NOT random — it's caused by how positions are encoded (RoPE)
+                    <div class="legend-insight" style="margin-top: 8px; background: rgba(245, 158, 11, 0.1); border-color: var(--accent-orange);">
+                        Assumed distribution, not a measurement. The concentration is attributed to
+                        positional encoding (RoPE) plus recency structure in the workload; the exact
+                        split is model-, layer-, head- and workload-dependent.
                     </div>
                 </div>
             </div>
@@ -351,61 +355,97 @@
             <div class="section-title">How RoPE Creates Locality</div>
             
             <div class="rope-viz">
-                <svg viewBox="0 0 300 120" style="max-width: 350px;">
+                <svg viewBox="0 0 300 120" style="max-width: 350px;" role="img" aria-label="Sketch of the RoPE upper-bound envelope: attention magnitude falls as distance from the current token grows, marked at distance 10 near the top, distance 100 and distance 500 part way down, and distance 1000 close to the axis.">
                     <!-- Axis -->
-                    <line x1="30" y1="90" x2="280" y2="90" stroke="#444" stroke-width="1"/>
-                    <line x1="30" y1="90" x2="30" y2="20" stroke="#444" stroke-width="1"/>
+                    <line x1="30" y1="90" x2="280" y2="90" stroke="var(--border-highlight)" stroke-width="1"/>
+                    <line x1="30" y1="90" x2="30" y2="20" stroke="var(--border-highlight)" stroke-width="1"/>
                     
                     <!-- Labels -->
-                    <text x="155" y="110" fill="#666" font-size="10" text-anchor="middle">Distance from current token</text>
-                    <text x="15" y="55" fill="#666" font-size="9" text-anchor="middle" transform="rotate(-90, 15, 55)">Attention</text>
+                    <text x="155" y="110" fill="var(--text-secondary)" font-size="10" text-anchor="middle">Distance from current token</text>
+                    <text x="15" y="55" fill="var(--text-secondary)" font-size="9" text-anchor="middle" transform="rotate(-90, 15, 55)">Attention</text>
                     
                     <!-- Decay curve -->
                     <path d="M 30 25 Q 60 30, 90 45 T 150 65 T 210 80 T 270 88" 
                           fill="none" stroke="url(#grad1)" stroke-width="3"/>
                     
                     <!-- Points -->
-                    <circle cx="50" cy="28" r="4" fill="#f59e0b"/>
-                    <circle cx="90" cy="42" r="4" fill="#a855f7"/>
-                    <circle cx="150" cy="62" r="4" fill="#6366f1"/>
-                    <circle cx="220" cy="78" r="4" fill="#3b82f6"/>
+                    <circle cx="50" cy="28" r="4" fill="var(--accent-orange)"/>
+                    <circle cx="90" cy="42" r="4" fill="var(--accent-purple)"/>
+                    <circle cx="150" cy="62" r="4" fill="var(--accent-purple)"/>
+                    <circle cx="220" cy="78" r="4" fill="var(--accent-cyan)"/>
                     
                     <!-- Point labels -->
-                    <text x="50" y="18" fill="#f59e0b" font-size="8" text-anchor="middle">d=10</text>
-                    <text x="90" y="35" fill="#a855f7" font-size="8" text-anchor="middle">d=100</text>
-                    <text x="150" y="55" fill="#6366f1" font-size="8" text-anchor="middle">d=500</text>
-                    <text x="220" y="72" fill="#3b82f6" font-size="8" text-anchor="middle">d=1000</text>
+                    <text x="50" y="18" fill="var(--accent-orange)" font-size="8" text-anchor="middle">d=10</text>
+                    <text x="90" y="35" fill="var(--accent-purple)" font-size="8" text-anchor="middle">d=100</text>
+                    <text x="150" y="55" fill="var(--accent-purple)" font-size="8" text-anchor="middle">d=500</text>
+                    <text x="220" y="72" fill="var(--accent-cyan)" font-size="8" text-anchor="middle">d=1000</text>
                     
                     <defs>
                         <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%">
-                            <stop offset="0%" stop-color="#f59e0b"/>
-                            <stop offset="50%" stop-color="#a855f7"/>
-                            <stop offset="100%" stop-color="#3b82f6"/>
+                            <stop offset="0%" stop-color="var(--accent-orange)"/>
+                            <stop offset="50%" stop-color="var(--accent-purple)"/>
+                            <stop offset="100%" stop-color="var(--accent-cyan)"/>
                         </linearGradient>
                     </defs>
                 </svg>
                 
                 <div class="rope-formula">
-                    <div class="main">attention ∝ cos((m - n) × θ)</div>
+                    <div class="main">|⟨q_m, k_n⟩| ≤ B(|m − n|)</div>
                     <div class="explanation">
-                        m = query position<br>
-                        n = key position<br>
-                        θ = rotation frequency<br><br>
-                        When distance (m-n) is small → cos ≈ 1 → high attention<br>
-                        When distance is large → cos oscillates → lower average
+                        m = query position, n = key position<br>
+                        B = a non-increasing upper-bound envelope in distance<br><br>
+                        The RoPE inner product is a <strong>sum over d/2 frequency pairs</strong>, each
+                        rotated by its own θ_i. It is <strong>not</strong> proportional to a single
+                        cos((m − n)θ), and it does not decay monotonically with distance.<br><br>
+                        What the construction gives is a bound: the magnitude of the inner product is
+                        capped by an envelope that does not increase with |m − n|. The curve at left
+                        sketches that envelope, not an actual attention trace.
                     </div>
                 </div>
             </div>
             
             <div class="insight-box">
-                <h3>💡 The Caching Implication</h3>
+                <h3><span aria-hidden="true">💡</span> The Caching Implication — narrower than it looks</h3>
                 <p>
-                    Since <span class="highlight">~80% of attention</span> goes to the most recent <span class="highlight">~10% of tokens</span>, 
-                    we can keep recent tokens in fast HBM memory and move older tokens to slower CXL memory. 
-                    Most accesses will hit the fast tier, keeping average latency low.
+                    In this <em>assumed</em> distribution, <span class="highlight">73% of attention</span> falls on the
+                    most recent <span class="highlight">~10% of tokens</span>. That motivates keeping recent blocks in
+                    HBM and placing older ones on a slower tier — but it does <strong>not</strong> license a hit-rate
+                    number, and the two are not the same claim.
+                </p>
+                <p>
+                    <strong>Retracted:</strong> the modelled <strong>97 / 2.7 / 0.3</strong> tier split across
+                    HBM (100 ns) / CXL DRAM (200 ns) / flash (25 µs), and the <strong>177 ns</strong> effective access
+                    latency derived from it. Both rested on a 97% hit rate that was never measured and on a
+                    <strong>200 ns CXL access that no hardware ever produced</strong> — <strong>no CXL hardware was
+                    measured</strong>. Also retracted: reading a <strong>5.4% hot set as capturing 97% of accesses</strong>,
+                    which conflated attention sparsity with cache hit rate.
+                </p>
+                <p>
+                    <strong>What replaces it.</strong> No single hit rate exists — <strong>8.5–91.6%</strong> across
+                    budgets, policies and workloads <span class="highlight">Simulated (provisional)</span>. Tier latency
+                    is <em>assumed</em> across <strong>32 / 64 / 121 GB/s</strong>: one 5.00 MiB block is
+                    <strong>164 / 82 / 43 µs</strong>. The tier's value is <strong>avoiding regeneration</strong> —
+                    forward compute for the same 16 tokens is <strong>9 / 11 / 18 ms</strong> at 50 / 40 / 25% MFU,
+                    two to three orders of magnitude, <strong>no precise multiple claimed</strong>.
+                </p>
+                <p>
+                    <strong>Sparsity is not residency.</strong> Lossless residency requires every block in
+                    <code>Read(t)</code> to be present, and under dense attention <em>every</em> block of an active
+                    sequence is read every step. Exploiting sparsity instead is a <em>lossy</em> relaxation with an
+                    accuracy-evaluation burden attached.
                 </p>
             </div>
         </div>
+
+        <p style="text-align:center;color:var(--text-secondary);font-size:0.8rem;margin-top:1.5rem;padding-top:0.75rem;border-top:1px solid var(--border-primary);">
+            <strong>Analytical model</strong> for the RoPE bound |⟨q_m, k_n⟩| ≤ B(|m − n|);
+            <strong>Illustrative</strong> for the attention distribution, which is an assumption, not a measured trace.
+            <strong>No CXL hardware was measured.</strong> Hit-rate figures are
+            <strong>Simulated (provisional)</strong>: one data-structure defect in Revision 1 inverted four of five
+            findings, so Revision 2 is provisional, not settled. <strong>Retracted here:</strong> 97%, the
+            97 / 2.7 / 0.3 tier split, 200 ns, 177 ns, 25 µs, and the 5.4% hot set / 97% of accesses claim.
+            Canonical numbers v6.0.
+        </p>
     </div>
 </body>
 </html>

@@ -1,98 +1,87 @@
-================================================================================
-CH07 - KV-CACHE MANAGEMENT - FIGURE INDEX (LARGEST CHAPTER)
-================================================================================
+==============================================================================
+CH07 - RESIDENCY AND POLICY STATE - FIGURE INDEX
+==============================================================================
 
-=== SECTION 7.1: HEAD SPECIALIZATION ===
-Fig 7.1: Head Specialization (4 Types)
-      Source: diagram-per-head-html.html -> The Four Types
-      Source: per-head-tracking.html
+Generated from the filesystem on 2026-08-22.
 
-Fig 7.2: Positional Head Pattern
-      Source: diagram-per-head-html.html
+diagram-ema-scoring-html.html
+      LRFU Decayed-Frequency Scoring
+      embedded: (gallery only)
 
-Fig 7.3: Syntactic Head Pattern
-      Source: diagram-per-head-html.html
+diagram-memory-wall-html.html
+      Attention Patterns & RoPE Locality
+      embedded: (gallery only)
 
-Fig 7.4: Semantic Head Pattern
-      Source: diagram-per-head-html.html
+diagram-per-head-html.html
+      Per-Head Scoring Granularity
+      embedded: (gallery only)
 
-Fig 7.5: Induction Head Pattern
-      Source: diagram-per-head-html.html
+ema-calculation.html
+      LRFU Score and Eviction Priority
+      embedded: (gallery only)
 
-=== SECTION 7.2: GQA STRUCTURE ===
-Fig 7.6: GQA Structure (How it Works)
-      Source: gqa-explainer.html
-      Source: figure-3-4-gqa-structure.tsx
+ema-eviction.html
+      Attention-Aware Block Eviction (LRFU)
+      embedded: (gallery only)
 
-Fig 7.7: Why GQA Matters
-      Source: gqa-explainer.html
+erratum-pick-victim.html   [NEW v6.0]
+      Erratum: _pick_victim()
+      evidence: Figure 7.3 · Simulated (provisional)
+      embedded: chapters/ch07-kv-cache.html
 
-Fig 7.8: MHA vs GQA vs MQA
-      Source: figure-3-4-gqa-structure.tsx
+figure-3-3-attention-locality.html
+      Figure 7.2 — Attention Locality Patterns
+      embedded: (gallery only)
 
-Fig 7.9: 640 Independent LRU Queues
-      Source: gqa-tracking-diagram.html
+figure-3-4-gqa-structure.html
+      Figure 7.3 — GQA Structure
+      embedded: (gallery only)
 
-Fig 7.10: What Each Queue Tracks
-      Source: gqa-tracking-diagram.html
+figure-4-2-ema-eviction.html
+      Figure 7.9 — LRFU Block Eviction
+      embedded: (gallery only)
 
-Fig 7.11: Per-Head Score Matrix
-      Source: figure-3-4-gqa-structure.tsx
+figure-4-3-rope-prefetch.html
+      Figure 7.10 — RoPE Distance Bound
+      embedded: (gallery only)
 
-=== SECTION 7.3: EMA SCORING ===
-Fig 7.12: EMA Update Rule
-      Source: ema-eviction.html
-      Source: diagram-ema-scoring-html.html
-      Source: figure-4-2-ema-eviction.tsx
+figure-7-3-gqa-structure.html
+      Figure 7.3 — GQA Structure
+      embedded: (gallery only)
 
-Fig 7.13: EMA Evolution Example
-      Source: figure-4-2-ema-eviction.tsx
+gqa-explainer.html
+      Grouped Query Attention
+      embedded: (gallery only)
 
-Fig 7.14: Observe Attention Scores
-      Source: ema-eviction.html
+gqa-tracking-diagram.html
+      GQA Per-Head Scoring Streams
+      embedded: (gallery only)
 
-Fig 7.15: Smooth with EMA
-      Source: ema-eviction.html
+kv-block-object.html   [NEW v6.0]
+      KV Block Object
+      evidence: Figure 7.1 · Illustrative — object model specification
+      embedded: chapters/ch07-kv-cache.html
 
-Fig 7.16: Step-by-Step Calculation (alpha=0.3)
-      Source: ema-eviction.html
-      Source: ema-calculation.html
+lossless-vs-lossy.html   [NEW v6.0]
+      Lossless vs Lossy Boundary
+      evidence: Figure 7.2 · Analytical model
+      embedded: chapters/ch07-kv-cache.html
 
-Fig 7.17: Eviction Priority Function
-      Source: ema-calculation.html
+movement-amplification.html   [NEW v6.0]
+      Movement Amplification
+      evidence: Figure 7.4 · Analytical model
+      embedded: chapters/ch07-kv-cache.html
 
-Fig 7.18: Decision Matrix
-      Source: ema-eviction.html
+per-head-tracking.html
+      Per-Head Scoring Signals
+      embedded: (gallery only)
 
-Fig 7.19: Scoring Components
-      Source: diagram-ema-scoring-html.html
+rope-prefetch-example.html
+      RoPE Geometry — Worked Example
+      embedded: (gallery only)
 
-Fig 7.20: Tier Assignment Thresholds
-      Source: diagram-ema-scoring-html.html
+rope-prefetch.html
+      RoPE Geometry Explainer
+      embedded: (gallery only)
 
-=== SECTION 7.4: ROPE-AWARE PREFETCH ===
-Fig 7.21: RoPE Creates Distance-Dependent Attention
-      Source: rope-prefetch.html
-      Source: figure-4-3-rope-prefetch.tsx
-      Source: diagram-memory-wall-html.html
-
-Fig 7.22: Prefetch Window Strategy
-      Source: rope-prefetch.html
-
-Fig 7.23: Empirical Window Size Selection
-      Source: rope-prefetch.html
-
-Fig 7.24: Prefetch Targets
-      Source: rope-prefetch-example.html
-
-Fig 7.25: Prefetch Timing Budget
-      Source: rope-prefetch-example.html
-
-Fig 7.26: Prefetch Execution Timeline
-      Source: rope-prefetch-example.html
-
-Fig 7.27: Attention Pattern & Prefetch Coverage
-      Source: figure-4-3-rope-prefetch.tsx
-      Source: figure-3-3-attention-locality.tsx
-
-TOTAL: 27 figures
+TOTAL: 19 figures (4 new in v6.0)

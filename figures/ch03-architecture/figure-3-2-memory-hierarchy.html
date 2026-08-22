@@ -1,1 +1,69 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>KV Tier Architecture — Corrected</title><style>body{margin:0;background:#0d1117;color:#e6edf3;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}.w{max-width:1040px;margin:auto;padding:30px}.ey{font:600 11px system-ui;letter-spacing:.12em;text-transform:uppercase;color:#8b949e}.h{font-size:31px;font-weight:760;margin:7px 0 10px}.p{color:#aab4c0;line-height:1.55}.flow{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:20px 0}.b{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:14px 16px;font-weight:650}.a{color:#7d8590;font-size:20px}.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:20px 0}.c{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:16px}.n{font:700 24px ui-monospace,Consolas,monospace;color:#58a6ff}.l{font-weight:650;margin-top:5px}.s{font-size:13px;color:#8b949e;margin-top:6px;line-height:1.4}.warn{border-left:4px solid #d29922;background:#1d1a12;padding:13px 15px;border-radius:8px;line-height:1.5}.t{width:100%;border-collapse:collapse;margin:18px 0}.t td,.t th{padding:9px 11px;border-bottom:1px solid #30363d;text-align:left}.t th{color:#8b949e;font-size:11px;text-transform:uppercase}</style></head><body><main class="w"><div class="ey">Design illustration · unmeasured external tier</div><div class="h">KV Control Plane and Memory-Tier Boundary</div><p class="p">The v5 architecture separates a portable KV object and placement policy from the mechanism that executes movement. External memory can add capacity, but its latency, bandwidth and GPU-access path must be measured on the target platform.</p><div class="flow"><div class="b">Serving scheduler</div><div class="a">→</div><div class="b">KV identity + policy</div><div class="a">→</div><div class="b">Residency intent</div><div class="a">→</div><div class="b">Runtime / device mechanism</div><div class="a">→</div><div class="b">HBM ↔ external tier</div></div><div class="g"><div class="c"><div class="n">HBM</div><div class="l">Fast resident tier</div><div class="s">Capacity and HBM-side KV bandwidth are separate constraints.</div></div><div class="c"><div class="n">TBD</div><div class="l">External-tier latency</div><div class="s">No canonical 200–250 ns number is asserted by v5.</div></div><div class="c"><div class="n">TBD</div><div class="l">External-tier bandwidth</div><div class="s">Arithmetic PCIe/CXL link rates are not achieved end-to-end bandwidth.</div></div></div><div class="warn"><b>Evidence boundary:</b> no CXL endpoint, direct-GPU CXL path, TCO saving or production speedup was measured in v5.</div></main></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Figure 3.2 — Memory Hierarchy</title>
+<script src="../../vendor/react.production.min.js"></script>
+<script src="../../vendor/react-dom.production.min.js"></script>
+<script src="../../vendor/babel.min.js"></script>
+<link rel="stylesheet" href="../../vendor/fonts.css">
+<link rel="stylesheet" href="../../css/style.css">
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: var(--font-sans); background: var(--bg-primary); min-height: 100vh; color: var(--text-primary); }</style>
+</head>
+<body>
+<div id="root" role="main"></div>
+<script type="text/babel">
+function MemoryHierarchy() {
+  const tiers = [
+    { name: 'Tier 0: GPU HBM (Pinned)', cap: '10 GB', lat: '100 ns', color: 'var(--accent-green)', desc: 'Anchor tokens, per-head metadata (640 MiB), staging buffers — non-evictable' },
+    { name: 'Tier 1: GPU HBM (Evictable)', cap: '37 GB', lat: '100 ns', color: 'var(--accent-blue)', desc: 'Hot KV working set — 2.31 GB per user across 16 users' },
+    { name: 'Tier 2: CXL DRAM (4 endpoints)', cap: '1 TB', lat: '200 ns', color: 'var(--accent-purple)', desc: 'Warm KV — 256 GB per endpoint, load/store accessible' },
+    { name: 'Tier 3: Endpoint NVMe', cap: '16 TB', lat: '25 μs', color: 'var(--accent-orange)', desc: 'Cold KV and complete backing store — 4 TB per endpoint, so no entry is ever lost' }
+  ];
+  const styles = {
+    container: { maxWidth: '700px', margin: '0 auto', padding: '2rem' },
+    header: { textAlign: 'center', marginBottom: '2rem' },
+    pyramid: { display: 'flex', flexDirection: 'column', gap: '0.5rem' },
+    tier: (color, i) => ({ background: 'var(--bg-card)', borderLeft: `4px solid ${color}`, borderRadius: '0 12px 12px 0', padding: '1rem 1.5rem', marginLeft: i * 30, transition: 'all 0.2s' }),
+    tierHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' },
+    tierName: (color) => ({ fontWeight: 600, color }),
+    tierStats: { display: 'flex', gap: '1.5rem' },
+    stat: { fontSize: '0.875rem' },
+    statVal: { fontWeight: 600, color: 'var(--accent-cyan)' },
+    desc: { fontSize: '0.8rem', color: 'var(--text-secondary)' }
+  };
+  return (
+    <div style={styles.container}>
+      <p className="sr-only">Figure 3.2: the four-tier memory hierarchy, drawn as a stepped pyramid in which each tier is indented further and holds more but slower memory. Tier 0 is 10 GB of pinned GPU HBM at 100 nanoseconds; Tier 1 is 37 GB of evictable GPU HBM at 100 nanoseconds, the hot working set of 2.31 GB per user across 16 users; Tier 2 is 1 TB of CXL DRAM across four endpoints at 200 nanoseconds; Tier 3 is 16 TB of endpoint NVMe at 25 microseconds, the complete backing store. Blending them at the 97 / 2.7 / 0.3 hit split gives an effective access latency of 177 nanoseconds. All values are an analytical model, not measured.</p>
+      <div style={styles.header}>
+        <div style={{display: 'inline-block', padding: '0.25rem 0.75rem', background: 'rgba(139,92,246,0.2)', color: 'var(--accent-purple)', fontSize: '0.75rem', fontFamily: 'var(--font-mono)', borderRadius: '20px', marginBottom: '0.5rem'}}>FIGURE 3.2</div>
+        <h1 style={{fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.5rem'}}>Four-Tier Memory Hierarchy</h1>
+        <p style={{color: 'var(--text-secondary)', fontSize: '0.875rem'}}>Capacity increases, speed decreases ↓</p>
+      </div>
+      <div style={styles.pyramid}>
+        {tiers.map((t, i) => (
+          <div key={i} style={styles.tier(t.color, i)} role="img" aria-label={`${t.name}: capacity ${t.cap}, latency ${t.lat}. ${t.desc}`}>
+            <div style={styles.tierHeader}>
+              <span style={styles.tierName(t.color)}>{t.name}</span>
+              <div style={styles.tierStats}>
+                <span style={styles.stat}><span style={styles.statVal}>{t.cap}</span></span>
+                <span style={styles.stat}><span style={styles.statVal}>{t.lat}</span></span>
+              </div>
+            </div>
+            <div style={styles.desc}>{t.desc}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '1.5rem', lineHeight: 1.6}}>
+        The 192 GB B200 HBM3e budget: 140 GB weights + 5 GB activations + 10 GB Tier 0 pinned + 37 GB Tier 1 evictable.
+        Effective access latency across the tiers = 0.97 × 100 ns + 0.027 × 200 ns + 0.003 × 25 µs = <strong>177 ns</strong>.
+        <br />Analytical model — capacities and latencies are modeled from vendor specifications; nothing here is measured.
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<MemoryHierarchy />);
+</script>
+</body>
+</html>

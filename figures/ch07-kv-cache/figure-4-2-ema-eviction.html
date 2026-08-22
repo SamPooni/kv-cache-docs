@@ -3,20 +3,21 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Figure 4.2 — EMA Eviction Policy</title>
-<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: system-ui, sans-serif; background: linear-gradient(135deg, #0f172a, #1e293b); min-height: 100vh; color: #e2e8f0; }</style>
+<title>Figure 7.9 — LRFU Block Eviction</title>
+<script src="../../vendor/react.production.min.js"></script>
+<script src="../../vendor/react-dom.production.min.js"></script>
+<script src="../../vendor/babel.min.js"></script>
+<link rel="stylesheet" href="../../css/style.css">
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: var(--font-sans); background: linear-gradient(135deg, var(--bg-primary), var(--bg-card)); min-height: 100vh; color: var(--text-primary); }</style>
 </head>
 <body>
-<div id="root"></div>
+<div id="root" role="main"></div>
 <script type="text/babel">
 const { useState, useEffect } = React;
 function EMAEviction() {
   const [step, setStep] = useState(0);
   const [scores, setScores] = useState([0.8, 0.3, 0.6, 0.1, 0.5, 0.2, 0.9, 0.4]);
-  const alpha = 0.2;
+  const alpha = 0.05;
   
   useEffect(() => {
     if (step > 0 && step <= 5) {
@@ -33,43 +34,81 @@ function EMAEviction() {
   const styles = {
     container: { maxWidth: '800px', margin: '0 auto', padding: '2rem' },
     header: { textAlign: 'center', marginBottom: '2rem' },
-    badge: { display: 'inline-block', padding: '0.25rem 0.75rem', background: 'rgba(245,158,11,0.2)', color: '#fbbf24', fontSize: '0.75rem', fontFamily: 'monospace', borderRadius: '20px', marginBottom: '0.5rem' },
-    formula: { background: '#0f172a', borderRadius: '12px', padding: '1rem', textAlign: 'center', marginBottom: '2rem', fontFamily: 'monospace', color: '#60a5fa' },
+    badge: { display: 'inline-block', padding: '0.25rem 0.75rem', background: 'rgba(245,158,11,0.2)', color: 'var(--accent-yellow)', fontSize: '0.75rem', fontFamily: 'var(--font-mono)', borderRadius: '20px', marginBottom: '0.5rem' },
+    formula: { background: 'var(--bg-primary)', borderRadius: '12px', padding: '1rem', textAlign: 'center', marginBottom: '2rem', fontFamily: 'var(--font-mono)', color: 'var(--accent-cyan)' },
     grid: { display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '0.5rem', marginBottom: '2rem' },
-    token: (score) => ({ background: '#1e293b', borderRadius: '8px', padding: '1rem', textAlign: 'center', border: `2px solid ${score < 0.25 ? '#ef4444' : score > 0.6 ? '#10b981' : '#334155'}` }),
-    bar: (score) => ({ height: 60, background: '#0f172a', borderRadius: '4px', overflow: 'hidden', position: 'relative' }),
-    fill: (score) => ({ position: 'absolute', bottom: 0, width: '100%', height: `${score * 100}%`, background: score < 0.25 ? '#ef4444' : score > 0.6 ? '#10b981' : '#f59e0b', transition: 'all 0.3s' }),
+    token: (score) => ({ background: 'var(--bg-card)', borderRadius: '8px', padding: '1rem', textAlign: 'center', border: `2px solid ${score < 0.25 ? 'var(--accent-red)' : score > 0.6 ? 'var(--accent-green)' : 'var(--border-primary)'}` }),
+    bar: (score) => ({ height: 60, background: 'var(--bg-primary)', borderRadius: '4px', overflow: 'hidden', position: 'relative' }),
+    fill: (score) => ({ position: 'absolute', bottom: 0, width: '100%', height: `${score * 100}%`, background: score < 0.25 ? 'var(--accent-red)' : score > 0.6 ? 'var(--accent-green)' : 'var(--accent-orange)', transition: 'all 0.3s' }),
     btns: { display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '1rem' },
-    btn: { padding: '0.5rem 1rem', background: '#3b82f6', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }
+    btn: { padding: '0.5rem 1rem', background: 'var(--accent-cyan)', color: 'var(--bg-primary)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }
   };
 
   return (
     <div style={styles.container}>
+      <p className="sr-only">Figure: LRFU-scored eviction of KV-cache blocks. The unit is a (sequence, token block) of 16 tokens, 5.00 mebibytes — never a head: every head of every layer is required for every token, so evicting a head produces wrong outputs, not a cache miss. The scoring rule is LRFU — Lee et al., "On the Existence of a Spectrum of Policies that Subsumes the LRU and LFU Policies", ACM SIGMETRICS 1999 — established prior art, with alpha as its documented LRU-to-LFU knob; it is not a new algorithm. Each block's attention score is smoothed with score_t = 0.05 times attention_t plus 0.95 times score_t-1, that is alpha = 0.05, the simulated optimum, giving a half-life of ln0.5 over ln0.95 = 13.5 decode steps. Alpha = 0.2 was never validated and is withdrawn; alpha is non-monotonic with an interior optimum near 0.05, and there is no convergence onto LFU as alpha approaches zero. Eight blocks B0 to B7 start at scores 0.80, 0.30, 0.60, 0.10, 0.50, 0.20, 0.90 and 0.40; stepping forward applies the update above to each. A block scoring above 0.6 is kept, below 0.25 is evicted, and in between is warm — so on the opening state B0 at 0.80 and B6 at 0.90 are keeps while B3 at 0.10 and B5 at 0.20 are evictions. Those 0.6 and 0.25 cut points are demo thresholds chosen to suit the synthetic score spread of this animation, not the design's thresholds; they are uncalibrated illustrative values. The design's keep, demote and evict thresholds are 0.03 and 0.005 at the alpha = 0.05 scale, an order of magnitude lower, because a real decayed score lags its input and saturates near the mean attention mass — a block drawing a steady 4 percent of attention converges near 0.04, not 0.4. The two sets are not in contradiction, and both are uncalibrated. Appendix K section K.7 lists them with the package's other uncalibrated parameters. No hit-rate improvement is attributed to the scoring function on this page: the 72 to 80 to 87 to 93 to 97 ladder and its plus 8, plus 7, plus 6, plus 4 increments are retracted, having never been run as an ablation, and no single hit rate exists — the simulated range is 8.5 to 91.6 percent across budgets, policies and workloads. The largest effect in the study is not the scoring function at all: at a 32 gibibyte budget, letting each block's identity key and score survive its eviction from HBM, rather than resetting on re-admission, is worth plus 34.15 percentage points to LFU, from 15.56 to 49.71 percent, and plus 24.85 to EMA alpha 0.01, from 31.54 to 56.39 percent, while EMA alpha 0.15 is unchanged at minus 0.21 percentage points. The animation is illustrative, never a result; simulated figures are provisional, because a single data-structure defect in Revision 1 inverted four of five findings.</p>
       <div style={styles.header}>
-        <div style={styles.badge}>FIGURE 4.2</div>
-        <h1 style={{fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.5rem'}}>EMA-Based Eviction</h1>
-        <p style={{color: '#94a3b8'}}>Exponential Moving Average smooths attention scores</p>
+        <div style={styles.badge}>FIGURE 7.9</div>
+        <h1 style={{fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.5rem'}}>LRFU Block Eviction</h1>
+        <p style={{color: 'var(--text-secondary)'}}>A decayed-frequency score smooths attention per <strong>(sequence, token block)</strong> — 16 tokens, 5.00 MiB. Never per head.</p>
+        <p style={{color: 'var(--text-secondary)', fontSize: '0.8rem'}}>α = 0.05 (simulated optimum) → half-life ln0.5/ln0.95 = 13.5 decode steps. α = 0.2 was never validated and is withdrawn.</p>
+        <p style={{color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '0.35rem'}}>Policy is <strong>LRFU</strong> — Lee et al., <em>“On the Existence of a Spectrum of Policies that Subsumes the LRU and LFU Policies”</em>, ACM SIGMETRICS 1999. <span style={{fontFamily: 'var(--font-mono)'}}>External literature</span></p>
       </div>
       <div style={styles.formula}>
-        score_t = α × attention_t + (1-α) × score_{'{t-1}'} &nbsp;&nbsp; (α = {alpha})
+        score_t = 0.05 × attention_t + 0.95 × score_{'{t-1}'} &nbsp;&nbsp; (α = {alpha}, half-life 13.5 steps)
       </div>
       <div style={styles.btns}>
         <button style={styles.btn} onClick={() => setStep(s => s + 1)}>Step Forward</button>
-        <button style={{...styles.btn, background: '#334155'}} onClick={() => { setStep(0); setScores([0.8, 0.3, 0.6, 0.1, 0.5, 0.2, 0.9, 0.4]); }}>Reset</button>
+        <button style={{...styles.btn, background: 'var(--border-primary)', color: 'var(--text-primary)'}} onClick={() => { setStep(0); setScores([0.8, 0.3, 0.6, 0.1, 0.5, 0.2, 0.9, 0.4]); }}>Reset</button>
       </div>
       <div style={styles.grid}>
         {scores.map((score, i) => (
-          <div key={i} style={styles.token(score)}>
-            <div style={styles.bar(score)}><div style={styles.fill(score)}></div></div>
-            <div style={{fontSize: '0.7rem', color: '#64748b', marginTop: '0.5rem'}}>T{i}</div>
-            <div style={{fontSize: '0.8rem', fontFamily: 'monospace', color: score < 0.25 ? '#ef4444' : '#94a3b8'}}>{score.toFixed(2)}</div>
+          <div key={i} role="img" aria-label={`Block B${i}, LRFU score ${score.toFixed(2)}, ${score < 0.25 ? 'evict' : score > 0.6 ? 'keep' : 'warm'}`} style={styles.token(score)}>
+            <div style={styles.bar(score)} aria-hidden="true"><div style={styles.fill(score)}></div></div>
+            <div style={{fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.5rem'}}>B{i}</div>
+            <div style={{fontSize: '0.8rem', fontFamily: 'var(--font-mono)', color: score < 0.25 ? 'var(--accent-red)' : 'var(--text-secondary)'}}>{score.toFixed(2)}</div>
           </div>
         ))}
       </div>
       <div style={{display: 'flex', justifyContent: 'center', gap: '2rem', fontSize: '0.875rem'}}>
-        <span><span style={{color: '#10b981'}}>■</span> Keep (score &gt; 0.6)</span>
-        <span><span style={{color: '#f59e0b'}}>■</span> Warm</span>
-        <span><span style={{color: '#ef4444'}}>■</span> Evict (score &lt; 0.25)</span>
+        <span><span aria-hidden="true" style={{color: 'var(--accent-green)'}}>■</span> Keep (score &gt; 0.6)</span>
+        <span><span aria-hidden="true" style={{color: 'var(--accent-orange)'}}>■</span> Warm</span>
+        <span><span aria-hidden="true" style={{color: 'var(--accent-red)'}}>■</span> Evict (score &lt; 0.25)</span>
+      </div>
+      <div style={{textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '1.5rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-primary)'}}>
+        <strong>Illustrative</strong> — synthetic attention values, never a result. The “+7 pts from EMA, 87% cumulative”
+        claim this caption once carried is <strong>retracted</strong> along with the whole 72→80→87→93→97 ladder, which was
+        never run as an ablation. No single hit rate exists; the simulated range is <strong>8.5–91.6%</strong> across budgets,
+        policies and workloads <span style={{fontFamily: 'var(--font-mono)'}}>Simulated (provisional)</span>. A single
+        data-structure defect in Revision 1 inverted four of five findings, so Revision 2 is provisional, not settled.
+        Canonical numbers v6.0.
+      </div>
+      <div className="callout" style={{marginTop: '1rem', borderLeft: '4px solid var(--accent-purple)', background: 'rgba(163,113,247,0.10)', padding: '1rem 1.25rem', borderRadius: '8px'}}>
+        <div className="callout-title" style={{color: 'var(--accent-purple)', fontWeight: 700, marginBottom: '0.35rem'}}>What actually moves the number is not on this screen</div>
+        <p style={{marginBottom: '0.5rem', color: 'var(--text-secondary)'}}>When a block leaves HBM here, its identity key
+        and score go with it and are restored on re-admission — they are not reset. That single protocol property is the
+        largest effect in the study. At a 32 GiB budget: <strong>LFU 15.56 → 49.71 (+34.15 pts)</strong>,
+        <strong> EMA α=0.01 31.54 → 56.39 (+24.85 pts)</strong>, EMA α=0.15 unchanged (−0.21 pts) — larger than the whole
+        spread between scoring functions, and testable with <strong>no CXL hardware</strong>.
+        <span style={{fontFamily: 'var(--font-mono)', fontSize: '0.72rem'}}> Simulated (provisional)</span></p>
+      </div>
+      <div className="callout warning" style={{marginTop: '1rem'}}>
+        <div className="callout-title">The 0.6 / 0.25 cut points here are demo thresholds, not the design's thresholds</div>
+        <p style={{marginBottom: '0.5rem'}}>This animation seeds eight blocks with synthetic scores spread
+        evenly across 0.1–0.9 so that the keep / warm / evict bands are all visibly populated as you step.
+        The 0.6 and 0.25 cut points are chosen to suit that synthetic spread and nothing else — they are
+        <strong> uncalibrated illustrative values</strong>.</p>
+        <p style={{marginBottom: '0.5rem'}}>They are deliberately not the same numbers as the design's
+        keep / demote / evict thresholds of <strong>0.03 / 0.005</strong> at the α = 0.05 scale (Figure 7.7), and the
+        difference is not a contradiction. A real decayed score lags its input and settles near the mean attention
+        mass: a block drawing a steady 4% of attention converges to a score near 0.04, not 0.4. Real scores
+        therefore live near the bottom of the 0–1 range, which is why the design's thresholds are an order of
+        magnitude lower than the ones used here to make a demo legible. Note also that α is
+        <strong> non-monotonic</strong> (32 GiB: 0.5→37.20, 0.3→38.84, 0.15→44.33, 0.05→55.96, 0.01→31.54,
+        0.003→25.47, 0.001→24.44), so thresholds cannot be rescaled by interpolating α.</p>
+        <p style={{marginBottom: 0}}>Both sets are uncalibrated and both need tuning against real attention
+        traces. See <a href="../../appendix/k-methodology.html">Appendix K §K.7 — Uncalibrated
+        parameters</a>.</p>
       </div>
     </div>
   );

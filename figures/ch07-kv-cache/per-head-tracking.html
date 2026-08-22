@@ -3,30 +3,31 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Per-Head Tracking Rationale</title>
+<title>Per-Head Scoring Signals</title>
+<link rel="stylesheet" href="../../css/style.css">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
-  font-family: 'Segoe UI', system-ui, sans-serif;
-  background: #ffffff;
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
   min-height: 100vh;
-  color: #1a1a1a;
+  color: var(--text-primary);
   padding: 2.5rem;
 }
 h1 {
   text-align: center;
   font-size: 2.4rem;
   margin-bottom: 0.75rem;
-  color: #1a1a1a;
+  color: var(--text-primary);
   font-weight: 700;
 }
 .subtitle {
   text-align: center;
-  color: #555;
+  color: var(--text-secondary);
   margin-bottom: 2.5rem;
   font-size: 1.2rem;
 }
-.container { max-width: 1200px; margin: 0 auto; }
+.container { max-width: 1200px; margin: 0 auto; padding: 0; }
 .tokens-row {
   display: flex;
   justify-content: center;
@@ -35,13 +36,13 @@ h1 {
   flex-wrap: wrap;
 }
 .token {
-  background: #f5f5f5;
+  background: var(--bg-code);
   padding: 0.75rem 1.5rem;
   border-radius: 8px;
-  font-family: 'Fira Code', monospace;
+  font-family: var(--font-mono);
   font-size: 1.1rem;
-  border: 2px solid #e0e0e0;
-  color: #333;
+  border: 2px solid var(--border-primary);
+  color: var(--text-primary);
   font-weight: 500;
 }
 .heads-grid {
@@ -50,15 +51,15 @@ h1 {
   gap: 2rem;
 }
 .head-card {
-  background: #fafafa;
+  background: var(--bg-card);
   border-radius: 16px;
   padding: 1.75rem;
-  border: 2px solid #e8e8e8;
+  border: 2px solid var(--border-primary);
   transition: transform 0.2s, box-shadow 0.2s;
 }
 .head-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 12px 40px rgba(0,0,0,0.1);
+  box-shadow: var(--shadow-lg);
 }
 .head-header {
   display: flex;
@@ -69,7 +70,7 @@ h1 {
 .head-name {
   font-weight: 700;
   font-size: 1.3rem;
-  color: #1a1a1a;
+  color: var(--text-primary);
 }
 .head-tag {
   font-size: 0.9rem;
@@ -77,13 +78,13 @@ h1 {
   border-radius: 20px;
   font-weight: 600;
 }
-.tag-position { background: #d4edda; color: #155724; }
-.tag-syntax { background: #ffe5cc; color: #8a4500; }
-.tag-semantic { background: #cce5ff; color: #004085; }
-.tag-copy { background: #f3d9fa; color: #6f2c91; }
+.tag-position { background: rgba(63, 185, 80, 0.15); color: var(--accent-green); border: 1px solid var(--accent-green); }
+.tag-syntax { background: rgba(210, 153, 34, 0.15); color: var(--accent-orange); border: 1px solid var(--accent-orange); }
+.tag-semantic { background: rgba(88, 166, 255, 0.15); color: var(--accent-cyan); border: 1px solid var(--accent-cyan); }
+.tag-copy { background: rgba(163, 113, 247, 0.15); color: var(--accent-purple); border: 1px solid var(--accent-purple); }
 .rationale {
   font-size: 1.05rem;
-  color: #444;
+  color: var(--text-primary);
   margin-bottom: 1.5rem;
   line-height: 1.6;
 }
@@ -97,8 +98,8 @@ h1 {
   width: 70px;
   text-align: right;
   padding-right: 10px;
-  color: #555;
-  font-family: monospace;
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
   font-size: 0.9rem;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -113,9 +114,9 @@ h1 {
   align-items: center;
   justify-content: center;
   font-size: 0.85rem;
-  font-family: monospace;
+  font-family: var(--font-mono);
   font-weight: 600;
-  border: 1px solid rgba(0,0,0,0.1);
+  border: 1px solid rgba(230, 237, 243, 0.12);
 }
 .legend {
   display: flex;
@@ -129,7 +130,7 @@ h1 {
   align-items: center;
   gap: 0.6rem;
   font-size: 1.1rem;
-  color: #333;
+  color: var(--text-primary);
   font-weight: 500;
 }
 .legend-dot {
@@ -140,11 +141,22 @@ h1 {
 </style>
 </head>
 <body>
-<div class="container">
-  <h1>Per-Head Tracking Rationale</h1>
-  <p class="subtitle">Visualizing what each attention head learns to track</p>
+<div class="container" role="main">
+  <p class="sr-only">Figure: per-head attention patterns as scoring signals, shown as synthetic 5 by 5 attention matrices over the tokens "The model processes each token" for four assumed head types. Head 0.3 is a recency head, assumed about 40 percent of heads, attending to the last 50 to 200 positions and showing a strong diagonal. Head 1.7 is a syntactic head, about 20 percent, tracking grammatical dependencies so that "processes" attends strongly to its subject "model". Head 2.4 is an anchor head, about 15 percent, attending to the opening positions holding the system prompt regardless of how far generation has advanced. Head 3.11 is a retrieval head, about 25 percent, content-based rather than positional and spiking on whichever earlier tokens are relevant. These differences make heads useful as scoring signals, and useless as eviction units. Every head of every layer is required for every token, so evicting a head produces wrong outputs, not a cache miss. The unit that is placed, moved and evicted is a (sequence, token block) of 16 tokens, 5.00 mebibytes at 320 kibibytes per token; the four head signals are combined into one score per block, and every head of a resident block is kept. H2O and SnapKV evict (head, token) pairs — the token axis is not optional, and token dropping is a lossy relaxation carrying an accuracy-evaluation burden, distinct from lossless residency. The four-way taxonomy and the 40, 15, 25, 20 percent shares are a modeling assumption, not a head census, and the matrices are synthetic illustrations. The earlier claim that per-head tracking contributes plus 6 percentage points of hit rate, 87 percent to 93 percent cumulative, is retracted with the whole 72 to 80 to 87 to 93 to 97 ladder, which was never run as an ablation. No single hit rate exists: the simulated range is 8.5 to 91.6 percent across budgets, policies and workloads, and it is provisional because a single data-structure defect in Revision 1 inverted four of five findings. Work built on, cited not competed with: H2O, SnapKV, Scissorhands, PyramidKV, Quest, Ada-KV, HeadKV, InfiniGen, LayerKV, KVPR, PagedAttention.</p>
+  <h1>Per-Head Attention as Scoring Signals</h1>
+  <p class="subtitle">What each head is assumed to track — Recency · Anchor · Retrieval · Syntactic. A <strong>scoring</strong> granularity, never an eviction one.</p>
+
+  <div class="callout warning" style="max-width:1100px;margin:0 auto 1.5rem;">
+    <div class="callout-title">These patterns score blocks. They do not license evicting a head.</div>
+    <p><strong>Every head of every layer is required for every token.</strong> Evicting a head produces
+    <strong>wrong outputs, not a cache miss</strong>. The placed, moved and evicted unit is a
+    <strong>(sequence, token block)</strong> — 16 tokens, 5.00 MiB at 320 KiB/token — and every head of a resident
+    block is kept. H2O and SnapKV evict <strong>(head, token)</strong> pairs: the token axis is not optional, and
+    token dropping is a <em>lossy</em> relaxation with an accuracy-evaluation burden, not the same claim as
+    lossless residency. <span class="mono">External literature</span></p>
+  </div>
   
-  <div class="tokens-row">
+  <div class="tokens-row" role="img" aria-label="The example sequence: The, model, processes, each, token">
     <div class="token">The</div>
     <div class="token">model</div>
     <div class="token">processes</div>
@@ -155,22 +167,33 @@ h1 {
   <div class="heads-grid" id="headsGrid"></div>
   
   <div class="legend">
-    <div class="legend-item"><div class="legend-dot" style="background:#28a745"></div>Positional</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#e67700"></div>Syntactic</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#007bff"></div>Semantic</div>
-    <div class="legend-item"><div class="legend-dot" style="background:#9c27b0"></div>Copy/Induction</div>
+    <div class="legend-item"><div class="legend-dot" aria-hidden="true" style="background:var(--accent-green)"></div>Recency (~40%)</div>
+    <div class="legend-item"><div class="legend-dot" aria-hidden="true" style="background:var(--accent-cyan)"></div>Anchor (~15%)</div>
+    <div class="legend-item"><div class="legend-dot" aria-hidden="true" style="background:var(--accent-purple)"></div>Retrieval (~25%)</div>
+    <div class="legend-item"><div class="legend-dot" aria-hidden="true" style="background:var(--accent-orange)"></div>Syntactic (~20%)</div>
   </div>
+
+  <p style="margin-top:1.25rem;padding:0.9rem 1.1rem;background:rgba(210,153,34,0.12);border:1px solid var(--accent-orange);border-left:3px solid var(--accent-orange);border-radius:10px;color:var(--text-primary);font-size:0.9rem;line-height:1.5;">
+    <strong>ASSUMPTION, not a measured result.</strong> The four-way taxonomy
+    (Recency / Anchor / Retrieval / Syntactic) and the <strong>40 / 15 / 25 / 20</strong> share
+    used throughout this package are a modeling assumption adopted to make per-head cache budgets
+    tractable. They are motivated by the induction-head and retrieval-head literature
+    (and by per-head budget work such as Ada-KV and HeadKV), but no head census was run on
+    Llama-2-70B for this work. The matrices below are synthetic illustrations, not model outputs.
+  </p>
 </div>
 
 <script>
+/* Head taxonomy: Recency / Anchor / Retrieval / Syntactic - matches figure-7-2-attention-locality
+   and chapter 7. Shares 40 / 15 / 25 / 20 are a modeling ASSUMPTION, not measured. */
 const tokens = ['The', 'model', 'proc.', 'each', 'token'];
 const heads = [
   {
     name: 'Head 0.3',
     type: 'position',
-    tag: 'Positional',
+    tag: 'Recency',
     tagClass: 'tag-position',
-    rationale: 'Attends to fixed relative positions. Strong diagonal pattern indicates local context aggregation within a fixed window.',
+    rationale: 'Recency head (assumed ~40% of heads). Attends to the last 50-200 positions. The strong diagonal is local context aggregation within a sliding window.',
     pattern: (i, j) => Math.exp(-Math.abs(i - j) * 1.2)
   },
   {
@@ -178,7 +201,7 @@ const heads = [
     type: 'syntax',
     tag: 'Syntactic',
     tagClass: 'tag-syntax',
-    rationale: 'Tracks subject-verb relationships. "processes" attends strongly to "model" (its subject).',
+    rationale: 'Syntactic head (assumed ~20% of heads). Tracks grammatical structure and dependencies: "processes" attends strongly to "model" (its subject).',
     pattern: (i, j) => {
       const syntaxPairs = [[2,1], [4,3]];
       for (let [a,b] of syntaxPairs) if (i===a && j===b) return 0.9;
@@ -188,44 +211,52 @@ const heads = [
   {
     name: 'Head 2.4',
     type: 'semantic',
-    tag: 'Semantic',
+    tag: 'Anchor',
     tagClass: 'tag-semantic',
-    rationale: 'Groups semantically related tokens. "token" and "model" share high mutual attention as domain concepts.',
+    rationale: 'Anchor head (assumed ~15% of heads). Attends to the opening positions of the sequence - system prompt and initial instructions - regardless of how far generation has advanced.',
     pattern: (i, j) => {
-      const semGroups = [[1,4], [4,1], [2,4], [4,2]];
-      for (let [a,b] of semGroups) if (i===a && j===b) return 0.85;
-      if (i === j) return 0.5;
-      return 0.1 + Math.random() * 0.2;
+      if (j === 0) return 0.9;
+      if (i === j) return 0.3;
+      return 0.05 + Math.random() * 0.12;
     }
   },
   {
     name: 'Head 3.11',
     type: 'copy',
-    tag: 'Induction',
+    tag: 'Retrieval',
     tagClass: 'tag-copy',
-    rationale: 'Induction head for in-context learning. Copies patterns from previous occurrences to predict next tokens.',
+    rationale: 'Retrieval head (assumed ~25% of heads). Content-based rather than positional: it spikes on whichever earlier tokens are relevant, anywhere in the context. Related to the induction-head and retrieval-head literature.',
     pattern: (i, j) => {
-      if (j === 0 && i > 0) return 0.7 - i * 0.1;
-      if (i === j) return 0.3;
-      return 0.05 + Math.random() * 0.15;
+      const hits = [[1,4], [4,1], [2,4], [4,2]];
+      for (let [a,b] of hits) if (i===a && j===b) return 0.85;
+      if (i === j) return 0.4;
+      return 0.08 + Math.random() * 0.15;
     }
   }
 ];
 
+function getAlpha(val) {
+  /* The tint is capped at 0.5 so the cell composites to a DARK surface at every
+     value: an accent at more than half strength over the card lands in a mid-tone
+     band where neither light nor dark text reaches 4.5:1. */
+  return Math.min(0.5, 0.08 + val * 0.6);
+}
+
 function getColor(val, type) {
   const colors = {
-    position: { r: 40, g: 167, b: 69 },
-    syntax: { r: 230, g: 119, b: 0 },
-    semantic: { r: 0, g: 123, b: 255 },
-    copy: { r: 156, g: 39, b: 176 }
+    position: { r: 63, g: 185, b: 80 },
+    syntax: { r: 210, g: 153, b: 34 },
+    semantic: { r: 88, g: 166, b: 255 },
+    copy: { r: 163, g: 113, b: 247 }
   };
   const c = colors[type];
-  const alpha = 0.15 + val * 0.7;
-  return `rgba(${c.r}, ${c.g}, ${c.b}, ${alpha})`;
+  return `rgba(${c.r}, ${c.g}, ${c.b}, ${getAlpha(val)})`;
 }
 
 function getTextColor(val) {
-  return val > 0.4 ? '#fff' : '#333';
+  /* A light fill needs a dark foreground; a low-alpha accent tint over the dark
+     card is still a dark fill, so it keeps light text. */
+  return getAlpha(val) > 0.5 ? 'var(--bg-primary)' : 'var(--text-primary)';
 }
 
 function renderHead(head) {
@@ -234,7 +265,7 @@ function renderHead(head) {
   
   let matrixHTML = '';
   for (let i = 0; i < tokens.length; i++) {
-    let row = `<div class="attn-row"><div class="attn-label">${tokens[i]}</div>`;
+    let row = `<div class="attn-row" role="img" aria-label="Attention row for query token &quot;${tokens[i]}&quot; in ${head.name}, the ${head.tag} head"><div class="attn-label">${tokens[i]}</div>`;
     let rowSum = 0;
     const vals = [];
     for (let j = 0; j < tokens.length; j++) {
@@ -243,7 +274,7 @@ function renderHead(head) {
     }
     for (let j = 0; j < tokens.length; j++) {
       const norm = vals[j] / rowSum;
-      row += `<div class="attn-cell" style="background:${getColor(norm, head.type)}; color:${getTextColor(norm)}">${norm.toFixed(2)}</div>`;
+      row += `<div class="attn-cell" aria-label="${tokens[i]} attends to ${tokens[j]}, weight ${norm.toFixed(2)}" style="background:${getColor(norm, head.type)}; color:${getTextColor(norm)}">${norm.toFixed(2)}</div>`;
     }
     row += '</div>';
     matrixHTML += row;
@@ -263,5 +294,19 @@ function renderHead(head) {
 const grid = document.getElementById('headsGrid');
 heads.forEach(h => grid.appendChild(renderHead(h)));
 </script>
+
+<p style="max-width:1100px;margin:1.5rem auto 0;text-align:center;color:var(--text-secondary);font-size:0.8rem;padding-top:0.75rem;border-top:1px solid var(--border-primary);">
+  <strong>Illustrative</strong> — head types, shares and attention matrices on this page are assumed and synthetic,
+  never a result; the taxonomy is motivated by the induction-head and retrieval-head literature
+  <span class="mono">External literature</span>. <strong>Retracted:</strong> the "+6 pts of hit rate, 87% &rarr; 93%
+  cumulative" attributed to per-head tracking, and the whole 72 &rarr; 80 &rarr; 87 &rarr; 93 &rarr; 97 ladder — never
+  run as an ablation, increments assumed additive and independent. No single hit rate exists; the simulated range is
+  <strong>8.5&ndash;91.6%</strong> <span class="mono">Simulated (provisional)</span>, and one data-structure defect in
+  Revision 1 inverted four of five findings, so Revision 2 is provisional, not settled. The largest effect in the study
+  is elsewhere: identity-keyed policy state surviving HBM eviction, worth <strong>+34.15 pts to LFU</strong>
+  (15.56 &rarr; 49.71) and <strong>+24.85 pts to EMA &alpha;=0.01</strong> (31.54 &rarr; 56.39) at 32 GiB.
+  Work built on, cited not competed with: H2O, SnapKV, Scissorhands, PyramidKV, Quest, Ada-KV, HeadKV, InfiniGen,
+  LayerKV, KVPR, PagedAttention. Canonical numbers v6.0.
+</p>
 </body>
 </html>

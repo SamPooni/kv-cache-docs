@@ -1,1 +1,688 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RoPE Prefetch — Corrected</title><style>body{margin:0;background:#0d1117;color:#e6edf3;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}.w{max-width:1040px;margin:auto;padding:30px}.ey{font:600 11px system-ui;letter-spacing:.12em;text-transform:uppercase;color:#8b949e}.h{font-size:31px;font-weight:760;margin:7px 0 10px}.p{color:#aab4c0;line-height:1.55}.flow{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:20px 0}.b{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:14px 16px;font-weight:650}.a{color:#7d8590;font-size:20px}.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:20px 0}.c{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:16px}.n{font:700 24px ui-monospace,Consolas,monospace;color:#58a6ff}.l{font-weight:650;margin-top:5px}.s{font-size:13px;color:#8b949e;margin-top:6px;line-height:1.4}.warn{border-left:4px solid #d29922;background:#1d1a12;padding:13px 15px;border-radius:8px;line-height:1.5}.t{width:100%;border-collapse:collapse;margin:18px 0}.t td,.t th{padding:9px 11px;border-bottom:1px solid #30363d;text-align:left}.t th{color:#8b949e;font-size:11px;text-transform:uppercase}</style></head><body><main class="w"><div class="ey">Prefetch policy · hypothesis</div><div class="h">RoPE Is Not a Universal Locality Guarantee</div><p class="p">Position can be one input to a prefetch heuristic, but RoPE itself does not prove that a fixed ±W window captures a fixed fraction of future attention. Any locality window and hit-rate benefit must be learned or measured from real attention traces.</p><div class="flow"><div class="b">attention trace</div><div class="a">+</div><div class="b">position / distance</div><div class="a">+</div><div class="b">reuse history</div><div class="a">→</div><div class="b">prefetch score</div><div class="a">→</div><div class="b">validate precision / recall / stall</div></div><div class="warn"><b>Removed:</b> the earlier +4%, 70%, 72%, 85% and 90% locality/hit-rate figures were not measured results.</div></main></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RoPE Geometry — Worked Example</title>
+<link rel="stylesheet" href="../../css/style.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-sans);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  padding: 2.5rem;
+  line-height: 1.5;
+}
+.container { max-width: 1000px; margin: 0 auto; padding: 0; }
+h1 {
+  font-size: 2.2rem;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+.subtitle {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 1.15rem;
+  margin-bottom: 2.5rem;
+}
+.section { margin-bottom: 2.5rem; }
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+.section-num {
+  width: 36px;
+  height: 36px;
+  background: var(--accent-purple);
+  color: var(--bg-primary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.section-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+.card {
+  background: var(--bg-card);
+  border: 2px solid var(--border-primary);
+  border-radius: 14px;
+  padding: 1.5rem;
+}
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.config-item {
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-primary);
+  border-radius: 10px;
+  padding: 1rem;
+  text-align: center;
+}
+.config-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.25rem;
+}
+.config-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--accent-purple);
+}
+.config-unit {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+.sequence-container {
+  overflow-x: auto;
+  padding: 1rem 0;
+}
+.token-sequence {
+  display: flex;
+  gap: 4px;
+  min-width: max-content;
+  justify-content: center;
+}
+.token {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  position: relative;
+}
+.token-pos {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  position: absolute;
+  top: -18px;
+}
+.token-id {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.token.storage { background: var(--bg-code); color: var(--text-secondary); border: 2px solid var(--border-primary); }
+.heatmap-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+.heatmap {
+  display: grid;
+  grid-template-columns: repeat(16, 1fr);
+  gap: 2px;
+  padding: 0.5rem;
+  background: var(--bg-code);
+  border-radius: 8px;
+  border: 2px solid var(--border-primary);
+}
+.heat-cell {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-family: var(--font-mono);
+  color: white;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+.legend-gradient {
+  width: 150px;
+  height: 16px;
+  border-radius: 4px;
+  background: linear-gradient(to right, #f0f0f0, #ffd700, #ff6b35, #dc3545);
+}
+.formula-box {
+  background: rgba(163, 113, 247, 0.10);
+  border: 2px solid var(--accent-purple);
+  border-radius: 10px;
+  padding: 1rem 1.5rem;
+  text-align: center;
+  margin: 1rem 0;
+}
+.formula-text {
+  font-family: var(--font-mono);
+  font-size: 1.1rem;
+  color: var(--text-primary);
+}
+.formula-text .highlight { color: var(--accent-purple); font-weight: 700; }
+.formula-text .red { color: var(--accent-red); font-weight: 700; }
+.timeline {
+  position: relative;
+  padding-left: 120px;
+}
+.timeline-step {
+  position: relative;
+  padding: 1.25rem;
+  padding-left: 2rem;
+  border-left: 3px solid var(--border-primary);
+}
+.timeline-step:last-child { border-left-color: transparent; }
+.timeline-step::before {
+  content: attr(data-time);
+  position: absolute;
+  left: -120px;
+  top: 1.25rem;
+  width: 100px;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--accent-purple);
+  font-weight: 600;
+}
+.timeline-dot {
+  position: absolute;
+  left: -10px;
+  top: 1.5rem;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent-purple);
+  border: 3px solid var(--bg-card);
+  box-shadow: 0 0 0 2px var(--accent-purple);
+}
+.timeline-dot.fetch { background: var(--accent-yellow); box-shadow: 0 0 0 2px var(--accent-yellow); }
+.timeline-dot.hit { background: var(--accent-green); box-shadow: 0 0 0 2px var(--accent-green); }
+.timeline-dot.miss { background: var(--accent-red); box-shadow: 0 0 0 2px var(--accent-red); }
+.step-title {
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-bottom: 0.5rem;
+}
+.step-detail {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.75rem;
+}
+.step-cache {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.mini-token {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+.mini-token.cached { background: rgba(63, 185, 80, 0.15); color: var(--accent-green); border: 1px solid var(--accent-green); }
+.mini-token.new { background: rgba(240, 194, 57, 0.15); color: var(--accent-yellow); border: 1px solid var(--accent-yellow); }
+.mini-token.evict { background: rgba(248, 81, 73, 0.15); color: var(--accent-red); border: 1px solid var(--accent-red); text-decoration: line-through; }
+.cache-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-right: 0.5rem;
+}
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin: 0;
+}
+.stat-card {
+  background: var(--bg-tertiary);
+  border-radius: 10px;
+  padding: 1.25rem;
+  text-align: center;
+  border: 2px solid var(--border-primary);
+}
+.stat-card.good { border-color: var(--accent-green); background: rgba(63, 185, 80, 0.10); }
+.stat-card.neutral { border-color: var(--accent-purple); background: rgba(163, 113, 247, 0.10); }
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: inherit;
+  font-family: var(--font-mono);
+}
+.stat-card.good .stat-value { color: var(--accent-green); }
+.stat-card.neutral .stat-value { color: var(--accent-purple); }
+.stat-label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  text-transform: none;
+  letter-spacing: normal;
+  margin-top: 0.25rem;
+}
+.comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+.compare-card {
+  background: var(--bg-tertiary);
+  border-radius: 12px;
+  padding: 1.25rem;
+  border: 2px solid var(--border-primary);
+}
+.compare-card.winner {
+  border-color: var(--accent-green);
+  box-shadow: 0 4px 12px rgba(63,185,80,0.15);
+}
+.compare-title {
+  font-weight: 700;
+  font-size: 1.1rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.compare-card.winner .compare-title { color: var(--accent-green); }
+.compare-stat {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--border-secondary);
+  font-size: 0.95rem;
+}
+.compare-stat:last-child { border-bottom: none; }
+.compare-stat-value { font-weight: 600; font-family: var(--font-mono); }
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.badge.success { background: rgba(63, 185, 80, 0.18); color: var(--accent-green); border: 1px solid var(--accent-green); }
+</style>
+</head>
+<body>
+<div class="container" role="main">
+  <p class="sr-only">Figure: a worked 16-token example of RoPE geometry, and the block-movement arithmetic that survives it. The scenario is a 16-token span, a GPU cache of 8 KV block slots, a distance band of W = 3 meaning plus or minus 3 positions, and a tier fetch for a 5.00 mebibyte block of 16 tokens at 320 kibibytes per token. RoPE gives an upper-bound envelope, the magnitude of the inner product of q_m and k_n is at most B of the absolute distance m minus n with B non-increasing; it is never proportional to cosine of (m minus n) times theta, and because RoPE is a rotation applied to Q and K at compute time it carries no information about which blocks are needed next, so it cannot drive prefetch. Section 2 shows an assumed attention distribution around a query at position 8, in which positions 5 to 11, within plus or minus 3, are assumed to hold about 72 percent of the attention mass; that concentration is an input assumption, model-, layer-, head- and workload-dependent, not a measurement, and it is not something RoPE proves. Section 3 walks the movement itself: a demand miss on the block covering position 8, a tier fetch that completes in 164, 82 or 43 microseconds at an assumed 32, 64 or 121 gigabytes per second, attention then reading positions 6, 7, 9 and 10 out of the resident block, and finally an eviction in which the block's identity key and score travel with it and are restored on re-admission rather than reset. Section 4 gives the comparison that survives: moving a 5.00 mebibyte block costs 164, 82 or 43 microseconds across the assumed bandwidth range, while regenerating the same 16 tokens by forward compute costs 9, 11 or 18 milliseconds at 50, 40 or 25 percent model FLOPs utilisation. Moving is two to three orders of magnitude cheaper than regenerating, and no precise multiple is claimed, because the two quantities do not measure the same operation; regenerating an arbitrary interior block is at least that expensive and potentially far higher, since interior KV is not independently reproducible and hidden states depend recursively on all preceding context. Retracted from this figure and not replaced: the 97 percent hit rate, the 72 to 80 to 87 to 93 to 97 ladder, the plus 4 percentage point RoPE-prefetch rung, the 8.0 times 400 to 50 microsecond prefetch speedup, the 25 microsecond flash round-trip, the 200 nanosecond CXL access and the 100 nanosecond HBM access. No CXL hardware was measured. No single hit rate exists: the simulated range is 8.5 to 91.6 percent across budgets, policies and workloads. The largest effect in the study is not on this page and is not a scoring or prefetch mechanism at all: at a 32 gibibyte budget, letting identity-keyed policy state survive HBM eviction is worth plus 34.15 percentage points to LFU, from 15.56 to 49.71 percent, and plus 24.85 to EMA alpha 0.01, from 31.54 to 56.39 percent, while EMA alpha 0.15 is unchanged at minus 0.21 percentage points — larger than the whole spread between policies, and a protocol result testable with no CXL hardware. Simulated figures are provisional, because a single data-structure defect in Revision 1 inverted four of five findings.</p>
+  <h1>RoPE Geometry: Worked Example</h1>
+  <p class="subtitle">What the distance bound says, and what moving a block actually costs</p>
+
+  <div class="callout warning" style="margin-bottom:1.5rem;">
+    <div class="callout-title">RoPE is not a prefetch signal — the speedup this page used to claim is retracted</div>
+    <p>RoPE is a <strong>rotation applied to Q/K at compute time</strong>: a function of position alone, known in
+    advance for every position, identical whether a block is resident or evicted. It carries <strong>no information
+    about which blocks are needed next</strong>. Distance decay is an <strong>upper bound</strong>,
+    <code>|⟨q_m, k_n⟩| ≤ B(|m − n|)</code> — <strong>never</strong> <code>∝ cos((m − n)·θ)</code>.</p>
+    <p><strong>Withdrawn from this figure:</strong> the 97% hit rate and the 72 → 80 → 87 → 93 → 97 ladder (never run
+    as an ablation; increments assumed additive and independent), the +4 pts RoPE-prefetch rung, the 8.0×
+    “400 µs → 50 µs” prefetch speedup, and the 25 µs / 200 ns / 100 ns tier latencies. <strong>No CXL hardware was
+    measured.</strong> What remains on this page is the geometry, and the move-versus-regenerate arithmetic in §4.</p>
+  </div>
+
+  <!-- Section 1: Setup -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">1</div>
+      <div class="section-title">Scenario Configuration</div>
+    </div>
+    <div class="card">
+      <div class="config-grid">
+        <div class="config-item">
+          <div class="config-label">Sequence Length</div>
+          <div class="config-value">16</div>
+          <div class="config-unit">tokens</div>
+        </div>
+        <div class="config-item">
+          <div class="config-label">GPU Cache Size</div>
+          <div class="config-value">8</div>
+          <div class="config-unit">KV slots</div>
+        </div>
+        <div class="config-item">
+          <div class="config-label">Distance band (bound loosest)</div>
+          <div class="config-value">W = 3</div>
+          <div class="config-unit">±3 positions — assumed, not fitted</div>
+        </div>
+        <div class="config-item">
+          <div class="config-label">Tier fetch, 5.00 MiB block</div>
+          <div class="config-value">164 / 82 / 43</div>
+          <div class="config-unit">µs @ 32 / 64 / 121 GB/s — <strong>assumed</strong>, no CXL hardware measured</div>
+        </div>
+      </div>
+      
+      <div class="formula-box">
+        <div class="formula-text">
+          |⟨q_<span class="red">m</span>, k_n⟩| ≤ <span class="highlight">B(|m − n|)</span>,&nbsp; B non-increasing
+        </div>
+        <div class="formula-text" style="margin-top:0.5rem;">
+          Inside <span class="highlight">[P−3, P+3]</span> the bound is <em>loosest</em> — a large inner product is
+          <strong>permitted</strong> there, not <strong>predicted</strong>.
+        </div>
+        <div class="formula-text" style="margin-top:0.5rem;color:var(--accent-red);">
+          NOT&nbsp; |⟨q_m, k_n⟩| ∝ cos((m − n)·θ)
+        </div>
+        <div style="color:var(--text-secondary);font-size:0.85rem;margin-top:0.5rem;">
+          The unit that is placed, moved and evicted is a <strong>(sequence, token block)</strong> — 16 tokens,
+          5.00 MiB at 320 KiB/token — never a head. Every head of every layer is required for every token, so
+          evicting a head produces <strong>wrong outputs, not a cache miss</strong>. H2O and SnapKV evict
+          <strong>(head, token)</strong> pairs; the token axis is not optional.
+        </div>
+      </div>
+
+      <div class="sequence-container" style="margin-top:1.5rem;">
+        <div class="token-sequence">
+          <div class="token storage" role="img" aria-label="Position 0, token &quot;The&quot;, on storage"><span class="token-pos">0</span><span class="token-id">The</span></div>
+          <div class="token storage" role="img" aria-label="Position 1, token &quot;quick&quot;, on storage"><span class="token-pos">1</span><span class="token-id">quick</span></div>
+          <div class="token storage" role="img" aria-label="Position 2, token &quot;brown&quot;, on storage"><span class="token-pos">2</span><span class="token-id">brown</span></div>
+          <div class="token storage" role="img" aria-label="Position 3, token &quot;fox&quot;, on storage"><span class="token-pos">3</span><span class="token-id">fox</span></div>
+          <div class="token storage" role="img" aria-label="Position 4, token &quot;jumps&quot;, on storage"><span class="token-pos">4</span><span class="token-id">jumps</span></div>
+          <div class="token storage" role="img" aria-label="Position 5, token &quot;over&quot;, on storage"><span class="token-pos">5</span><span class="token-id">over</span></div>
+          <div class="token storage" role="img" aria-label="Position 6, token &quot;the&quot;, on storage"><span class="token-pos">6</span><span class="token-id">the</span></div>
+          <div class="token storage" role="img" aria-label="Position 7, token &quot;lazy&quot;, on storage"><span class="token-pos">7</span><span class="token-id">lazy</span></div>
+          <div class="token storage" role="img" aria-label="Position 8, token &quot;dog&quot;, on storage"><span class="token-pos">8</span><span class="token-id">dog</span></div>
+          <div class="token storage" role="img" aria-label="Position 9, token &quot;and&quot;, on storage"><span class="token-pos">9</span><span class="token-id">and</span></div>
+          <div class="token storage" role="img" aria-label="Position 10, token &quot;runs&quot;, on storage"><span class="token-pos">10</span><span class="token-id">runs</span></div>
+          <div class="token storage" role="img" aria-label="Position 11, token &quot;into&quot;, on storage"><span class="token-pos">11</span><span class="token-id">into</span></div>
+          <div class="token storage" role="img" aria-label="Position 12, token &quot;the&quot;, on storage"><span class="token-pos">12</span><span class="token-id">the</span></div>
+          <div class="token storage" role="img" aria-label="Position 13, token &quot;dark&quot;, on storage"><span class="token-pos">13</span><span class="token-id">dark</span></div>
+          <div class="token storage" role="img" aria-label="Position 14, token &quot;forest&quot;, on storage"><span class="token-pos">14</span><span class="token-id">forest</span></div>
+          <div class="token storage" role="img" aria-label="Position 15, token &quot;.&quot;, on storage"><span class="token-pos">15</span><span class="token-id">.</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: Attention Pattern -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">2</div>
+      <div class="section-title">Assumed Attention Distribution (Query @ P=8)</div>
+    </div>
+    <div class="card">
+      <div class="heatmap-container">
+        <div class="heatmap" role="img" aria-label="Assumed attention heatmap over the 16 positions for a query at position 8. Attention is strongest at the query itself and at its immediate neighbours 7, 9, 6 and 10, tapering through 5 and 11 to near zero at positions 0 and 15. Positions 5 to 11, within plus or minus 3 of the query, are assumed to carry about 72 percent of the attention mass.">
+          <div class="heat-cell" style="background:#e8e8e8;color:#0a0e14" aria-hidden="true">0</div>
+          <div class="heat-cell" style="background:#f5e6c8;color:#0a0e14" aria-hidden="true">1</div>
+          <div class="heat-cell" style="background:#f0d090;color:#0a0e14" aria-hidden="true">2</div>
+          <div class="heat-cell" style="background:#e8b860;color:#0a0e14" aria-hidden="true">3</div>
+          <div class="heat-cell" style="background:#e09830;color:#0a0e14" aria-hidden="true">4</div>
+          <div class="heat-cell" style="background:#e87830;color:#0a0e14" aria-hidden="true">5</div>
+          <div class="heat-cell" style="background:#f04020;color:#0a0e14" aria-hidden="true">6</div>
+          <div class="heat-cell" style="background:#f0554a;color:#0a0e14" aria-hidden="true">7</div>
+          <div class="heat-cell" style="background:#f05a4a;color:#0a0e14;box-shadow:0 0 8px #f05a4a" aria-hidden="true">Q</div>
+          <div class="heat-cell" style="background:#f2554a;color:#0a0e14" aria-hidden="true">9</div>
+          <div class="heat-cell" style="background:#f04828;color:#0a0e14" aria-hidden="true">10</div>
+          <div class="heat-cell" style="background:#e88038;color:#0a0e14" aria-hidden="true">11</div>
+          <div class="heat-cell" style="background:#e0a040;color:#0a0e14" aria-hidden="true">12</div>
+          <div class="heat-cell" style="background:#e8c068;color:#0a0e14" aria-hidden="true">13</div>
+          <div class="heat-cell" style="background:#f0d898;color:#0a0e14" aria-hidden="true">14</div>
+          <div class="heat-cell" style="background:#ece0c0;color:#0a0e14" aria-hidden="true">15</div>
+        </div>
+        <div class="heatmap-legend">
+          <span>Low attention</span>
+          <div class="legend-gradient" aria-hidden="true"></div>
+          <span>High attention</span>
+        </div>
+        <p style="color:var(--text-secondary); font-size:0.9rem; max-width:640px; text-align:center;">
+          <strong>Assumption, not measurement.</strong> This walkthrough assumes attention concentrates
+          around the query position, so that positions 5–11 (within ±3 of query P=8) capture
+          <strong>~72%</strong> of total attention mass. The concentration is
+          model-, layer-, head- and workload-dependent and is an input to the model, not a result of it.
+          What RoPE itself provides is an upper-bound envelope on the inner-product magnitude,
+          <code>|⟨q_m, k_n⟩| ≤ B(|m − n|)</code> with B non-increasing — the inner product is a sum over
+          d/2 frequency pairs and does not decay monotonically.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 3: Timeline -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">3</div>
+      <div class="section-title">Movement Timeline — demand-driven, per block</div>
+    </div>
+    <div class="card">
+      <div class="timeline">
+        <div class="timeline-step" data-time="t = 0 µs">
+          <div class="timeline-dot miss" aria-hidden="true"></div>
+          <div class="step-title"><span aria-hidden="true">🔴</span> Demand miss: query P=8 ("dog")</div>
+          <div class="step-detail">
+            Attention requires the KV covering position 8. Not resident → <strong>MOVE</strong> issues a tier fetch
+            for the block that holds it, together with the neighbouring blocks the same step will read.
+            <br><strong>PLACE</strong> scores the admission against state <em>restored</em> with the block, not reset.
+          </div>
+          <div class="step-cache">
+            <span class="cache-label">Cache:</span>
+            <span style="color:var(--text-secondary); font-style:italic;">empty</span>
+          </div>
+        </div>
+
+        <div class="timeline-step" data-time="t = 82 µs (assumed)">
+          <div class="timeline-dot fetch" aria-hidden="true"></div>
+          <div class="step-title"><span aria-hidden="true">⏳</span> Block arrives — 5.00 MiB across the tier</div>
+          <div class="step-detail">
+            One 5.00 MiB block transfer is <strong>164 / 82 / 43 µs</strong> at an <em>assumed</em>
+            32 / 64 / 121 GB/s. <strong>No CXL hardware was measured</strong>; 82 µs here is the mid-range
+            assumption, not a measurement. Positions 5,6,7,9,10,11 arrive with it.
+          </div>
+          <div class="step-cache">
+            <span class="cache-label">Cache:</span>
+            <div class="mini-token new" role="img" aria-label="Position 5, newly fetched into cache">5</div>
+            <div class="mini-token new" role="img" aria-label="Position 6, newly fetched into cache">6</div>
+            <div class="mini-token new" role="img" aria-label="Position 7, newly fetched into cache">7</div>
+            <div class="mini-token cached" style="box-shadow:0 0 6px var(--accent-green)" role="img" aria-label="Position 8, already cached">8</div>
+            <div class="mini-token new" role="img" aria-label="Position 9, newly fetched into cache">9</div>
+            <div class="mini-token new" role="img" aria-label="Position 10, newly fetched into cache">10</div>
+            <div class="mini-token new" role="img" aria-label="Position 11, newly fetched into cache">11</div>
+          </div>
+        </div>
+
+        <div class="timeline-step" data-time="t = 82 µs+">
+          <div class="timeline-dot hit" aria-hidden="true"></div>
+          <div class="step-title"><span aria-hidden="true">🟢</span> Resident: attention reads P=7 ("lazy")</div>
+          <div class="step-detail">
+            Position 7 is in the block already moved — a hit because the <em>block</em> is the unit, not because
+            anything predicted it.
+          </div>
+        </div>
+
+        <div class="timeline-step" data-time="t = 82 µs+">
+          <div class="timeline-dot hit" aria-hidden="true"></div>
+          <div class="step-title"><span aria-hidden="true">🟢</span> Resident: P=6, P=9, P=10</div>
+          <div class="step-detail">
+            Same reason. Under dense attention <strong>every</strong> block of an active sequence is read every
+            step, so residency, not prediction, is what the tier buys.
+          </div>
+        </div>
+
+        <div class="timeline-step" data-time="t = 164 µs (assumed)">
+          <div class="timeline-dot" aria-hidden="true"></div>
+          <div class="step-title"><span aria-hidden="true">➡</span> Next query: P=12 ("the")</div>
+          <div class="step-detail">
+            Decode advances. Positions 9,10,11 are already resident; 12–15 are moved.
+            <br><strong>The evicted blocks keep their identity key and score</strong> — restored on re-admission,
+            not reset. That is the mechanism worth <strong>+34.15 pts to LFU</strong> at 32 GiB, and it is a
+            <strong>protocol</strong> property, testable with no CXL hardware.
+            <span class="mono" style="font-size:0.72rem;">Simulated (provisional)</span>
+          </div>
+          <div class="step-cache">
+            <span class="cache-label">Evict:</span>
+            <div class="mini-token evict" role="img" aria-label="Position 5, evicted from cache — its identity key and score persist and are restored on re-admission">5</div>
+            <div class="mini-token evict" role="img" aria-label="Position 6, evicted from cache">6</div>
+            <div class="mini-token evict" role="img" aria-label="Position 7, evicted from cache">7</div>
+            <div class="mini-token evict" role="img" aria-label="Position 8, evicted from cache">8</div>
+            <span class="cache-label" style="margin-left:1rem;">Keep:</span>
+            <div class="mini-token cached" role="img" aria-label="Position 9, already cached">9</div>
+            <div class="mini-token cached" role="img" aria-label="Position 10, already cached">10</div>
+            <div class="mini-token cached" role="img" aria-label="Position 11, already cached">11</div>
+            <span class="cache-label" style="margin-left:1rem;">New:</span>
+            <div class="mini-token new" role="img" aria-label="Position 12, newly fetched into cache">12</div>
+            <div class="mini-token new" role="img" aria-label="Position 13, newly fetched into cache">13</div>
+            <div class="mini-token new" role="img" aria-label="Position 14, newly fetched into cache">14</div>
+            <div class="mini-token new" role="img" aria-label="Position 15, newly fetched into cache">15</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 4: Results -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">4</div>
+      <div class="section-title">The Comparison That Survives — move vs. regenerate</div>
+    </div>
+    <div class="card">
+      <div class="stats-grid">
+        <div class="stat-card neutral">
+          <div class="stat-value">5.00 MiB</div>
+          <div class="stat-label">One block = 16 tokens at 320 KiB/token <span class="mono">Analytical model</span></div>
+        </div>
+        <div class="stat-card neutral">
+          <div class="stat-value">164 / 82 / 43 µs</div>
+          <div class="stat-label">Tier fetch of that block at an <strong>assumed</strong> 32 / 64 / 121 GB/s — no CXL hardware measured <span class="mono">Analytical model</span></div>
+        </div>
+        <div class="stat-card neutral">
+          <div class="stat-value">9 / 11 / 18 ms</div>
+          <div class="stat-label">Forward compute for the same 16 tokens at 50 / 40 / 25% MFU <span class="mono">Analytical model</span></div>
+        </div>
+        <div class="stat-card good">
+          <div class="stat-value">2–3 orders</div>
+          <div class="stat-label">Moving beats regenerating — the order of magnitude, <strong>no precise multiple claimed</strong></div>
+        </div>
+      </div>
+
+      <div class="comparison" style="margin-top:1.5rem;">
+        <div class="compare-card">
+          <div class="compare-title"><span aria-hidden="true">🔁</span> Regenerate the block</div>
+          <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.5rem;">Forward compute, 16 tokens, linear term</div>
+          <div class="compare-stat">
+            <span>50% MFU</span>
+            <span class="compare-stat-value">9 ms</span>
+          </div>
+          <div class="compare-stat">
+            <span>40% MFU</span>
+            <span class="compare-stat-value">11 ms</span>
+          </div>
+          <div class="compare-stat">
+            <span>25% MFU</span>
+            <span class="compare-stat-value">18 ms</span>
+          </div>
+          <div class="compare-stat">
+            <span>Arbitrary <em>interior</em> block</span>
+            <span class="compare-stat-value">≥ the above</span>
+          </div>
+        </div>
+        <div class="compare-card winner">
+          <div class="compare-title"><span aria-hidden="true">➡</span> Move the block <span class="badge success">Cheaper</span></div>
+          <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:0.5rem;">5.00 MiB across the tier — bandwidth <strong>assumed</strong>, not measured</div>
+          <div class="compare-stat">
+            <span>121 GB/s (optimistic)</span>
+            <span class="compare-stat-value">43 µs</span>
+          </div>
+          <div class="compare-stat">
+            <span>64 GB/s (mid-range)</span>
+            <span class="compare-stat-value">82 µs</span>
+          </div>
+          <div class="compare-stat">
+            <span>32 GB/s (pessimistic)</span>
+            <span class="compare-stat-value">164 µs</span>
+          </div>
+          <div class="compare-stat">
+            <span>Verdict</span>
+            <span class="compare-stat-value">2–3 orders cheaper</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="callout note">
+        <div class="callout-title">What this comparison is, and what it is not</div>
+        <p>Both columns are an <strong>Analytical model</strong> over stated inputs. The move column divides
+        5.00 MiB by three <em>assumed</em> tier bandwidths; <strong>no CXL hardware was measured</strong> anywhere in
+        this package, and the 200 ns CXL access figure that once appeared here is demoted to an unmeasured
+        assumption inside the 32–121 GB/s range. The regenerate column is the linear term of forward compute for
+        16 tokens at three MFU assumptions.</p>
+        <p><strong>Claim the order of magnitude, not a multiple.</strong> The two quantities do not measure the same
+        operation, so a ratio between them is not a speedup. The 218× figure that can be formed from one pair
+        (17.9 ms ÷ 82 µs) is one point in the range and must always be quoted with its inputs. The honest statement
+        is: <strong>moving a block is two to three orders of magnitude cheaper than regenerating it</strong>.</p>
+        <p><strong>Interior blocks are worse than the table suggests.</strong> Regenerating an arbitrary
+        <em>interior</em> block costs at least the figures above and potentially far more: interior KV is not
+        independently reproducible, because hidden states depend recursively on all preceding context.
+        <strong>Avoiding regeneration is what the tier is for.</strong></p>
+        <p><strong>Retracted, and not replaced.</strong> The former "16 serial round-trips at 25 µs = 400 µs versus
+        2 batched round-trips = 50 µs, an 8.0× reduction" is withdrawn: it rested on a 25 µs flash round-trip and on
+        a prefetcher that RoPE cannot supply, and batching does not survive a bandwidth-limited transfer model
+        anyway. The +4 pts / 93% → 97% rung and the 97% hit rate go with it — <strong>no single hit rate
+        exists</strong>, and the corrected simulation gives <strong>8.5–91.6%</strong> across budgets, policies and
+        workloads. <span class="mono">Simulated (provisional)</span>
+        See <a href="../../chapters/ch07-kv-cache.html">Chapter 7</a>, and <code>ARCHITECTURE-v6.md</code> for where
+        MOVE sits in the control plane.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 5: Key Insight -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">5</div>
+      <div class="section-title">Key Insight</div>
+    </div>
+    <div class="card" style="background:linear-gradient(135deg, rgba(163,113,247,0.12) 0%, rgba(63,185,80,0.10) 100%);">
+      <div style="display:flex; gap:1.5rem; align-items:center; flex-wrap:wrap;">
+        <div style="flex:1; min-width:280px;">
+          <h3 style="font-size:1.2rem; margin-bottom:0.75rem; color:var(--text-primary);">
+            The tier's value is avoiding regeneration — and the biggest win is a protocol, not a predictor
+          </h3>
+          <p style="color:var(--text-secondary); font-size:0.95rem; line-height:1.6;">
+            RoPE supplies only a non-increasing upper bound on inner-product magnitude with distance. It predicts
+            nothing about residency, and the attention concentration assumed in §2 is an input, not a proof.
+            What the tier actually buys is that a block already computed need not be computed again.
+            And the largest effect measured anywhere in this study is neither the scoring function nor any
+            prefetcher: it is letting a block's <strong>identity-keyed policy state survive its eviction</strong>
+            from HBM — <strong>LFU 15.56 → 49.71 (+34.15 pts)</strong> and
+            <strong>EMA α=0.01 31.54 → 56.39 (+24.85 pts)</strong> at 32 GiB, with EMA α=0.15 unchanged
+            (−0.21 pts). Larger than the spread between policies, and testable with <strong>no CXL hardware</strong>.
+            <span class="mono" style="font-size:0.72rem;">Simulated (provisional)</span>
+          </p>
+        </div>
+        <div style="background:var(--bg-card); border-radius:12px; padding:1.25rem; border:2px solid var(--accent-purple); text-align:center;">
+          <div style="font-size:0.9rem; color:var(--accent-purple); font-weight:600; margin-bottom:0.5rem;">Persistent metadata, LFU @ 32 GiB</div>
+          <div style="font-size:2.5rem; font-weight:700; color:var(--accent-green);">+34.15 pts</div>
+          <div style="font-size:0.85rem; color:var(--text-secondary);">15.56% → 49.71% · Simulated (provisional)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p style="text-align:center;color:var(--text-secondary);font-size:0.8rem;margin-top:1.5rem;padding-top:0.75rem;border-top:1px solid var(--border-primary);">
+    <strong>Illustrative</strong> walkthrough over 16 positions — never a benchmark. The attention concentration in
+    §2 is an assumption; the RoPE bound in §1 is an <strong>Analytical model</strong>; the transfer and compute costs
+    in §4 are an <strong>Analytical model</strong> over <em>assumed</em> bandwidths and MFU — <strong>no CXL hardware
+    was measured</strong>. Hit-rate figures are <strong>Simulated (provisional)</strong>: one data-structure defect in
+    Revision 1 inverted four of five findings, so Revision 2 is provisional, not settled.
+    <strong>Retracted here:</strong> 97%, the 72 → 80 → 87 → 93 → 97 ladder, the +4 pts prefetch rung, the 8.0×
+    400 µs → 50 µs speedup, and the 25 µs / 200 ns / 100 ns latencies. Work built on, cited not competed with:
+    H2O, SnapKV, Scissorhands, PyramidKV, Quest, Ada-KV, HeadKV, InfiniGen, LayerKV, KVPR, PagedAttention.
+    Canonical numbers v6.0.
+  </p>
+</div>
+</body>
+</html>

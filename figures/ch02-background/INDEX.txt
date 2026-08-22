@@ -1,31 +1,45 @@
-================================================================================
+==============================================================================
 CH02 - BACKGROUND - FIGURE INDEX
-================================================================================
+==============================================================================
 
-Fig 2.1: Prefill Phase
-      Source: figure-2-1-inference-phases.tsx -> Prefill Phase
-      Source: section-2-1-inference-fundamentals.tsx -> Prefill Phase
+Generated from the filesystem on 2026-08-22.
 
-Fig 2.2: Decode Phase
-      Source: figure-2-1-inference-phases.tsx -> Decode Phase
-      Source: section-2-1-inference-fundamentals.tsx -> Decode Phase
+bandwidth-utilisation.html
+      Bandwidth Utilisation
+      evidence: Figure 2.7 · Measured
+      embedded: (gallery only)
 
-Fig 2.3: Phase Comparison
-      Source: figure-2-1-inference-phases.tsx -> Performance Comparison
+current-approaches-comparison.html
+      Current Approaches Comparison
+      embedded: (gallery only)
 
-Fig 2.4: Why KV-Cache Exists (With vs Without)
-      Source: figure-2-3-why-kv-cache.tsx
+figure-2-1-inference-phases.html
+      Figure 2.1 — LLM Inference Phases
+      embedded: (gallery only)
 
-Fig 2.5: KV-Cache Growth Chart
-      Source: figure-2-2-kv-cache-growth.tsx
+figure-2-2-kv-cache-growth.html
+      Figure 2.2 — KV-Cache Growth
+      embedded: (gallery only)
 
-Fig 2.6: Decode Memory Access Pattern
-      Source: visual-appendix.html -> Diagram 4.2
+figure-2-3-why-kv-cache.html
+      Figure 2.3 — Why KV-Cache
+      embedded: (gallery only)
 
-Fig 2.7: Roofline Model
-      Source: figure-2-4-roofline.tsx
+figure-2-4-roofline.html
+      Figure 2.4 — Roofline Model
+      embedded: (gallery only)
 
-Fig 2.8: Current Approaches Comparison Matrix
-      Source: current-approaches-comparison.tsx
+measured-two-term-decode.html
+      Two-Term Decode Model
+      evidence: Figure 2.6 · Measured
+      embedded: (gallery only)
 
-TOTAL: 8 figures
+section-2-1-inference-fundamentals.html
+      Section 2.1 — Inference Fundamentals
+      embedded: (gallery only)
+
+visual-appendix.html
+      Visual appendix
+      embedded: (gallery only)
+
+TOTAL: 9 figures (0 new in v6.0)

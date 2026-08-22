@@ -1,1 +1,202 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Latency Model — Corrected</title><style>body{margin:0;background:#0d1117;color:#e6edf3;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}.w{max-width:1040px;margin:auto;padding:30px}.ey{font:600 11px system-ui;letter-spacing:.12em;text-transform:uppercase;color:#8b949e}.h{font-size:31px;font-weight:760;margin:7px 0 10px}.p{color:#aab4c0;line-height:1.55}.flow{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:20px 0}.b{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:14px 16px;font-weight:650}.a{color:#7d8590;font-size:20px}.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin:20px 0}.c{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:16px}.n{font:700 24px ui-monospace,Consolas,monospace;color:#58a6ff}.l{font-weight:650;margin-top:5px}.s{font-size:13px;color:#8b949e;margin-top:6px;line-height:1.4}.warn{border-left:4px solid #d29922;background:#1d1a12;padding:13px 15px;border-radius:8px;line-height:1.5}.t{width:100%;border-collapse:collapse;margin:18px 0}.t td,.t th{padding:9px 11px;border-bottom:1px solid #30363d;text-align:left}.t th{color:#8b949e;font-size:11px;text-transform:uppercase}</style></head><body><main class="w"><div class="ey">Latency model · illustrative</div><div class="h">Latency Has Two Different Obligations</div><p class="p">A tier must provide enough aggregate ingress bandwidth <em>and</em> complete each needed transfer early enough to avoid a decode stall. The weighted examples in v5 are explanatory models, not measured CXL latency.</p><div class="flow"><div class="b">KV needed at future step</div><div class="a">→</div><div class="b">Prefetch / transfer</div><div class="a">→</div><div class="b">HBM resident before use</div><div class="a">→</div><div class="b">Attention</div></div><table class="t"><tr><th>Question</th><th>Measurement needed</th></tr><tr><td>Can the tier sustain the byte rate?</td><td>Delivered tier→HBM bandwidth under concurrent decode.</td></tr><tr><td>Can a block arrive before use?</td><td>Transfer-size latency distribution and prefetch lead time.</td></tr><tr><td>Is recomputation cheaper?</td><td>Compare measured transfer time with measured prefix/KV regeneration cost.</td></tr></table><div class="warn"><b>No fixed multiple:</b> v5 does not claim 40×, 65× or a universal ~250 ns CXL access time.</div></main></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Latency Calculations</title>
+<script src="../../vendor/react.production.min.js"></script>
+<script src="../../vendor/react-dom.production.min.js"></script>
+<script src="../../vendor/babel.min.js"></script>
+<link rel="stylesheet" href="../../vendor/fonts.css">
+<link rel="stylesheet" href="../../css/style.css">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); background: var(--bg-primary); min-height: 100vh; color: var(--text-primary); }
+.ev-row { display: flex; flex-wrap: wrap; gap: 0.4rem; justify-content: center; margin: 0.75rem 0 0; }
+.ev { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 20px; font-family: var(--font-mono);
+      font-size: 0.7rem; letter-spacing: 0.02em; border: 1px solid; background: var(--bg-code); }
+.ev-meas { color: var(--accent-green); border-color: rgba(63,185,80,0.45); }
+.ev-sim { color: var(--accent-orange); border-color: rgba(210,153,34,0.45); }
+.ev-model { color: var(--accent-cyan); border-color: rgba(88,166,255,0.45); }
+.ev-lit { color: var(--accent-purple); border-color: rgba(163,113,247,0.45); }
+.ev-ill { color: var(--text-secondary); border-color: var(--border-primary); }
+</style>
+</head>
+<body>
+<div id="root" role="main"></div>
+<script type="text/babel">
+const { useState } = React;
+
+/* The tier's value is avoiding regeneration, not a hit rate. This calculator therefore
+   compares the cost of MOVING one 5.00 MiB block (16 tokens at 320 KiB/token) against the
+   cost of REGENERATING it by forward compute. Both inputs are stated ranges from
+   CANONICAL-NUMBERS.md section 4; neither is measured on CXL hardware. */
+function BlockMovementCalculator() {
+  const [bw, setBw] = useState(64);        // GB/s, assumed tier bandwidth, 32-121
+  const [mfu, setMfu] = useState(40);      // % model FLOPs utilisation: 50 / 40 / 25
+  const BLOCK_BYTES = 5 * 1048576;         // 5.00 MiB = 16 tokens x 320 KiB
+  const REGEN_MS = { 50: 9, 40: 11, 25: 18 };   // canonical forward-compute, 16 tokens
+  const fetchUs = BLOCK_BYTES / (bw * 1e9) * 1e6;
+  const regenMs = REGEN_MS[mfu];
+  const ratio = (regenMs * 1000) / fetchUs;
+  const anchor = bw <= 40 ? '164 µs at 32 GB/s' : bw >= 100 ? '43 µs at 121 GB/s' : '82 µs at 64 GB/s';
+
+  const styles = {
+    container: { maxWidth: '760px', margin: '0 auto', padding: '2rem' },
+    header: { textAlign: 'center', marginBottom: '1.5rem' },
+    lede: { color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.7, maxWidth: '66ch', margin: '0.6rem auto 0' },
+    formula: { background: 'var(--bg-code)', borderRadius: '12px', padding: '1.25rem', margin: '1.5rem 0', textAlign: 'center', fontFamily: 'var(--font-mono)', color: 'var(--accent-cyan)', fontSize: '0.92rem', lineHeight: 1.9 },
+    sliders: { background: 'var(--bg-card)', borderRadius: '16px', padding: '1.5rem', marginBottom: '1.5rem' },
+    slider: { marginBottom: '1.5rem' },
+    sliderLabel: { display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', fontSize: '0.9rem' },
+    input: { width: '100%' },
+    scale: { display: 'flex', justifyContent: 'space-between', fontFamily: 'var(--font-mono)', fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '0.25rem' },
+    btnRow: { display: 'flex', gap: '0.5rem', marginTop: '0.5rem' },
+    btn: (on) => ({ flex: 1, padding: '0.45rem 0.6rem', borderRadius: '8px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600,
+      background: on ? 'var(--accent-cyan)' : 'var(--bg-code)', color: on ? 'var(--bg-primary)' : 'var(--text-primary)',
+      border: `1px solid ${on ? 'var(--accent-cyan)' : 'var(--border-primary)'}` }),
+    twoUp: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' },
+    resFetch: { background: 'var(--accent-green)', borderRadius: '16px', padding: '1.5rem', textAlign: 'center' },
+    resRegen: { background: 'var(--accent-orange)', borderRadius: '16px', padding: '1.5rem', textAlign: 'center' },
+    resVal: { fontSize: '2.2rem', fontWeight: 700, color: 'var(--bg-primary)', lineHeight: 1.15 },
+    resLabel: { color: 'var(--bg-primary)', fontSize: '0.82rem', fontWeight: 600, marginTop: '0.3rem' },
+    resSub: { color: 'var(--bg-primary)', fontSize: '0.72rem', fontFamily: 'var(--font-mono)', marginTop: '0.35rem' },
+    verdict: { background: 'var(--bg-code)', borderRadius: '12px', padding: '1.25rem', marginTop: '1rem', textAlign: 'center' },
+    verdictVal: { fontSize: '1.15rem', fontWeight: 700, color: 'var(--accent-green)' },
+    breakdown: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginTop: '1rem' },
+    stat: { background: 'var(--bg-code)', borderRadius: '8px', padding: '1rem', textAlign: 'center' },
+    statVal: { fontSize: '1.1rem', fontWeight: 600, color: 'var(--accent-cyan)', fontFamily: 'var(--font-mono)' },
+    statLabel: { fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.2rem' },
+    note: { background: 'var(--bg-card)', borderLeft: '4px solid var(--accent-orange)', borderRadius: '0 12px 12px 0', padding: '1.15rem 1.25rem', marginTop: '1.5rem', color: 'var(--text-secondary)', fontSize: '0.85rem', lineHeight: 1.7 },
+    noteTitle: { color: 'var(--accent-orange)', fontWeight: 600, marginBottom: '0.5rem', fontSize: '0.95rem' },
+    lightStrong: { color: 'var(--text-primary)' }
+  };
+
+  return (
+    <div style={styles.container}>
+      <p className="sr-only">Figure: an interactive calculator for the cost of moving one KV block against the cost of
+      regenerating it. One block is 16 tokens at 320 kibibytes per token, which is 5.00 mebibytes. The first slider sets an
+      assumed tier bandwidth anywhere in the 32 to 121 gigabyte per second range; at the three canonical points a 5.00
+      mebibyte fetch takes 164 microseconds at 32 gigabytes per second, 82 microseconds at 64, and 43 microseconds at 121.
+      No CXL hardware was measured, so tier bandwidth is an assumption and not a result. The second control sets model
+      FLOPs utilisation, and the forward compute needed to regenerate the same 16 tokens is 9 milliseconds at 50 percent,
+      11 milliseconds at 40 percent and 18 milliseconds at 25 percent. Across the whole grid moving the block is two to
+      three orders of magnitude cheaper than regenerating it, and no precise multiple is claimed: the displayed ratio is
+      one point in that range and must always be quoted with its inputs, in the same way that the often-repeated 218 times
+      figure is just 17.9 milliseconds divided by 82 microseconds. Regenerating an arbitrary interior block is in fact
+      worse than the forward-compute figure shown, because interior KV is not independently reproducible — hidden states
+      depend recursively on all preceding context. The previous version of this figure computed an effective access latency
+      of 177 nanoseconds from a 97 percent hit rate, a 200 nanosecond CXL access and a 25 microsecond NVMe tail, and
+      reported an 11.5 times end-to-end improvement. All of those are retracted: the 97 percent hit rate was never
+      measured and the corrected simulation gives a range of 8.5 to 91.6 percent depending on budget, policy and workload,
+      with 38.34 for LRU, 16.09 for LFU, 44.18 for EMA alpha 0.15 and 35.91 for EMA alpha 0.01 at a 32 gibibyte budget;
+      the 200 nanosecond access is demoted to an unmeasured assumption inside the 32 to 121 gigabyte per second range; and
+      the 11.5 times figure was derived from the 97 percent. Simulated values are Revision 2 and provisional, because a
+      single data-structure defect in Revision 1 inverted four of five findings. There is no single hit rate to put in a
+      latency formula, which is why this figure now measures the thing the tier actually buys.</p>
+
+      <div style={styles.header}>
+        <h1 style={{fontSize: '1.5rem', fontWeight: 700}}>Move a block, or regenerate it?</h1>
+        <p style={styles.lede}>
+          The tier's value is <strong style={styles.lightStrong}>avoiding regeneration</strong>, not a hit rate.
+          One block is 16 tokens &times; 320 KiB/token = <strong style={styles.lightStrong}>5.00 MiB</strong>.
+          Set the assumed tier bandwidth and the compute efficiency, and compare.
+        </p>
+        <div className="ev-row">
+          <span className="ev ev-model">Analytical model</span>
+          <span className="ev ev-ill">Illustrative — no CXL hardware was measured</span>
+        </div>
+      </div>
+
+      <div style={styles.formula}>
+        t_fetch = 5.00 MiB ÷ BW_tier &nbsp;&nbsp;·&nbsp;&nbsp; t_regen = forward compute, 16 tokens
+      </div>
+
+      <div style={styles.sliders}>
+        <div style={styles.slider}>
+          <div style={styles.sliderLabel}>
+            <span>Assumed tier bandwidth (32–121 GB/s)</span>
+            <span style={{color: 'var(--accent-green)', fontWeight: 600, fontFamily: 'var(--font-mono)'}}>{bw} GB/s</span>
+          </div>
+          <input type="range" min="32" max="121" step="1" value={bw} onChange={e => setBw(+e.target.value)} style={styles.input} aria-label="Assumed tier bandwidth in gigabytes per second, from 32 to 121" />
+          <div style={styles.scale}><span>32 — pessimistic</span><span>64 — mid-range</span><span>121 — CXL 3.0 ×16 theoretical</span></div>
+        </div>
+        <div>
+          <div style={styles.sliderLabel}>
+            <span>Model FLOPs utilisation for regeneration</span>
+            <span style={{color: 'var(--accent-orange)', fontWeight: 600, fontFamily: 'var(--font-mono)'}}>{mfu}% MFU</span>
+          </div>
+          <div style={styles.btnRow}>
+            {[50, 40, 25].map(v => (
+              <button key={v} style={styles.btn(mfu === v)} onClick={() => setMfu(v)} aria-pressed={mfu === v}>
+                {v}% MFU — {REGEN_MS[v]} ms
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div style={styles.twoUp}>
+        <div style={styles.resFetch} role="img" aria-label={`Moving the block: ${fetchUs.toFixed(1)} microseconds at ${bw} gigabytes per second.`}>
+          <div style={styles.resVal}>{fetchUs.toFixed(1)} µs</div>
+          <div style={styles.resLabel}>Move the block</div>
+          <div style={styles.resSub}>5.00 MiB ÷ {bw} GB/s</div>
+        </div>
+        <div style={styles.resRegen} role="img" aria-label={`Regenerating the block: ${regenMs} milliseconds of forward compute at ${mfu} percent model FLOPs utilisation, and more for an arbitrary interior block.`}>
+          <div style={styles.resVal}>{regenMs} ms</div>
+          <div style={styles.resLabel}>Regenerate it</div>
+          <div style={styles.resSub}>16 tokens @ {mfu}% MFU</div>
+        </div>
+      </div>
+
+      <div style={styles.verdict}>
+        <div style={styles.verdictVal}>Moving is two to three orders of magnitude cheaper</div>
+        <div style={{color: 'var(--text-secondary)', fontSize: '0.85rem', marginTop: '0.5rem', lineHeight: 1.7}}>
+          At these inputs the arithmetic gives <strong style={styles.lightStrong}>{regenMs} ms ÷ {fetchUs.toFixed(0)} µs
+          &asymp; {ratio.toFixed(0)}&times;</strong> — <strong style={styles.lightStrong}>one point in a range, not a claim</strong>.
+          Quote the order of magnitude, never a precise multiple: the two quantities do not measure the same operation.
+        </div>
+      </div>
+
+      <div style={styles.breakdown}>
+        <div style={styles.stat}><div style={styles.statVal}>164 µs</div><div style={styles.statLabel}>5.00 MiB @ 32 GB/s — pessimistic</div></div>
+        <div style={styles.stat}><div style={styles.statVal}>82 µs</div><div style={styles.statLabel}>5.00 MiB @ 64 GB/s — mid-range</div></div>
+        <div style={styles.stat}><div style={styles.statVal}>43 µs</div><div style={styles.statLabel}>5.00 MiB @ 121 GB/s — CXL 3.0 ×16 theoretical</div></div>
+      </div>
+      <p style={{color: 'var(--text-secondary)', fontSize: '0.78rem', marginTop: '0.6rem', textAlign: 'center'}}>
+        Currently nearest: <strong style={styles.lightStrong}>{anchor}</strong>.
+      </p>
+
+      <div style={styles.note}>
+        <div style={styles.noteTitle}>What was retracted here, and why</div>
+        This figure previously computed an <strong style={styles.lightStrong}>effective access latency of 177 ns</strong>
+        from a 97% HBM hit rate, a 200 ns CXL access and a 25 µs NVMe tail, and reported
+        <strong style={styles.lightStrong}> 11.5&times;</strong> end-to-end. All of that is withdrawn.
+        <ul style={{margin: '0.6rem 0 0 1.2rem', lineHeight: 1.8}}>
+          <li><strong style={styles.lightStrong}>97% hit rate</strong> — never measured. There is no single hit rate.
+          The corrected simulation gives <strong style={styles.lightStrong}>8.5–91.6%</strong> depending on HBM budget,
+          policy and workload; at 32 GiB, LRU 38.34, LFU 16.09, EMA α=0.15 44.18, EMA α=0.01 35.91.</li>
+          <li><strong style={styles.lightStrong}>200 ns CXL access</strong> — demoted to an unmeasured assumption inside
+          the 32–121 GB/s range this page now sweeps. No CXL hardware was measured.</li>
+          <li><strong style={styles.lightStrong}>11.5&times; effective latency</strong> — derived from the 97%, so it
+          falls with it. No replacement ratio is claimed.</li>
+        </ul>
+        <div style={{marginTop: '0.7rem'}}>
+          Regenerating an <em>arbitrary interior</em> block costs at least the forward-compute figure above and
+          potentially far more: interior KV is not independently reproducible, because hidden states depend recursively on
+          all preceding context.
+        </div>
+      </div>
+
+      <p style={{color: 'var(--text-secondary)', fontSize: '0.78rem', marginTop: '1.25rem', textAlign: 'center', lineHeight: 1.7}}>
+        <em>Analytical model — tier bandwidth is an assumption across a stated range, not a measurement.
+        No CXL hardware was benchmarked. Simulated hit rates quoted above are Revision 2 and provisional:
+        a single data-structure defect in Revision 1 inverted four of five findings.</em>
+      </p>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<BlockMovementCalculator />);
+</script>
+</body>
+</html>

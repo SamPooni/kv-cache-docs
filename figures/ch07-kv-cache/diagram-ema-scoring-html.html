@@ -3,19 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EMA Attention Scoring</title>
+    <title>LRFU Decayed-Frequency Scoring</title>
+    <link rel="stylesheet" href="../../css/style.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
-            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #0a0a12 0%, #1a1a2e 100%);
+            font-family: var(--font-sans);
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
             min-height: 100vh;
-            color: #e0e0e0;
+            color: var(--text-primary);
             padding: 40px 20px;
         }
         
-        .container { max-width: 1100px; margin: 0 auto; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 0; }
         
         h1 {
             font-size: 1.8rem;
@@ -28,7 +29,7 @@
         
         .subtitle {
             text-align: center;
-            color: #666;
+            color: var(--text-secondary);
             margin-bottom: 40px;
         }
         
@@ -43,7 +44,7 @@
         .section-title {
             font-size: 1.1rem;
             font-weight: 600;
-            color: #22c55e;
+            color: var(--accent-green);
             margin-bottom: 20px;
         }
         
@@ -59,13 +60,13 @@
         }
         
         .formula {
-            font-family: 'SF Mono', monospace;
+            font-family: var(--font-mono);
             font-size: 1.1rem;
-            color: #22c55e;
+            color: var(--accent-green);
         }
         
         .formula-explanation {
-            color: #888;
+            color: var(--text-secondary);
             font-size: 0.85rem;
             flex: 1;
         }
@@ -107,12 +108,12 @@
             font-size: 1rem;
         }
         
-        .token-card.important .token-name { color: #22c55e; }
-        .token-card.unimportant .token-name { color: #ef4444; }
+        .token-card.important .token-name { color: var(--accent-green); }
+        .token-card.unimportant .token-name { color: var(--accent-red); }
         
         .token-pos {
             font-size: 0.8rem;
-            color: #666;
+            color: var(--text-secondary);
         }
         
         .score-timeline {
@@ -130,25 +131,25 @@
         
         .step-label {
             width: 60px;
-            color: #666;
+            color: var(--text-secondary);
         }
         
         .step-calc {
             flex: 1;
-            font-family: 'SF Mono', monospace;
+            font-family: var(--font-mono);
             font-size: 0.75rem;
-            color: #888;
+            color: var(--text-secondary);
         }
         
         .step-result {
             width: 80px;
             text-align: right;
             font-weight: 600;
-            font-family: 'SF Mono', monospace;
+            font-family: var(--font-mono);
         }
         
-        .token-card.important .step-result { color: #22c55e; }
-        .token-card.unimportant .step-result { color: #ef4444; }
+        .token-card.important .step-result { color: var(--accent-green); }
+        .token-card.unimportant .step-result { color: var(--accent-red); }
         
         /* Score bar visualization */
         .score-bar-container {
@@ -159,7 +160,7 @@
         
         .score-bar-label {
             font-size: 0.75rem;
-            color: #888;
+            color: var(--text-secondary);
             margin-bottom: 8px;
         }
         
@@ -178,7 +179,7 @@
             padding-left: 10px;
             font-size: 0.75rem;
             font-weight: 600;
-            color: white;
+            color: var(--bg-primary);
         }
         
         /* Decision section */
@@ -216,9 +217,9 @@
             margin-bottom: 5px;
         }
         
-        .decision-card.keep .decision-threshold { color: #22c55e; }
-        .decision-card.demote .decision-threshold { color: #fb923c; }
-        .decision-card.evict .decision-threshold { color: #ef4444; }
+        .decision-card.keep .decision-threshold { color: var(--accent-green); }
+        .decision-card.demote .decision-threshold { color: var(--accent-orange); }
+        .decision-card.evict .decision-threshold { color: var(--accent-red); }
         
         .decision-action {
             font-size: 0.9rem;
@@ -226,13 +227,13 @@
             margin-bottom: 5px;
         }
         
-        .decision-card.keep .decision-action { color: #22c55e; }
-        .decision-card.demote .decision-action { color: #fb923c; }
-        .decision-card.evict .decision-action { color: #ef4444; }
+        .decision-card.keep .decision-action { color: var(--accent-green); }
+        .decision-card.demote .decision-action { color: var(--accent-orange); }
+        .decision-card.evict .decision-action { color: var(--accent-red); }
         
         .decision-location {
             font-size: 0.8rem;
-            color: #888;
+            color: var(--text-secondary);
         }
         
         /* Half-life explanation */
@@ -245,7 +246,7 @@
         }
         
         .halflife-title {
-            color: #3b82f6;
+            color: var(--accent-cyan);
             font-weight: 600;
             margin-bottom: 10px;
             font-size: 0.95rem;
@@ -258,40 +259,49 @@
         }
         
         .halflife-calc {
-            font-family: 'SF Mono', monospace;
+            font-family: var(--font-mono);
             font-size: 0.85rem;
-            color: #93c5fd;
+            color: var(--accent-cyan);
             background: rgba(0,0,0,0.3);
             padding: 15px;
             border-radius: 8px;
         }
         
         .halflife-meaning {
-            color: #94a3b8;
+            color: var(--text-secondary);
             font-size: 0.85rem;
             flex: 1;
         }
         
         .highlight {
-            color: #fbbf24;
+            color: var(--accent-yellow);
             font-weight: 600;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>EMA-Based Attention Scoring</h1>
-        <p class="subtitle">How we track which tokens are actually important (not just recent)</p>
-        
+<div class="container" role="main">
+        <p class="sr-only">Figure: LRFU decayed-frequency scoring, worked through as an exponential moving average, comparing how an important and an unimportant block score over 100 decode steps under score_new = 0.05 x attention + 0.95 x score_old, that is alpha = 0.05. This is not a new algorithm. A decayed-frequency score is LRFU — Lee et al., "On the Existence of a Spectrum of Policies that Subsumes the LRU and LFU Policies", ACM SIGMETRICS 1999 — established prior art, and alpha is its documented knob between LRU-like and LFU-like behaviour. The block holding the instruction token "helpful" at position 45 runs 0.0020, 0.0044, 0.0170, 0.0389 and 0.0420 at steps 1, 2, 10, 50 and 100, ending at 0.0420 and kept; the block holding the filler token "the" at position 5,432 runs 0.0001, 0.0002, 0.0004, 0.0009 and 0.0010 over the same steps, ending at 0.0010 and evicted. The half-life is (1 - alpha)^n = 0.5, so 0.95^n = 0.5 and n = log 0.5 over log 0.95 = 13.5 steps, which at the illustrative 10 tokens per second per user is about 1.35 seconds. Scores above 0.03 are kept in HBM, 0.005 to 0.03 are demoted to the host or CXL DRAM tier, and below 0.005 are evicted to NVMe or discarded. Those two thresholds are uncalibrated design parameters, not derived or measured values, and their absolute scale is tied to alpha; they are restated here at the alpha = 0.05 scale. Alpha = 0.2 was never validated and is withdrawn. In simulation alpha is non-monotonic with an interior optimum at about 0.05: at a 32 gibibyte budget the hit rates are 37.20 percent at alpha 0.5, 38.84 at 0.3, 44.33 at 0.15, 55.96 at 0.05, 31.54 at 0.01, 25.47 at 0.003 and 24.44 at 0.001, and there is no convergence onto LFU as alpha approaches zero. The scoring function is also not where the largest effect lies: at the same budget, letting identity-keyed policy state survive HBM eviction is worth plus 34.15 percentage points to LFU and plus 24.85 to EMA alpha 0.01, more than the whole spread between scoring functions. The worked numbers on this page are illustrative; the simulated hit rates are provisional, because a single data-structure defect in Revision 1 inverted four of five findings. No single hit rate is claimed anywhere: the simulated range is 8.5 to 91.6 percent across budgets, policies and workloads.</p>
+        <h1>LRFU Decayed-Frequency Scoring</h1>
+        <p class="subtitle">Established prior art, worked through — not a new algorithm. How a block's score tracks sustained attention rather than mere recency.</p>
+
+        <div class="callout" style="border-left:4px solid var(--accent-purple); background:rgba(163,113,247,0.10); padding:1rem 1.25rem; border-radius:8px; margin-bottom:1.5rem;">
+            <div class="callout-title" style="color:var(--accent-purple); font-weight:700; margin-bottom:0.35rem;">This is LRFU, not a new algorithm — <span style="font-family:var(--font-mono); font-size:0.75rem; font-weight:400;">External literature</span></div>
+            <p style="color:var(--text-secondary);">A decayed-frequency score is <strong>LRFU</strong> — Lee et al., <em>“On the Existence of a Spectrum of
+            Policies that Subsumes the LRU and LFU Policies”</em>, ACM SIGMETRICS 1999. α is its documented LRU↔LFU knob.
+            This package contributes the worked example and the sweep, not the policy.</p>
+        </div>
+
         <div class="section">
-            <div class="section-title">The EMA Update Rule</div>
-            
+            <div class="section-title">The Update Rule</div>
+
             <div class="formula-box">
-                <div class="formula">score_new = 0.2 × attention + 0.8 × score_old</div>
+                <div class="formula">score_new = 0.05 × attention + 0.95 × score_old</div>
                 <div class="formula-explanation">
-                    Each decode step, we update the score using <strong>exponential moving average</strong>.<br>
-                    Tokens that consistently receive attention accumulate high scores.<br>
-                    Tokens that are ignored see their scores decay toward zero.
+                    Each decode step, the score is updated as an <strong>exponential moving average</strong> — the LRFU
+                    spectrum written recursively.<br>
+                    Blocks that consistently receive attention accumulate high scores.<br>
+                    Blocks that are ignored see their scores decay toward zero.
                 </div>
             </div>
             
@@ -304,35 +314,35 @@
                     <div class="score-timeline">
                         <div class="score-step">
                             <div class="step-label">Step 1</div>
-                            <div class="step-calc">0.2 × 0.04 + 0.8 × 0</div>
-                            <div class="step-result">0.008</div>
+                            <div class="step-calc">0.05 × 0.040 + 0.95 × 0</div>
+                            <div class="step-result">0.0020</div>
                         </div>
                         <div class="score-step">
                             <div class="step-label">Step 2</div>
-                            <div class="step-calc">0.2 × 0.05 + 0.8 × 0.008</div>
-                            <div class="step-result">0.016</div>
+                            <div class="step-calc">0.05 × 0.050 + 0.95 × 0.0020</div>
+                            <div class="step-result">0.0044</div>
                         </div>
                         <div class="score-step">
                             <div class="step-label">Step 10</div>
-                            <div class="step-calc">0.2 × 0.03 + 0.8 × 0.042</div>
-                            <div class="step-result">0.040</div>
+                            <div class="step-calc">0.05 × 0.030 + 0.95 × 0.0163</div>
+                            <div class="step-result">0.0170</div>
                         </div>
                         <div class="score-step">
                             <div class="step-label">Step 50</div>
-                            <div class="step-calc">0.2 × 0.04 + 0.8 × 0.11</div>
-                            <div class="step-result">0.096</div>
+                            <div class="step-calc">0.05 × 0.040 + 0.95 × 0.0388</div>
+                            <div class="step-result">0.0389</div>
                         </div>
                         <div class="score-step">
                             <div class="step-label">Step 100</div>
-                            <div class="step-calc">0.2 × 0.05 + 0.8 × 0.14</div>
-                            <div class="step-result">0.122</div>
+                            <div class="step-calc">0.05 × 0.050 + 0.95 × 0.0416</div>
+                            <div class="step-result">0.0420</div>
                         </div>
                     </div>
                     <div class="score-bar-container">
                         <div class="score-bar-label">Final Score after 100 steps</div>
                         <div class="score-bar-bg">
-                            <div class="score-bar" style="width: 61%; background: linear-gradient(90deg, #22c55e, #16a34a);">
-                                0.122 → KEEP
+                            <div class="score-bar" role="img" aria-label="Final LRFU score after 100 steps for the block holding &quot;helpful&quot;, 0.0420, decision keep" style="width: 84%; background: linear-gradient(90deg, #22c55e, #16a34a);">
+                                0.0420 → KEEP
                             </div>
                         </div>
                     </div>
@@ -346,54 +356,59 @@
                     <div class="score-timeline">
                         <div class="score-step">
                             <div class="step-label">Step 1</div>
-                            <div class="step-calc">0.2 × 0.002 + 0.8 × 0</div>
-                            <div class="step-result">0.0004</div>
+                            <div class="step-calc">0.05 × 0.0020 + 0.95 × 0</div>
+                            <div class="step-result">0.0001</div>
                         </div>
                         <div class="score-step">
                             <div class="step-label">Step 2</div>
-                            <div class="step-calc">0.2 × 0.001 + 0.8 × 0.0004</div>
-                            <div class="step-result">0.0005</div>
+                            <div class="step-calc">0.05 × 0.0010 + 0.95 × 0.0001</div>
+                            <div class="step-result">0.0002</div>
                         </div>
                         <div class="score-step">
                             <div class="step-label">Step 10</div>
-                            <div class="step-calc">0.2 × 0.001 + 0.8 × 0.0008</div>
-                            <div class="step-result">0.0008</div>
+                            <div class="step-calc">0.05 × 0.0010 + 0.95 × 0.0004</div>
+                            <div class="step-result">0.0004</div>
                         </div>
                         <div class="score-step">
                             <div class="step-label">Step 50</div>
-                            <div class="step-calc">0.2 × 0.000 + 0.8 × 0.0006</div>
-                            <div class="step-result">0.0005</div>
+                            <div class="step-calc">0.05 × 0.0000 + 0.95 × 0.0010</div>
+                            <div class="step-result">0.0009</div>
                         </div>
                         <div class="score-step">
                             <div class="step-label">Step 100</div>
-                            <div class="step-calc">0.2 × 0.001 + 0.8 × 0.0004</div>
-                            <div class="step-result">0.0005</div>
+                            <div class="step-calc">0.05 × 0.0010 + 0.95 × 0.0010</div>
+                            <div class="step-result">0.0010</div>
                         </div>
                     </div>
                     <div class="score-bar-container">
                         <div class="score-bar-label">Final Score after 100 steps</div>
                         <div class="score-bar-bg">
-                            <div class="score-bar" style="width: 2.5%; background: linear-gradient(90deg, #ef4444, #dc2626);">
+                            <div class="score-bar" role="img" aria-label="Final LRFU score after 100 steps for the block holding &quot;the&quot;, 0.0010, decision evict" style="width: 2%; background: linear-gradient(90deg, #ef4444, #dc2626);">
                             </div>
                         </div>
-                        <div style="font-size: 0.75rem; color: #ef4444; margin-top: 5px;">0.0005 → EVICT</div>
+                        <div style="font-size: 0.75rem; color: var(--accent-red); margin-top: 5px;">0.0010 → EVICT</div>
                     </div>
                 </div>
             </div>
             
             <div class="halflife-box">
-                <div class="halflife-title">Why α = 0.2? The Half-Life Calculation</div>
+                <div class="halflife-title">Why α = 0.05? The Half-Life Calculation</div>
                 <div class="halflife-content">
                     <div class="halflife-calc">
                         (1 - α)^n = 0.5<br>
-                        0.8^n = 0.5<br>
-                        n = log(0.5) / log(0.8)<br>
-                        n = 3.1 steps
+                        0.95^n = 0.5<br>
+                        n = log(0.5) / log(0.95)<br>
+                        n = 13.5 steps
                     </div>
                     <div class="halflife-meaning">
-                        At <span class="highlight">20 tokens/second</span>, the half-life is <span class="highlight">155 milliseconds</span>.<br><br>
-                        This means: if a token doesn't receive attention for 155ms, its score drops by 50%. 
-                        Tokens that are consistently important maintain high scores; tokens that were briefly accessed but then ignored see their scores decay quickly.
+                        At an illustrative <span class="highlight">10 tokens/second per user</span>, the half-life is about <span class="highlight">1.35 seconds</span>.<br><br>
+                        If a block receives no attention for 1.35 s, its score halves. Blocks that are consistently
+                        important hold high scores; blocks briefly touched and then ignored decay away.<br><br>
+                        <strong>α = 0.05 is the simulated optimum, not a derived constant.</strong> α = 0.2 was never
+                        validated and is withdrawn. In the sweep at 32 GiB, α is <strong>non-monotonic</strong>:
+                        0.5→37.20, 0.3→38.84, 0.15→44.33, <strong>0.05→55.96</strong>, 0.01→31.54, 0.003→25.47,
+                        0.001→24.44. There is <strong>no</strong> convergence onto LFU as α→0.
+                        <span style="font-family:var(--font-mono);font-size:0.72rem;">Simulated (provisional)</span>
                     </div>
                 </div>
             </div>
@@ -403,23 +418,69 @@
             <div class="section-title">Eviction Decision Thresholds</div>
             
             <div class="decision-section">
-                <div class="decision-card keep">
-                    <div class="decision-threshold">> 0.10</div>
+                <div class="decision-card keep" role="img" aria-label="Score above 0.03: keep the block in HBM">
+                    <div class="decision-threshold">&gt; 0.03</div>
                     <div class="decision-action">KEEP</div>
-                    <div class="decision-location">Store in fast HBM</div>
+                    <div class="decision-location">Block stays in HBM</div>
                 </div>
-                <div class="decision-card demote">
-                    <div class="decision-threshold">0.02 - 0.10</div>
+                <div class="decision-card demote" role="img" aria-label="Score 0.005 to 0.03: demote the block to the host or CXL DRAM tier — its policy state travels with it">
+                    <div class="decision-threshold">0.005 – 0.03</div>
                     <div class="decision-action">DEMOTE</div>
-                    <div class="decision-location">Move to CXL DRAM</div>
+                    <div class="decision-location">Host / CXL DRAM — <strong>score travels with the block</strong></div>
                 </div>
-                <div class="decision-card evict">
-                    <div class="decision-threshold">< 0.02</div>
+                <div class="decision-card evict" role="img" aria-label="Score below 0.005: evict the block to NVMe or discard it">
+                    <div class="decision-threshold">&lt; 0.005</div>
                     <div class="decision-action">EVICT</div>
-                    <div class="decision-location">Move to Flash or discard</div>
+                    <div class="decision-location">NVMe or discard</div>
                 </div>
             </div>
+
+            <div class="callout warning">
+                <div class="callout-title">0.03 and 0.005 are uncalibrated design parameters</div>
+                <p>Neither threshold is derived, measured or fitted. They are placeholders chosen to make the
+                three-tier decision legible, and they are stated here as assumptions so that a reader can argue
+                with them rather than inherit them. They have been <strong>rescaled to α = 0.05</strong>; the
+                earlier 0.10 / 0.02 pair belonged to the withdrawn α = 0.2 and does not carry over.</p>
+                <p><strong>What they control.</strong> The <em>keep</em> threshold (0.03) sets the size of the
+                HBM-resident working set: it is the score a block must hold to stay in HBM. The <em>evict</em>
+                threshold (0.005) sets the floor below which a block is pushed off the DRAM tier to NVMe. The band
+                between them is the demote zone, and its width sets how much traffic the middle tier absorbs.</p>
+                <p><strong>Which way they push.</strong> Raising the keep threshold frees HBM sooner, at the cost
+                of hit rate — more accesses fall through to a tier whose latency is <em>assumed, not measured</em>
+                (32 / 64 / 121 GB/s → 164 / 82 / 43 µs for a 5.00 MiB block). Lowering it holds more blocks in HBM
+                and raises hit rate at the cost of capacity. Raising the evict threshold reclaims DRAM faster and
+                shortens metadata state, at the cost of a longer miss tail on NVMe; lowering it keeps more of the
+                context warm and moves capacity pressure onto the DRAM tier. Widening the demote band trades HBM
+                pressure for tier pressure; narrowing it makes the policy behave more like a two-tier keep/evict
+                decision. What is <em>not</em> claimed is any particular hit rate at any setting — no single hit
+                rate exists. Across budgets, policies and workloads the simulated range is
+                <strong>8.5–91.6%</strong>. <span style="font-family:var(--font-mono);font-size:0.72rem;">Simulated (provisional)</span></p>
+                <p><strong>Threshold tuning is not where the leverage is.</strong> At a 32 GiB budget the whole
+                spread between scoring functions is smaller than one protocol change: letting identity-keyed policy
+                state survive HBM eviction is worth <strong>+34.15 pts to LFU</strong> (15.56 → 49.71) and
+                <strong>+24.85 pts to EMA α=0.01</strong> (31.54 → 56.39), while EMA α=0.15 is unchanged
+                (−0.21 pts). Tune the protocol before tuning α.</p>
+                <p><strong>How they would be calibrated.</strong> Only against real attention traces. Replay
+                attention distributions from a production 128 K workload, sweep the pair, and pick the point that
+                meets a stated service objective at the smallest working set. The correct values almost certainly
+                differ per model. Note also that the absolute scale of these thresholds is tied to α: an EMA lags
+                its input, so a threshold of 0.03 is not "3% of attention". Changing α changes what these numbers
+                mean — and α is non-monotonic, so there is no safe interpolation between settings.
+                See <a href="../../appendix/k-methodology.html">Appendix K, section K.7 — Uncalibrated
+                parameters</a> for the consolidated table.</p>
+            </div>
         </div>
+
+        <p style="text-align:center;color:var(--text-secondary);font-size:0.8rem;margin-top:1.5rem;padding-top:0.75rem;border-top:1px solid rgba(148,163,184,0.25);">
+            <strong>Illustrative</strong> — the worked scores on this page are pedagogical, never a result.
+            α = 0.05, half-life ln0.5/ln0.95 = 13.5 decode steps. The policy is <strong>LRFU</strong> (Lee et al.,
+            ACM SIGMETRICS 1999) — <em>External literature</em>. Hit-rate figures quoted here are
+            <strong>Simulated (provisional)</strong>: a single data-structure defect in Revision 1 inverted four of
+            five findings, so Revision 2 is provisional, not settled. <strong>Retracted and removed from this
+            figure:</strong> the 97% hit rate, the 72→80→87→93→97 ladder and its +8/+7/+6/+4 increments (never run
+            as an ablation), the "+7 pts from EMA scoring" step, α = 0.2, and the 200 ns / 177 ns latency figures —
+            no CXL hardware was measured. Canonical numbers v6.0.
+        </p>
     </div>
 </body>
 </html>

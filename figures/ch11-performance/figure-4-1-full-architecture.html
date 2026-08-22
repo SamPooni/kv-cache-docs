@@ -1,1 +1,154 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>KV-State Architecture</title><style>body{margin:0;background:#0d1117;color:#e6edf3;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}.wrap{max-width:1100px;margin:auto;padding:34px}.k{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#7d8590}.title{font-size:34px;font-weight:750;margin:7px 0 10px}.sub{color:#aab4c0;line-height:1.55;max-width:900px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin:24px 0}.card{background:#161b22;border:1px solid #30363d;border-radius:14px;padding:18px}.big{font:700 28px ui-monospace,SFMono-Regular,Consolas,monospace;color:#58a6ff}.label{margin-top:6px;color:#c9d1d9}.note{font-size:13px;color:#8b949e;margin-top:7px;line-height:1.45}.flow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:22px 0}.box{padding:14px 16px;border-radius:12px;border:1px solid #30363d;background:#161b22;font-weight:650}.arrow{color:#7d8590;font-size:22px}.warn{border-left:4px solid #d29922;background:#1d1a12;padding:14px 16px;border-radius:8px;line-height:1.5}.good{border-left-color:#3fb950}.table{width:100%;border-collapse:collapse;margin-top:18px}.table th,.table td{padding:11px 12px;border-bottom:1px solid #30363d;text-align:left}.table th{color:#8b949e;font-size:12px;text-transform:uppercase;letter-spacing:.06em}.tag{display:inline-block;padding:3px 7px;border-radius:999px;background:#21262d;color:#8b949e;font-size:11px;margin-left:6px}</style></head><body><div class="wrap"><div class="k">v5.0.2 · architecture status</div><div class="title">KV-State Architecture — Evidence-Aware View</div><div class="sub">The architecture separates policy from mechanism and treats external memory as a candidate tier, not as a measured performance result.</div><div class="flow"><div class="box">Serving scheduler</div><div class="arrow">→</div><div class="box">KV control plane<br><span class="note">identity · QoS · reuse · residency intent</span></div><div class="arrow">→</div><div class="box">KV data plane<br><span class="note">allocation · promotion · demotion · transfer</span></div><div class="arrow">→</div><div class="box">HBM / host DRAM / CXL / storage</div></div><div class="grid"><div class="card"><div class="big">Host</div><div class="label">Owns policy</div><div class="note">Portable identity-keyed state, priorities and placement intent.</div></div><div class="card"><div class="big">Device</div><div class="label">Owns mechanism</div><div class="note">Local allocation, transfer execution and representation mechanics.</div></div><div class="card"><div class="big">No 8×/16×</div><div class="label">No capacity-multiplier claim</div><div class="note">Concurrency and cost multipliers from v4 are retracted.</div></div></div><div class="warn"><strong>Unmeasured:</strong> CXL-path latency, CXL throughput on the target system, endpoint economics and end-to-end production speedup. These require hardware validation.</div></div></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Figure 11.1 — The KV-State Control Plane</title>
+<script src="../../vendor/react.production.min.js"></script>
+<script src="../../vendor/react-dom.production.min.js"></script>
+<script src="../../vendor/babel.min.js"></script>
+<link rel="stylesheet" href="../../css/style.css">
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: var(--font-sans); background: linear-gradient(135deg, var(--bg-primary), var(--bg-tertiary)); min-height: 100vh; color: var(--text-primary); }</style>
+</head>
+<body>
+<div id="root" role="main"></div>
+<script type="text/babel">
+function FullArchitecture() {
+  const info = ['Agent / model state', 'Context-region summaries', 'Candidate regions', 'KV blocks (16 tokens = 5.00 MiB)', 'Token-level KV'];
+  const phys = ['HBM', 'Host / CXL DRAM', 'NVMe / remote storage'];
+  const stages = [
+    { name: 'SELECT', desc: 'Which candidate regions / KV blocks are worth considering at all — relevance and reuse-prediction signals.', ev: 'Design / unvalidated', color: 'var(--accent-green)' },
+    { name: 'PLACE', desc: 'Which tier a selected block occupies — and whether its identity-keyed policy state carries across the tier boundary. This is the one stage with an empirical result.', ev: 'Simulated (provisional)', color: 'var(--accent-purple)', lead: true },
+    { name: 'MOVE', desc: 'Execute the transfer: scheduling, batching, hiding movement behind compute.', ev: 'Design / unvalidated', color: 'var(--accent-blue)' },
+    { name: 'ATTEND', desc: 'The model consumes the placed KV state. Every head of every layer is required for every token.', ev: 'Design / unvalidated', color: 'var(--accent-teal)' },
+    { name: 'OBSERVE', desc: 'Record what was actually used and attended; feed it back into agent/model state and the next SELECT.', ev: 'Design / unvalidated', color: 'var(--accent-orange)' }
+  ];
+  const stats = [
+    { v: '+34.15 pts', l: 'LFU, persistent metadata @32 GiB', ev: 'Simulated (provisional)' },
+    { v: '+24.85 pts', l: 'EMA α=0.01, persistent metadata', ev: 'Simulated (provisional)' },
+    { v: '6×', l: 'Memory expansion', ev: 'Analytical model' },
+    { v: '236.5 GB/s', l: '87% of 273 GB/s spec', ev: 'Measured — DGX Spark GB10' }
+  ];
+  const styles = {
+    container: { maxWidth: '860px', margin: '0 auto', padding: '2rem' },
+    header: { textAlign: 'center', marginBottom: '2rem' },
+    cols: { display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '1rem', alignItems: 'start' },
+    panel: { background: 'var(--bg-card)', borderRadius: '12px', padding: '1rem' },
+    panelTitle: (c) => ({ fontWeight: 700, color: c, fontSize: '0.8rem', fontFamily: 'var(--font-mono)', letterSpacing: '0.05em', marginBottom: '0.6rem' }),
+    hierItem: { background: 'var(--bg-code)', padding: '0.45rem 0.7rem', borderRadius: '8px', fontSize: '0.78rem', marginBottom: '0.3rem' },
+    arrow: { textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8rem', lineHeight: 1 },
+    stack: { display: 'flex', flexDirection: 'column', gap: '0.5rem' },
+    layer: (color, lead) => ({ background: lead ? 'rgba(163,113,247,0.10)' : 'var(--bg-card)', borderLeft: `4px solid ${color}`, borderRadius: '0 12px 12px 0', padding: '0.9rem 1.1rem' }),
+    layerName: (color) => ({ fontWeight: 700, color, marginBottom: '0.3rem', fontFamily: 'var(--font-mono)', letterSpacing: '0.05em' }),
+    tag: { display: 'inline-block', padding: '0.1rem 0.5rem', borderRadius: '10px', fontSize: '0.62rem', fontFamily: 'var(--font-mono)', border: '1px solid var(--border-highlight)', color: 'var(--text-secondary)', marginTop: '0.4rem' },
+    lead: { marginTop: '1.5rem', background: 'var(--bg-card)', borderRadius: '12px', padding: '1.1rem 1.25rem', borderLeft: '4px solid var(--accent-purple)' },
+    tbl: { width: '100%', borderCollapse: 'collapse', marginTop: '0.7rem', fontSize: '0.82rem' },
+    th: { textAlign: 'left', padding: '0.4rem 0.6rem', borderBottom: '1px solid var(--border-primary)', color: 'var(--text-secondary)', fontWeight: 600 },
+    td: { padding: '0.4rem 0.6rem', borderBottom: '1px solid var(--border-secondary)' },
+    stats: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginTop: '1.5rem' },
+    stat: { background: 'var(--bg-card)', borderRadius: '12px', padding: '1rem', textAlign: 'center' },
+    statVal: { fontSize: '1.25rem', fontWeight: 700, color: 'var(--accent-green)' },
+    statLabel: { fontSize: '0.72rem', color: 'var(--text-secondary)' },
+    caveat: { marginTop: '1.25rem', padding: '0.85rem 1rem', borderLeft: '3px solid var(--accent-orange)', background: 'rgba(210,153,34,0.08)', borderRadius: '4px', color: 'var(--text-secondary)', fontSize: '0.75rem', lineHeight: 1.6 },
+    note: { marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-primary)', color: 'var(--text-secondary)', fontSize: '0.75rem', lineHeight: 1.6 }
+  };
+  return (
+    <div style={styles.container}>
+      <p className="sr-only">Figure: the KV-State Control Plane, the v6 framing of this package's contribution. Two orthogonal hierarchies feed one pipeline. The information hierarchy asks what is worth considering and runs from agent and model state, through context-region summaries, to candidate regions, to KV blocks of 16 tokens or 5.00 mebibytes each, down to token-level KV. The physical hierarchy asks where it should live and runs from HBM, to host or CXL DRAM, to NVMe or remote storage. The control plane maps the first onto the second in five stages: SELECT decides which regions or blocks are worth considering; PLACE decides which tier a block occupies and whether its identity-keyed policy state carries across the tier boundary; MOVE executes the transfer, including scheduling, batching and hiding movement behind compute; ATTEND is the model consuming the placed state, where every head of every layer is required for every token; and OBSERVE records what was actually used and feeds it back into the next SELECT. Only PLACE carries any empirical result, and it is simulated and provisional: at a 32 gibibyte HBM budget, letting identity-keyed policy state survive eviction raises LFU from 15.56 to 49.71 percent hit rate, a gain of 34.15 percentage points, and EMA with alpha 0.01 from 31.54 to 56.39 percent, a gain of 24.85 percentage points, while EMA alpha 0.15 is unchanged at minus 0.21 percentage points. That is larger than the entire spread between scoring functions, and it is a protocol result, testable with no CXL hardware. SELECT, MOVE, ATTEND, OBSERVE and the feedback loop are design, unvalidated — none has been built or measured. Supporting values: 6 times memory expansion, analytical; and 236.5 gigabytes per second achieved streaming bandwidth, 87 percent of the 273 gigabytes per second specification, measured on DGX Spark GB10. The v4.0 headline set shown here previously — a 97 percent hit rate, 16 times user capacity, EMA alpha 0.2, a 200 nanosecond CXL access, and a 36 percent CapEx reduction from $160,000 to $103,000 — is retracted in full. No CXL hardware was measured. All simulation numbers are provisional because a single data-structure defect in Revision 1 inverted four of five findings.</p>
+      <div style={styles.header}>
+        <div style={{display: 'inline-block', padding: '0.25rem 0.75rem', background: 'rgba(63,185,80,0.18)', color: 'var(--accent-green)', fontSize: '0.75rem', fontFamily: 'var(--font-mono)', borderRadius: '20px', marginBottom: '0.5rem'}}>FIGURE 11.1</div>
+        <h1 style={{fontSize: '1.5rem', fontWeight: 700}}>The KV-State Control Plane</h1>
+        <p style={{color: 'var(--text-secondary)', fontSize: '0.875rem'}}>Two orthogonal hierarchies, one pipeline. A <strong>proposed design</strong> — only <strong style={{color:'var(--accent-purple)'}}>PLACE</strong> carries an empirical result, and that result is simulated.</p>
+      </div>
+
+      <div style={styles.cols}>
+        <div>
+          <div style={styles.panel} role="img" aria-label="Information hierarchy, what is worth considering: agent and model state, then context-region summaries, then candidate regions, then KV blocks of 16 tokens or 5.00 mebibytes, then token-level KV.">
+            <div style={styles.panelTitle('var(--accent-cyan)')}>INFORMATION HIERARCHY</div>
+            <div style={{fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.5rem'}}>“what is worth considering?”</div>
+            {info.map((x, i) => (
+              <div key={i}>
+                <div style={styles.hierItem}>{x}</div>
+                {i < info.length - 1 && <div style={styles.arrow} aria-hidden="true">▼</div>}
+              </div>
+            ))}
+          </div>
+          <div style={{...styles.panel, marginTop: '1rem'}} role="img" aria-label="Physical hierarchy, where it should live: HBM, then host or CXL DRAM, then NVMe or remote storage.">
+            <div style={styles.panelTitle('var(--accent-orange)')}>PHYSICAL HIERARCHY</div>
+            <div style={{fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: '0.5rem'}}>“where should it live?”</div>
+            {phys.map((x, i) => (
+              <div key={i}>
+                <div style={styles.hierItem}>{x}</div>
+                {i < phys.length - 1 && <div style={styles.arrow} aria-hidden="true">▼</div>}
+              </div>
+            ))}
+            <div style={{fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.5rem'}}>Tier latency is <em>assumed</em>, not measured: 32 / 64 / 121 GB/s → a 5.00 MiB block is 164 / 82 / 43 µs.</div>
+          </div>
+        </div>
+
+        <div style={styles.stack}>
+          {stages.map((l, i) => (
+            <div key={i} role="img" aria-label={`Control-plane stage ${i + 1} of 5, ${l.name}. ${l.desc} Evidence: ${l.ev}.`} style={styles.layer(l.color, l.lead)}>
+              <div style={styles.layerName(l.color)}>{l.name}</div>
+              <div style={{fontSize: '0.8rem', lineHeight: 1.5}}>{l.desc}</div>
+              <span style={styles.tag}>{l.ev}</span>
+            </div>
+          ))}
+          <div style={{...styles.arrow, fontSize: '0.72rem', color: 'var(--text-muted)'}}>OBSERVE feeds back <span aria-hidden="true">↰</span> into agent / model state</div>
+        </div>
+      </div>
+
+      <div style={styles.lead}>
+        <div style={{fontWeight: 700, color: 'var(--accent-purple)', marginBottom: '0.3rem'}}>Inside PLACE — the largest effect in the study</div>
+        <div style={{fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.6}}>
+          Letting identity-keyed policy state survive HBM eviction, rather than re-admitting a block as if newly
+          created. It is larger than the spread between policies, and it is a <strong>protocol</strong> result —
+          testable with no CXL hardware.
+        </div>
+        <table style={styles.tbl}>
+          <caption className="sr-only">Hit rate at 32 GiB HBM with policy metadata reset on eviction versus persisting across it.</caption>
+          <thead><tr><th scope="col" style={styles.th}>Policy</th><th scope="col" style={styles.th}>Metadata reset</th><th scope="col" style={styles.th}>Metadata persists</th><th scope="col" style={styles.th}>Δ</th></tr></thead>
+          <tbody>
+            <tr><td style={styles.td}>LFU</td><td style={styles.td}>15.56%</td><td style={styles.td}>49.71%</td><td style={{...styles.td, color: 'var(--accent-green)', fontWeight: 700}}>+34.15 pts</td></tr>
+            <tr><td style={styles.td}>EMA (LRFU) α=0.01</td><td style={styles.td}>31.54%</td><td style={styles.td}>56.39%</td><td style={{...styles.td, color: 'var(--accent-green)', fontWeight: 700}}>+24.85 pts</td></tr>
+            <tr><td style={styles.td}>EMA (LRFU) α=0.15</td><td style={styles.td}>44.33%</td><td style={styles.td}>44.12%</td><td style={{...styles.td, color: 'var(--text-muted)'}}>−0.21 pts</td></tr>
+          </tbody>
+        </table>
+        <div style={{fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.4rem'}}>32 GiB HBM · <span style={styles.tag}>Simulated (provisional)</span></div>
+      </div>
+
+      <div style={styles.stats}>
+        {stats.map((s, i) => (
+          <div key={i} style={styles.stat} role="img" aria-label={`${s.v}: ${s.l}. Evidence: ${s.ev}.`}>
+            <div style={styles.statVal}>{s.v}</div>
+            <div style={styles.statLabel}>{s.l}</div>
+            <span style={styles.tag}>{s.ev}</span>
+          </div>
+        ))}
+      </div>
+
+      <div style={styles.caveat}>
+        <strong style={{color: 'var(--accent-orange)'}}>Standing caveat — Simulated (provisional).</strong> A single data-structure defect in Revision 1
+        inverted four of five findings. Revision 2 is provisional, not settled: no Belady bound, no bandwidth or
+        queueing model, whole-context residency assumed, synthetic workload, 2–3 seeds, no hardware validation.
+      </div>
+
+      <div style={styles.note}>
+        <strong>What this figure used to show, and why it does not.</strong> The four-layer product stack here
+        previously claimed a 97% HBM hit rate, 16× user capacity, a 200 ns CXL load/store access, EMA scoring at
+        α = 0.2, RoPE-informed prefetch, and a 36% CapEx reduction from $160,000 to $103,000. All are retracted.
+        <strong>No CXL hardware was measured.</strong> No single hit rate exists — 8.5–91.6% across budgets, policies
+        and workloads. α = 0.2 was never validated; the simulated optimum is α ≈ 0.05 and α is non-monotonic
+        (0.5→37.20, 0.3→38.84, 0.15→44.33, 0.05→55.96, 0.01→31.54, 0.003→25.47, 0.001→24.44). The scoring function
+        is <strong>LRFU</strong> (Lee et al., ACM SIGMETRICS 1999) — established prior art, α its documented LRU↔LFU
+        knob <span style={styles.tag}>External literature</span>. RoPE carries no information about which blocks are
+        needed next and does not appear in this pipeline as a prefetch signal. The surviving capacity arithmetic is
+        320 KiB/token, 2.50 GiB at 8K, 40.0 GiB at 128K, crossover with weights ≈ 427,000 tokens.
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<FullArchitecture />);
+</script>
+</body>
+</html>

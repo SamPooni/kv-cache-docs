@@ -1,23 +1,30 @@
-================================================================================
-CH11 - PERFORMANCE - FIGURE INDEX
-================================================================================
+==============================================================================
+CH11 - RESULTS SUMMARY - FIGURE INDEX
+==============================================================================
 
-Fig 11.1: Algorithm Contribution
-      Source: figure-5-1-performance-benchmarks.html
+Generated from the filesystem on 2026-08-22.
 
-Fig 11.2: Effective Latency Results
-      Source: figure-5-1-performance-benchmarks.html
+alpha-grid.html   [NEW v6.0]
+      Alpha Grid
+      evidence: Figure 11.1 · Simulated (provisional)
+      embedded: chapters/ch11-performance.html
 
-Fig 11.3: System Comparison
-      Source: figure-4-1-full-architecture.html
+figure-4-1-full-architecture.html
+      Figure 11.1 — The KV-State Control Plane
+      embedded: (gallery only)
 
-Fig 11.4: Key Metrics
-      Source: figure-5-1-performance-benchmarks.html
+figure-5-1-performance-benchmarks.html
+      Figure 11.2 — Residency-State Persistence: The Largest Effect in the Study
+      embedded: (gallery only)
 
-Fig 11.5: Performance Sensitivity to Cache Hit Rate
-      Source: figure-5-1-performance-benchmarks.html
+persistent-metadata.html   [NEW v6.0]
+      Persistent Metadata
+      evidence: Figure 11.2 · Simulated (provisional)
+      embedded: chapters/ch11-performance.html
 
-Fig 11.6: Summary: Key Results
-      Source: figure-5-1-performance-benchmarks.html
+policy-sweep.html
+      Policy Sweep
+      evidence: Figure 11.1 · Simulated (provisional)
+      embedded: (gallery only)
 
-TOTAL: 6 figures
+TOTAL: 5 figures (2 new in v6.0)

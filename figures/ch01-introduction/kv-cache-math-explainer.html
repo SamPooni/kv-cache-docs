@@ -4,13 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>KV-Cache Math Explainer</title>
-<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: system-ui, sans-serif; background: linear-gradient(135deg, #0f172a, #1e293b); min-height: 100vh; color: #e2e8f0; }</style>
+<script src="../../vendor/react.production.min.js"></script>
+<script src="../../vendor/react-dom.production.min.js"></script>
+<script src="../../vendor/babel.min.js"></script>
+<link rel="stylesheet" href="../../vendor/fonts.css">
+<link rel="stylesheet" href="../../css/style.css">
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: var(--font-sans); background: var(--bg-primary); min-height: 100vh; color: var(--text-primary); }</style>
 </head>
 <body>
-<div id="root"></div>
+<div id="root" role="main"></div>
 <script type="text/babel">
 const { useState } = React;
 function KVCacheMath() {
@@ -26,21 +28,23 @@ function KVCacheMath() {
   const styles = {
     container: { maxWidth: '700px', margin: '0 auto', padding: '2rem' },
     header: { textAlign: 'center', marginBottom: '2rem' },
-    badge: { display: 'inline-block', padding: '0.25rem 0.75rem', background: 'rgba(59,130,246,0.2)', color: '#60a5fa', fontSize: '0.75rem', fontFamily: 'monospace', borderRadius: '20px', marginBottom: '0.5rem' },
-    formula: { background: '#0f172a', borderRadius: '12px', padding: '1.5rem', marginBottom: '2rem', textAlign: 'center' },
-    formulaText: { fontFamily: 'monospace', fontSize: '1rem', color: '#60a5fa', marginBottom: '1rem' },
+    badge: { display: 'inline-block', padding: '0.25rem 0.75rem', background: 'rgba(59,130,246,0.2)', color: 'var(--accent-cyan)', fontSize: '0.75rem', fontFamily: 'var(--font-mono)', borderRadius: '20px', marginBottom: '0.5rem' },
+    formula: { background: 'var(--bg-code)', borderRadius: '12px', padding: '1.5rem', marginBottom: '2rem', textAlign: 'center' },
+    formulaText: { fontFamily: 'var(--font-mono)', fontSize: '1rem', color: 'var(--accent-cyan)', marginBottom: '1rem' },
     slider: { width: '100%', marginTop: '0.5rem' },
     paramGrid: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '2rem' },
-    param: { background: '#1e293b', borderRadius: '12px', padding: '1rem' },
-    paramLabel: { fontSize: '0.875rem', color: '#94a3b8', marginBottom: '0.25rem' },
-    paramValue: { fontSize: '1.25rem', fontWeight: 700, color: '#60a5fa', fontFamily: 'monospace' },
+    param: { background: 'var(--bg-card)', borderRadius: '12px', padding: '1rem' },
+    paramLabel: { fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' },
+    paramValue: { fontSize: '1.25rem', fontWeight: 700, color: 'var(--accent-cyan)', fontFamily: 'var(--font-mono)' },
     result: { background: 'linear-gradient(135deg, #10b981, #059669)', borderRadius: '16px', padding: '2rem', textAlign: 'center' },
     resultValue: { fontSize: '3rem', fontWeight: 700, color: 'white' },
-    resultLabel: { color: 'rgba(255,255,255,0.8)', marginTop: '0.5rem' }
+    resultLabel: { color: 'rgba(255,255,255,0.8)', marginTop: '0.5rem' },
+    note: { marginTop: '1.5rem', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.5 }
   };
 
   return (
     <div style={styles.container}>
+      <p className="sr-only">Figure: interactive KV-cache size calculator. It evaluates KV_size = 2 × L × n_kv × d_head × seq_len × sizeof(dtype); at the opening settings of 80 layers, 8 KV heads, 128 head dimensions, 32,768 sequence length and 2 bytes per element it reports 10.74 GB of KV-cache for a single user, and the same formula gives the reference point of 320 KiB per token, or 43 GB at 128K tokens for Llama-2-70B in BF16. The point is that cache size grows linearly with every one of these parameters, so long contexts dominate memory. All values are an analytical model, not measured.</p>
       <div style={styles.header}>
         <div style={styles.badge}>INTERACTIVE CALCULATOR</div>
         <h1 style={{fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.5rem'}}>KV-Cache Size Calculator</h1>
@@ -52,27 +56,31 @@ function KVCacheMath() {
         <div style={styles.param}>
           <div style={styles.paramLabel}>Layers (L)</div>
           <div style={styles.paramValue}>{layers}</div>
-          <input type="range" min="32" max="128" value={layers} onChange={e => setLayers(+e.target.value)} style={styles.slider} />
+          <input type="range" min="32" max="128" value={layers} onChange={e => setLayers(+e.target.value)} style={styles.slider} aria-label="Layers (L)" />
         </div>
         <div style={styles.param}>
           <div style={styles.paramLabel}>KV Heads</div>
           <div style={styles.paramValue}>{kvHeads}</div>
-          <input type="range" min="1" max="32" value={kvHeads} onChange={e => setKvHeads(+e.target.value)} style={styles.slider} />
+          <input type="range" min="1" max="32" value={kvHeads} onChange={e => setKvHeads(+e.target.value)} style={styles.slider} aria-label="KV Heads" />
         </div>
         <div style={styles.param}>
           <div style={styles.paramLabel}>Head Dim</div>
           <div style={styles.paramValue}>{dHead}</div>
-          <input type="range" min="64" max="256" step="64" value={dHead} onChange={e => setDHead(+e.target.value)} style={styles.slider} />
+          <input type="range" min="64" max="256" step="64" value={dHead} onChange={e => setDHead(+e.target.value)} style={styles.slider} aria-label="Head Dim" />
         </div>
         <div style={styles.param}>
           <div style={styles.paramLabel}>Sequence Length</div>
           <div style={styles.paramValue}>{seqLen.toLocaleString()}</div>
-          <input type="range" min="4096" max="131072" step="4096" value={seqLen} onChange={e => setSeqLen(+e.target.value)} style={styles.slider} />
+          <input type="range" min="4096" max="131072" step="4096" value={seqLen} onChange={e => setSeqLen(+e.target.value)} style={styles.slider} aria-label="Sequence Length" />
         </div>
       </div>
       <div style={styles.result}>
         <div style={styles.resultValue}>{formatBytes(kvSize)}</div>
         <div style={styles.resultLabel}>Total KV-Cache Size (per user)</div>
+      </div>
+      <div style={styles.note}>
+        Reference point (Llama-2-70B, GQA 8 KV heads, BF16): 320 KiB/token → 43 GB at 128K tokens.
+        <br />Analytical model — computed from the sizing formula, not measured.
       </div>
     </div>
   );

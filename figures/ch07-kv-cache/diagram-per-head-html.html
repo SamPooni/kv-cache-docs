@@ -3,19 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Per-Head Attention Tracking</title>
+    <title>Per-Head Scoring Granularity</title>
+    <link rel="stylesheet" href="../../css/style.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         body {
-            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #0a0a12 0%, #1a1a2e 100%);
+            font-family: var(--font-sans);
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
             min-height: 100vh;
-            color: #e0e0e0;
+            color: var(--text-primary);
             padding: 40px 20px;
         }
         
-        .container { max-width: 1100px; margin: 0 auto; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 0; }
         
         h1 {
             font-size: 1.8rem;
@@ -28,7 +29,7 @@
         
         .subtitle {
             text-align: center;
-            color: #666;
+            color: var(--text-secondary);
             margin-bottom: 40px;
         }
         
@@ -43,7 +44,7 @@
         .section-title {
             font-size: 1.1rem;
             font-weight: 600;
-            color: #a78bfa;
+            color: var(--accent-purple);
             margin-bottom: 20px;
         }
         
@@ -78,20 +79,20 @@
             margin-bottom: 3px;
         }
         
-        .head-card.recency .head-name { color: #fb923c; }
-        .head-card.anchor .head-name { color: #22c55e; }
-        .head-card.retrieval .head-name { color: #a855f7; }
-        .head-card.syntactic .head-name { color: #3b82f6; }
+        .head-card.recency .head-name { color: var(--accent-orange); }
+        .head-card.anchor .head-name { color: var(--accent-green); }
+        .head-card.retrieval .head-name { color: var(--accent-purple); }
+        .head-card.syntactic .head-name { color: var(--accent-cyan); }
         
         .head-id {
             font-size: 0.75rem;
-            color: #666;
+            color: var(--text-secondary);
             margin-bottom: 12px;
         }
         
         .head-pattern {
             font-size: 0.8rem;
-            color: #94a3b8;
+            color: var(--text-secondary);
             margin-bottom: 12px;
             line-height: 1.4;
         }
@@ -121,7 +122,7 @@
             display: flex;
             justify-content: space-between;
             font-size: 0.6rem;
-            color: #666;
+            color: var(--text-secondary);
             margin-top: 4px;
         }
         
@@ -156,12 +157,12 @@
             gap: 8px;
         }
         
-        .box.problem .box-title { color: #ef4444; }
-        .box.solution .box-title { color: #22c55e; }
+        .box.problem .box-title { color: var(--accent-red); }
+        .box.solution .box-title { color: var(--accent-green); }
         
         .box-content {
             font-size: 0.85rem;
-            color: #94a3b8;
+            color: var(--text-secondary);
             line-height: 1.6;
         }
         
@@ -175,7 +176,7 @@
         
         .scenario-title {
             font-size: 0.9rem;
-            color: #888;
+            color: var(--text-secondary);
             margin-bottom: 15px;
         }
         
@@ -228,7 +229,7 @@
             display: flex;
             align-items: center;
             gap: 5px;
-            color: #888;
+            color: var(--text-secondary);
             padding-right: 15px;
         }
         
@@ -258,13 +259,13 @@
             margin-bottom: 8px;
         }
         
-        .head-decision-title.recency { color: #fb923c; }
-        .head-decision-title.anchor { color: #22c55e; }
-        .head-decision-title.retrieval { color: #a855f7; }
-        .head-decision-title.syntactic { color: #3b82f6; }
+        .head-decision-title.recency { color: var(--accent-orange); }
+        .head-decision-title.anchor { color: var(--accent-green); }
+        .head-decision-title.retrieval { color: var(--accent-purple); }
+        .head-decision-title.syntactic { color: var(--accent-cyan); }
         
         .keep-list {
-            color: #94a3b8;
+            color: var(--text-secondary);
             font-size: 0.7rem;
         }
         
@@ -278,25 +279,39 @@
         }
         
         .result-title {
-            color: #a78bfa;
+            color: var(--accent-purple);
             font-weight: 600;
             margin-bottom: 10px;
         }
         
         .result-text {
-            color: #94a3b8;
+            color: var(--text-secondary);
             font-size: 0.9rem;
         }
         
         .result-text strong {
-            color: #c4b5fd;
+            color: var(--accent-purple);
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Per-Head Attention Tracking</h1>
-        <p class="subtitle">Different attention heads serve different purposes — one cache policy doesn't fit all</p>
+<div class="container" role="main">
+        <p class="sr-only">Figure: per-head attention as a scoring signal, not an eviction unit. Heads differ in what they attend to, and that difference is useful for scoring which token blocks matter. It is not a licence to evict a head. Every head of every layer is required for every token: dropping a head's KV for a token that is still attended produces wrong outputs, not a cache miss, so a head is never the unit that is placed, moved or evicted. The unit is a (sequence, token block) of 16 tokens, 5.00 mebibytes at 320 kibibytes per token. H2O and SnapKV evict (head, token) pairs — the token axis is not optional, and dropping tokens is a lossy relaxation that carries an accuracy-evaluation burden, quite different from lossless residency. Four head types at layer 40 are contrasted as scoring signals: the recency head, head 0, looks at the last 50 to 100 tokens; the anchor head, head 1, attends to the first 50 tokens holding the system instructions; the retrieval head, head 2, attends by semantic similarity anywhere in the context; the syntactic head, head 3, attends to grammatically related tokens. In the worked 128K-context document QA example — system prompt at positions 0 to 100, a 64K-token document, the word "France" at position 64K, and 64K tokens of conversation — the four heads weight the last 100 tokens, positions 0 to 100, position 64K and the recent question words respectively. Those four signals are combined into one score per token block, and the blocks scoring highest stay in HBM while the rest are placed on the host or CXL DRAM tier. Every head's KV for a resident block is kept; what varies is which blocks are resident. The earlier claim that per-head tracking contributes plus 6 percentage points of hit rate, taking a cumulative 87 percent to 93 percent, is retracted along with the whole 72 to 80 to 87 to 93 to 97 ladder, which was never run as an ablation and whose increments were assumed additive and independent. No single hit rate exists: the simulated range is 8.5 to 91.6 percent across budgets, policies and workloads. The four-way head taxonomy and the 40, 15, 25, 20 percent shares used elsewhere in this package are a modeling assumption motivated by the induction-head and retrieval-head literature, not a measured head census. Related work this reframing builds on, cited not competed with: H2O, SnapKV, Scissorhands, PyramidKV, Quest, Ada-KV, HeadKV, InfiniGen, LayerKV, KVPR, PagedAttention.</p>
+        <h1>Per-Head Attention as a <em>Scoring</em> Signal</h1>
+        <p class="subtitle">Heads differ in what they attend to — useful for scoring blocks. A head is <strong>never</strong> an eviction unit.</p>
+
+        <div class="callout warning" style="margin-bottom:1.5rem;">
+            <div class="callout-title">Scoring granularity, not eviction granularity</div>
+            <p><strong>Every head of every layer is required for every token.</strong> Dropping one head's KV for a
+            token that is still attended produces <strong>wrong outputs, not a cache miss</strong>. So a head is never
+            the unit that is placed, moved or evicted. The unit is a <strong>(sequence, token block)</strong> —
+            16 tokens, 5.00 MiB at 320 KiB/token.</p>
+            <p>H2O and SnapKV evict <strong>(head, token)</strong> pairs: <strong>the token axis is not optional</strong>.
+            Dropping tokens is a <em>lossy</em> relaxation with an accuracy-evaluation burden attached — a different
+            claim from lossless residency, which requires every block in <code>Read(t)</code> to be present.</p>
+            <p>What the four profiles below are for: they are <strong>signals that score blocks</strong>. The scores are
+            combined per block; the block is what moves.</p>
+        </div>
         
         <div class="section">
             <div class="section-title">The Four Types of Attention Heads</div>
@@ -308,21 +323,21 @@
                     <div class="head-pattern">
                         Focuses on last 50-100 tokens. Looking for immediate context.
                     </div>
-                    <div class="attention-mini">
+                    <div class="attention-mini" role="img" aria-label="Attention profile of the recency head across five buckets from old to recent: 10, 15, 20, 45 and 95 percent of full height, rising towards the most recent tokens.">
                         <div class="attention-bar" style="background: rgba(251,146,60,0.1);">
-                            <div class="attention-fill" style="height: 10%; background: #fb923c;"></div>
+                            <div class="attention-fill" style="height: 10%; background: var(--accent-orange);"></div>
                         </div>
                         <div class="attention-bar" style="background: rgba(251,146,60,0.1);">
-                            <div class="attention-fill" style="height: 15%; background: #fb923c;"></div>
+                            <div class="attention-fill" style="height: 15%; background: var(--accent-orange);"></div>
                         </div>
                         <div class="attention-bar" style="background: rgba(251,146,60,0.1);">
-                            <div class="attention-fill" style="height: 20%; background: #fb923c;"></div>
+                            <div class="attention-fill" style="height: 20%; background: var(--accent-orange);"></div>
                         </div>
                         <div class="attention-bar" style="background: rgba(251,146,60,0.1);">
-                            <div class="attention-fill" style="height: 45%; background: #fb923c;"></div>
+                            <div class="attention-fill" style="height: 45%; background: var(--accent-orange);"></div>
                         </div>
                         <div class="attention-bar" style="background: rgba(251,146,60,0.1);">
-                            <div class="attention-fill" style="height: 95%; background: #fb923c;"></div>
+                            <div class="attention-fill" style="height: 95%; background: var(--accent-orange);"></div>
                         </div>
                     </div>
                     <div class="attention-labels">
@@ -337,21 +352,21 @@
                     <div class="head-pattern">
                         Always attends to first 50 tokens. Looking for system instructions.
                     </div>
-                    <div class="attention-mini">
+                    <div class="attention-mini" role="img" aria-label="Attention profile of the anchor head across five buckets from start to end: 90, 20, 15, 25 and 30 percent of full height, concentrated at the start of the sequence.">
                         <div class="attention-bar" style="background: rgba(34,197,94,0.1);">
-                            <div class="attention-fill" style="height: 90%; background: #22c55e;"></div>
+                            <div class="attention-fill" style="height: 90%; background: var(--accent-green);"></div>
                         </div>
                         <div class="attention-bar" style="background: rgba(34,197,94,0.1);">
-                            <div class="attention-fill" style="height: 20%; background: #22c55e;"></div>
+                            <div class="attention-fill" style="height: 20%; background: var(--accent-green);"></div>
                         </div>
                         <div class="attention-bar" style="background: rgba(34,197,94,0.1);">
-                            <div class="attention-fill" style="height: 15%; background: #22c55e;"></div>
+                            <div class="attention-fill" style="height: 15%; background: var(--accent-green);"></div>
                         </div>
                         <div class="attention-bar" style="background: rgba(34,197,94,0.1);">
-                            <div class="attention-fill" style="height: 25%; background: #22c55e;"></div>
+                            <div class="attention-fill" style="height: 25%; background: var(--accent-green);"></div>
                         </div>
                         <div class="attention-bar" style="background: rgba(34,197,94,0.1);">
-                            <div class="attention-fill" style="height: 30%; background: #22c55e;"></div>
+                            <div class="attention-fill" style="height: 30%; background: var(--accent-green);"></div>
                         </div>
                     </div>
                     <div class="attention-labels">
@@ -366,21 +381,21 @@
                     <div class="head-pattern">
                         Attends based on semantic similarity. Finds relevant info anywhere.
                     </div>
-                    <div class="attention-mini">
+                    <div class="attention-mini" role="img" aria-label="Attention profile of the retrieval head across five buckets: 15, 85, 20, 60 and 25 percent of full height, spiky and content-driven rather than positional.">
                         <div class="attention-bar" style="background: rgba(139,92,246,0.1);">
-                            <div class="attention-fill" style="height: 15%; background: #a855f7;"></div>
+                            <div class="attention-fill" style="height: 15%; background: var(--accent-purple);"></div>
                         </div>
                         <div class="attention-bar" style="background: rgba(139,92,246,0.1);">
-                            <div class="attention-fill" style="height: 85%; background: #a855f7;"></div>
+                            <div class="attention-fill" style="height: 85%; background: var(--accent-purple);"></div>
                         </div>
                         <div class="attention-bar" style="background: rgba(139,92,246,0.1);">
-                            <div class="attention-fill" style="height: 20%; background: #a855f7;"></div>
+                            <div class="attention-fill" style="height: 20%; background: var(--accent-purple);"></div>
                         </div>
                         <div class="attention-bar" style="background: rgba(139,92,246,0.1);">
-                            <div class="attention-fill" style="height: 60%; background: #a855f7;"></div>
+                            <div class="attention-fill" style="height: 60%; background: var(--accent-purple);"></div>
                         </div>
                         <div class="attention-bar" style="background: rgba(139,92,246,0.1);">
-                            <div class="attention-fill" style="height: 25%; background: #a855f7;"></div>
+                            <div class="attention-fill" style="height: 25%; background: var(--accent-purple);"></div>
                         </div>
                     </div>
                     <div class="attention-labels">
@@ -395,21 +410,21 @@
                     <div class="head-pattern">
                         Attends to grammatically related tokens. Subject-verb agreement, etc.
                     </div>
-                    <div class="attention-mini">
+                    <div class="attention-mini" role="img" aria-label="Attention profile of the syntactic head across five buckets: 30, 70, 25, 40 and 35 percent of full height, a structured repeating pattern.">
                         <div class="attention-bar" style="background: rgba(59,130,246,0.1);">
-                            <div class="attention-fill" style="height: 30%; background: #3b82f6;"></div>
+                            <div class="attention-fill" style="height: 30%; background: var(--accent-cyan);"></div>
                         </div>
                         <div class="attention-bar" style="background: rgba(59,130,246,0.1);">
-                            <div class="attention-fill" style="height: 70%; background: #3b82f6;"></div>
+                            <div class="attention-fill" style="height: 70%; background: var(--accent-cyan);"></div>
                         </div>
                         <div class="attention-bar" style="background: rgba(59,130,246,0.1);">
-                            <div class="attention-fill" style="height: 25%; background: #3b82f6;"></div>
+                            <div class="attention-fill" style="height: 25%; background: var(--accent-cyan);"></div>
                         </div>
                         <div class="attention-bar" style="background: rgba(59,130,246,0.1);">
-                            <div class="attention-fill" style="height: 40%; background: #3b82f6;"></div>
+                            <div class="attention-fill" style="height: 40%; background: var(--accent-cyan);"></div>
                         </div>
                         <div class="attention-bar" style="background: rgba(59,130,246,0.1);">
-                            <div class="attention-fill" style="height: 35%; background: #3b82f6;"></div>
+                            <div class="attention-fill" style="height: 35%; background: var(--accent-cyan);"></div>
                         </div>
                     </div>
                     <div class="attention-labels">
@@ -421,7 +436,7 @@
             
             <div class="problem-solution">
                 <div class="box problem">
-                    <div class="box-title">❌ Problem with Global Caching</div>
+                    <div class="box-title"><span aria-hidden="true">❌</span> Problem with Global Caching</div>
                     <div class="box-content">
                         A single "keep recent tokens" policy works for <strong>recency heads</strong> but fails for:
                         <ul style="margin-top: 8px; margin-left: 18px;">
@@ -431,35 +446,38 @@
                     </div>
                 </div>
                 <div class="box solution">
-                    <div class="box-title">✓ Solution: Per-Head Tracking</div>
+                    <div class="box-title"><span aria-hidden="true">✓</span> Fix: score per head, place per block</div>
                     <div class="box-content">
-                        Track which tokens each head needs separately. A token stays cached if <strong>ANY</strong> head still needs it.
-                        This ensures anchor tokens stay cached even though recency heads don't need them.
+                        Read each head's attention separately as a <strong>scoring signal</strong>, then combine the
+                        signals into <strong>one score per (sequence, token block)</strong>. A block stays resident if
+                        <strong>ANY</strong> head still weights it — which keeps anchor blocks resident even when the
+                        recency heads have moved on. <strong>All heads of a resident block are kept</strong>; heads are
+                        never dropped independently, because dropping one is a correctness error, not a cache miss.
                     </div>
                 </div>
             </div>
         </div>
         
         <div class="section">
-            <div class="section-title">Example: 100K Context Document QA</div>
+            <div class="section-title">Example: 128K Context Document QA</div>
             
             <div class="scenario">
                 <div class="scenario-title">Context structure:</div>
                 <div class="context-bar">
-                    <div class="context-segment segment-system">System<br>Prompt</div>
-                    <div class="context-segment segment-doc">Document (50K tokens)</div>
-                    <div class="context-segment segment-mention">"France"</div>
-                    <div class="context-segment segment-recent">Conversation (40K tokens)</div>
+                    <div class="context-segment segment-system" role="img" aria-label="System prompt segment, positions 0 to 100">System<br>Prompt</div>
+                    <div class="context-segment segment-doc" role="img" aria-label="Document segment, 64K tokens, positions 100 to 64K">Document (64K tokens)</div>
+                    <div class="context-segment segment-mention" role="img" aria-label="The "France" mention, the key fact, at position 64K">"France"</div>
+                    <div class="context-segment segment-recent" role="img" aria-label="Conversation segment, 64K tokens, positions 64K to 128K">Conversation (64K tokens)</div>
                 </div>
                 <div class="context-labels">
-                    <div class="context-label"><div class="dot" style="background: #22c55e;"></div> Pos 0-100</div>
-                    <div class="context-label"><div class="dot" style="background: #6366f1;"></div> Pos 100-50K</div>
-                    <div class="context-label"><div class="dot" style="background: #a855f7;"></div> Pos 50K (key fact)</div>
-                    <div class="context-label"><div class="dot" style="background: #fb923c;"></div> Pos 50K-100K</div>
+                    <div class="context-label"><div class="dot" aria-hidden="true" style="background: var(--accent-green);"></div> Pos 0-100</div>
+                    <div class="context-label"><div class="dot" aria-hidden="true" style="background: var(--accent-purple);"></div> Pos 100-64K</div>
+                    <div class="context-label"><div class="dot" aria-hidden="true" style="background: var(--accent-purple);"></div> Pos 64K (key fact)</div>
+                    <div class="context-label"><div class="dot" aria-hidden="true" style="background: var(--accent-orange);"></div> Pos 64K-128K</div>
                 </div>
             </div>
             
-            <p style="color: #888; font-size: 0.85rem; margin: 15px 0;">
+            <p style="color: var(--text-secondary); font-size: 0.85rem; margin: 15px 0;">
                 Query: "What is the capital of France?" — Now generating answer...
             </p>
             
@@ -467,41 +485,59 @@
                 <div class="head-decision">
                     <div class="head-decision-title recency">Recency Head</div>
                     <div class="keep-list">
-                        Needs: Last 100 tokens<br>
+                        Scores up: blocks covering the last 100 tokens<br>
                         (recent conversation)
                     </div>
                 </div>
                 <div class="head-decision">
                     <div class="head-decision-title anchor">Anchor Head</div>
                     <div class="keep-list">
-                        Needs: Pos 0-100<br>
+                        Scores up: blocks covering pos 0–100<br>
                         (system prompt)
                     </div>
                 </div>
                 <div class="head-decision">
                     <div class="head-decision-title retrieval">Retrieval Head</div>
                     <div class="keep-list">
-                        Needs: Pos 50K<br>
-                        (where "France" mentioned)
+                        Scores up: the block covering pos 64K<br>
+                        (where "France" is mentioned)
                     </div>
                 </div>
                 <div class="head-decision">
                     <div class="head-decision-title syntactic">Syntactic Head</div>
                     <div class="keep-list">
-                        Needs: Question words<br>
+                        Scores up: blocks covering the question words<br>
                         (recent "What is")
                     </div>
                 </div>
             </div>
             
             <div class="result-box">
-                <div class="result-title">Combined Cache Decision</div>
+                <div class="result-title">Combined placement decision — per <em>block</em></div>
                 <div class="result-text">
-                    Keep in HBM: <strong>Pos 0-100</strong> (anchor) + <strong>Pos ~50K</strong> (France mention) + <strong>Last 1000 tokens</strong> (recent)<br>
-                    Everything else → CXL DRAM (accessed less frequently)
+                    Resident in HBM: the blocks covering <strong>pos 0–100</strong> (anchor) +
+                    <strong>pos ~64K</strong> (the France mention) + <strong>the last 1000 tokens</strong> (recent).
+                    Everything else is placed on the host / CXL DRAM tier.<br>
+                    <strong>All 8 KV heads × 80 layers of every resident block are kept.</strong> The head axis is a
+                    scoring input; the block is what moves. No hit rate is claimed for this decision — the ablation
+                    that would justify one was never run.
                 </div>
             </div>
         </div>
+
+        <p style="text-align:center;color:var(--text-secondary);font-size:0.8rem;margin-top:1.5rem;padding-top:0.75rem;border-top:1px solid var(--border-primary);">
+            <strong>Illustrative</strong> — the four-way head taxonomy (Recency / Anchor / Retrieval / Syntactic)
+            and the head shares used elsewhere in this package (40 / 15 / 25 / 20) are a modeling assumption
+            motivated by the induction-head and retrieval-head literature <span class="mono">External literature</span>,
+            not a measured head census. <strong>Retracted:</strong> the "+6 pts of hit rate, 87% → 93% cumulative"
+            attributed to per-head tracking, together with the whole 72 → 80 → 87 → 93 → 97 ladder — never run as an
+            ablation, increments assumed additive and independent. No single hit rate exists; the simulated range is
+            <strong>8.5–91.6%</strong> across budgets, policies and workloads
+            <span class="mono">Simulated (provisional)</span>, and one data-structure defect in Revision 1 inverted
+            four of five findings, so Revision 2 is provisional, not settled. Work built on, cited not competed with:
+            H2O, SnapKV, Scissorhands, PyramidKV, Quest, Ada-KV, HeadKV, InfiniGen, LayerKV, KVPR, PagedAttention.
+            Canonical numbers v6.0.
+        </p>
     </div>
 </body>
 </html>

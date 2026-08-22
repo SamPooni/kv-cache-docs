@@ -4,8 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chapter 7: Residency and Policy State — A Case Study — KV-Cache Offloading Architecture</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../vendor/fonts.css">
   <link rel="stylesheet" href="../css/style.css">
   <style>
     .kv-table { width: 100%; border-collapse: collapse; margin: 1.25rem 0 2rem; font-size: 0.92rem; }
@@ -16,24 +15,24 @@
     .kv-table tbody tr:hover { background: var(--surface-alt, rgba(127,127,127,0.05)); }
     .kv-table td.hi { font-weight: 700; }
     .callout { border-left: 4px solid #c9860a; background: rgba(201,134,10,0.08); padding: 0.9rem 1.2rem; margin: 1.5rem 0; border-radius: 4px; font-size: 0.95rem; }
-    .callout-title { font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.78rem; margin-bottom: 0.35rem; color: #c9860a; }
-    .callout.protocol { border-left-color: #2f8f4e; background: rgba(47,143,78,0.08); }
-    .callout.protocol .callout-title { color: #2f8f4e; }
-    .callout.open { border-left-color: #7a5fc4; background: rgba(122,95,196,0.08); }
-    .callout.open .callout-title { color: #7a5fc4; }
-    .callout.scope { border-left-color: #3b6ea5; background: rgba(59,110,165,0.08); }
-    .callout.scope .callout-title { color: #3b6ea5; }
+    .callout-title { font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.78rem; margin-bottom: 0.35rem; color: var(--accent-orange); }
+    .callout.protocol { border-left-color: var(--accent-green); background: rgba(47,143,78,0.08); }
+    .callout.protocol .callout-title { color: var(--accent-green); }
+    .callout.open { border-left-color: var(--accent-purple); background: rgba(122,95,196,0.08); }
+    .callout.open .callout-title { color: var(--accent-purple); }
+    .callout.scope { border-left-color: var(--accent-cyan); background: rgba(59,110,165,0.08); }
+    .callout.scope .callout-title { color: var(--accent-cyan); }
     .stat-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin: 1.75rem 0 2.25rem; }
     .stat-tile { border: 1px solid var(--border, #33383f); border-radius: 8px; padding: 1.1rem 1.2rem; }
     .stat-tile .tv { font-family: 'IBM Plex Mono', monospace; font-size: 1.9rem; font-weight: 600; line-height: 1.1; }
-    .stat-tile .tv.big { color: #2f8f4e; }
+    .stat-tile .tv.big { color: var(--accent-green); }
     .stat-tile .tl { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.4rem; }
     .falsify-grid { display: grid; grid-template-columns: 1fr; gap: 0.75rem; margin: 1.5rem 0 2rem; }
     .falsify-item { border: 1px solid var(--border, #33383f); border-radius: 6px; padding: 0.85rem 1.1rem; display: flex; gap: 0.9rem; align-items: baseline; }
     .falsify-item .fn { font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 0.85rem; color: var(--text-muted); min-width: 1.6rem; }
-    .falsify-item.hw { border-color: #2f8f4e; }
+    .falsify-item.hw { border-color: var(--accent-green); }
     .falsify-item .badge { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.03em; padding: 0.15rem 0.5rem; border-radius: 3px; margin-left: auto; white-space: nowrap; }
-    .falsify-item.hw .badge { background: rgba(47,143,78,0.15); color: #2f8f4e; }
+    .falsify-item.hw .badge { background: rgba(47,143,78,0.15); color: var(--accent-green); }
     .falsify-item:not(.hw) .badge { background: rgba(127,127,127,0.15); color: var(--text-muted); }
   </style>
 </head>
@@ -70,6 +69,15 @@
         All numeric results below come from <code>kv_tiering_sim_v2.py</code> against <code>results_v2.json</code> — Revision 2 of a trace-driven simulation. Revision 1 shipped with a data-structure defect in the eviction-metadata bookkeeping that inverted four of its five headline findings; Revision 2 is the corrected rebuild. Treat every number here as <strong>provisional, not settled</strong>: it has not been validated against a real CXL memory pool, and it is a second revision of a simulator, not a third-party-audited result. The chapter's central claim is stated so that it does not depend on any single number in these tables surviving further correction — see §7.5.
       </div>
 
+      
+      <div class="figure-embed tall">
+        <div class="figure-embed-header">
+          <span class="figure-embed-label">Figure 7.3 &mdash; The defect that inverted the study, and the Revision 1 &rarr; Revision 2 ledger</span>
+          <a class="figure-embed-link" href="../figures/ch07-kv-cache/erratum-pick-victim.html" target="_blank" rel="noopener">Open Full Screen &#8599;</a>
+        </div>
+        <iframe src="../figures/ch07-kv-cache/erratum-pick-victim.html" title="The _pick_victim() defect audited against a brute-force argmin, the order-preserving key that fixes it, and how each Revision 1 finding fared" loading="lazy" style="height:900px;background:var(--bg-primary)"></iframe>
+      </div>
+
       <h2>7.1 What is actually being claimed</h2>
       <p>
         It is tempting to read this chapter as pitching a new eviction-scoring function. It is not, and being precise about that matters. The scoring function used throughout — an exponential moving average of access recency and frequency, with a decay constant α that interpolates between recency-only and frequency-only behavior — is <strong>LRFU</strong>, published by Lee, Kim, Noh, Min, Cho, and Kim at SIGMETRICS 1999. The α knob's role as an LRU↔LFU interpolation parameter is documented in that paper, not discovered here. Nothing in this chapter claims novelty for the scoring function itself. EMA, LRU, and LFU are used here strictly as <strong>past-only signal baselines</strong> — one instance of the broader signal taxonomy Chapter 3 lays out for the PLACE stage — not as the architecture's central mechanism. The architecture does not depend on any one of them; it depends on whether the signal a residency policy chooses, whatever that signal is, keeps its state across a tier crossing.
@@ -78,10 +86,28 @@
         The actual claim is about <em>where policy state lives and what happens to it when a block leaves HBM</em>. In a conventional tiered-KV design, a block evicted from HBM is simply gone as far as the eviction policy is concerned; when it (or its logical successor — the same session, the same prefix position) comes back, the controller has no record of it and admits it as if newly created, with a fresh recency/frequency score starting from zero. This chapter's contribution is to treat the KV state <em>and its control metadata</em> — recency/frequency score, identity key — as one migratable object, so that identity-keyed policy state survives the round trip between HBM and a slower tier instead of being reset on every eviction. The host owns the policy (what score a block has, when it should be evicted); the device owns the mechanism (moving bytes, honoring the eviction decision). That division, and the persistence of policy state across the tier boundary, is the PLACE-stage mechanism the rest of this chapter defends — a narrower claim than "the architecture," and one that says nothing about SELECT (what enters candidacy) or MOVE (how bytes cross the physical hierarchy).
       </p>
 
+      
+      <div class="figure-embed tall">
+        <div class="figure-embed-header">
+          <span class="figure-embed-label">Figure 7.1 &mdash; The KV block object: payload, identity, policy, mechanism</span>
+          <a class="figure-embed-link" href="../figures/ch07-kv-cache/kv-block-object.html" target="_blank" rel="noopener">Open Full Screen &#8599;</a>
+        </div>
+        <iframe src="../figures/ch07-kv-cache/kv-block-object.html" title="The KV block object, what migrates with the payload and what does not, and the four consequences of write-once" loading="lazy" style="height:920px;background:var(--bg-primary)"></iframe>
+      </div>
+
       <h2>7.2 Simulation setup</h2>
       <p>
         Results below are drawn from a single simulation configuration unless a table says otherwise: Llama-3 70B under grouped-query attention, 16-token KV blocks (5.00 MiB/block), 200 synthetic sessions with Zipf(1.1)-distributed return frequency, context lengths from 1K to 12K tokens sharing a 2048-token common prefix, run for 2500 turns, for a total working-set footprint of 421 GiB against an HBM tier sized from 8 to 128 GiB backed by a 512 GiB CXL tier. Each configuration was run across 2–3 seeds; seed counts are noted per table since they differ between the α-sweep and the other experiments.
       </p>
+
+      
+      <div class="figure-embed tall">
+        <div class="figure-embed-header">
+          <span class="figure-embed-label">Figure 7.2 &mdash; The lossless/lossy boundary, formally</span>
+          <a class="figure-embed-link" href="../figures/ch07-kv-cache/lossless-vs-lossy.html" target="_blank" rel="noopener">Open Full Screen &#8599;</a>
+        </div>
+        <iframe src="../figures/ch07-kv-cache/lossless-vs-lossy.html" title="Lossless requires every block attention reads at step t to be resident; lossy methods relax exactly that one constraint, and every other constraint is shared" loading="lazy" style="height:900px;background:var(--bg-primary)"></iframe>
+      </div>
 
       <h2>7.3 Baseline comparison: hit rate vs. HBM budget</h2>
       <p>
@@ -187,6 +213,15 @@
       <p>
         Across the budget and policy sweep, recompute — regenerating a block's KV state from scratch because it missed the cache — accounts for 44–89% of turn stall time, not a single fixed figure; the share moves with HBM budget and policy. Under an idealized model where transfer and compute are fully overlapped, fetch time for a resident block falls to 0.35–1.25 ms per turn, and recompute's share of stall rises to over 99%. Once data movement is hidden behind compute, recompute avoidance is the only term left that matters — which is another way of stating why hit rate, and specifically the persistence result in §7.5, is the quantity this case study is trying to move.
       </p>
+
+      
+      <div class="figure-embed tall">
+        <div class="figure-embed-header">
+          <span class="figure-embed-label">Figure 7.4 &mdash; Movement amplification, and why the floor is 2, not 1</span>
+          <a class="figure-embed-link" href="../figures/ch07-kv-cache/movement-amplification.html" target="_blank" rel="noopener">Open Full Screen &#8599;</a>
+        </div>
+        <iframe src="../figures/ch07-kv-cache/movement-amplification.html" title="A_read and A_traffic, the write-once bound on demotions, and the four block histories that give amplification values of 0, 1, 2 and 4" loading="lazy" style="height:880px;background:var(--bg-primary)"></iframe>
+      </div>
 
       <div class="callout open">
         <div class="callout-title">Open question — not yet measured</div>

@@ -1,1 +1,143 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Measured Performance Evidence</title><style>body{margin:0;background:#0d1117;color:#e6edf3;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}.wrap{max-width:1100px;margin:auto;padding:34px}.k{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#7d8590}.title{font-size:34px;font-weight:750;margin:7px 0 10px}.sub{color:#aab4c0;line-height:1.55;max-width:900px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin:24px 0}.card{background:#161b22;border:1px solid #30363d;border-radius:14px;padding:18px}.big{font:700 28px ui-monospace,SFMono-Regular,Consolas,monospace;color:#58a6ff}.label{margin-top:6px;color:#c9d1d9}.note{font-size:13px;color:#8b949e;margin-top:7px;line-height:1.45}.flow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:22px 0}.box{padding:14px 16px;border-radius:12px;border:1px solid #30363d;background:#161b22;font-weight:650}.arrow{color:#7d8590;font-size:22px}.warn{border-left:4px solid #d29922;background:#1d1a12;padding:14px 16px;border-radius:8px;line-height:1.5}.good{border-left-color:#3fb950}.table{width:100%;border-collapse:collapse;margin-top:18px}.table th,.table td{padding:11px 12px;border-bottom:1px solid #30363d;text-align:left}.table th{color:#8b949e;font-size:12px;text-transform:uppercase;letter-spacing:.06em}.tag{display:inline-block;padding:3px 7px;border-radius:999px;background:#21262d;color:#8b949e;font-size:11px;margin-left:6px}</style></head><body><div class="wrap"><div class="k">v5.0.2 · performance evidence</div><div class="title">Performance Results — What Is Actually Measured</div><div class="grid"><div class="card"><div class="big">236.5</div><div class="label">GB/s streaming</div><div class="note">GB10 baseline, measured.</div></div><div class="card"><div class="big">16.34</div><div class="label">ms/GiB HF/SDPA KV slope</div><div class="note">R²≈0.991 over the measured sweep.</div></div><div class="card"><div class="big">17.58</div><div class="label">ms/GiB vLLM/FA2 KV slope</div><div class="note">R²≈0.945; one large point needs repeat validation.</div></div><div class="card"><div class="big">61–66</div><div class="label">GB/s effective KV bandwidth</div><div class="note">Derived from the fitted slopes.</div></div></div><table class="table"><tr><th>Former headline</th><th>v5.0.2 status</th></tr><tr><td>16× user capacity</td><td>Retracted</td></tr><tr><td>95–97% HBM hit rate</td><td>Retracted as a general result</td></tr><tr><td>36% cost reduction</td><td>Retracted</td></tr><tr><td>~250 ns CXL endpoint latency</td><td>Unmeasured assumption; not a result</td></tr><tr><td>Persistent metadata advantage</td><td>Provisional simulation result; needs hardware/workload validation</td></tr></table><div class="warn"><strong>Interpretation:</strong> the measured GB10 result supports reducing KV traffic as a first-order opportunity. It does not by itself prove that compression, placement, sparsity, or any specific cache policy is universally dominant.</div></div></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Figure 11.2 — Residency-State Persistence: The Largest Effect in the Study</title>
+<script src="../../vendor/react.production.min.js"></script>
+<script src="../../vendor/react-dom.production.min.js"></script>
+<script src="../../vendor/babel.min.js"></script>
+<link rel="stylesheet" href="../../css/style.css">
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: var(--font-sans); background: linear-gradient(135deg, var(--bg-primary), var(--bg-tertiary)); min-height: 100vh; color: var(--text-primary); }</style>
+</head>
+<body>
+<div id="root" role="main"></div>
+<script type="text/babel">
+function PerformanceBenchmarks() {
+  // PLACE-stage result: identity-keyed policy state surviving HBM eviction.
+  // Simulated (provisional), 32 GiB HBM, experiment e2 of results_v2.json.
+  const persistence = [
+    { metric: 'LFU', baseline: '15.56%', ours: '49.71%', improvement: '+34.15 pts', color: 'var(--accent-green)' },
+    { metric: 'EMA (LRFU) α=0.01', baseline: '31.54%', ours: '56.39%', improvement: '+24.85 pts', color: 'var(--accent-blue)' },
+    { metric: 'EMA (LRFU) α=0.15', baseline: '44.33%', ours: '44.12%', improvement: '−0.21 pts', color: 'var(--text-muted)' }
+  ];
+  // For scale: the spread between scoring functions is smaller than persistence buys.
+  const policySpread = [
+    { metric: 'LRU', v: '36.85%', color: 'var(--accent-orange)' },
+    { metric: 'LFU', v: '15.56%', color: 'var(--accent-red)' },
+    { metric: 'EMA α=0.15', v: '44.33%', color: 'var(--accent-purple)' },
+    { metric: 'EMA α=0.05 (tuned optimum)', v: '55.96%', color: 'var(--accent-teal)' }
+  ];
+  const surviving = [
+    { metric: 'Memory expansion', basis: '(192 + 1,024) ÷ 192', v: '6×', label: 'Analytical model' },
+    { metric: 'KV per token, Llama-3 70B GQA', basis: '2 × 80 × 8 × 128 × 2 B', v: '320 KiB/token', label: 'Analytical model' },
+    { metric: 'KV at 8K context', basis: '320 KiB × 8,192', v: '2.50 GiB', label: 'Analytical model' },
+    { metric: 'KV at 128K context', basis: '320 KiB × 131,072', v: '40.0 GiB', label: 'Analytical model' },
+    { metric: 'KV/weights crossover', basis: 'vs 130.4 GiB bf16 weights', v: '≈ 427,000 tokens', label: 'Analytical model' },
+    { metric: 'Achieved streaming bandwidth', basis: '87% of 273 GB/s spec', v: '236.5 GB/s', label: 'Measured — DGX Spark GB10' }
+  ];
+  const styles = {
+    container: { maxWidth: '860px', margin: '0 auto', padding: '2rem' },
+    header: { textAlign: 'center', marginBottom: '2rem' },
+    table: { background: 'var(--bg-card)', borderRadius: '16px', overflow: 'hidden' },
+    headerRow: { display: 'grid', gridTemplateColumns: '1.6fr 1fr 1fr 1fr', background: 'var(--bg-code)', padding: '1rem', fontWeight: 600, fontSize: '0.8rem' },
+    row: (color) => ({ display: 'grid', gridTemplateColumns: '1.6fr 1fr 1fr 1fr', padding: '1rem', borderTop: '1px solid var(--border-primary)', borderLeft: `3px solid ${color}` }),
+    improvement: (color) => ({ fontWeight: 700, color }),
+    sectionTitle: { fontSize: '0.78rem', fontFamily: 'var(--font-mono)', letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-secondary)', margin: '2rem 0 0.6rem' },
+    hero: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginTop: '2rem' },
+    heroStat: { background: 'linear-gradient(135deg, var(--accent-green), #2d8c3c)', borderRadius: '16px', padding: '1.5rem', textAlign: 'center' },
+    heroVal: { fontSize: '2.1rem', fontWeight: 700, color: 'var(--bg-primary)' },
+    heroLabel: { color: '#0a0e14', opacity: 0.85, fontSize: '0.8rem' },
+    barRow: { display: 'grid', gridTemplateColumns: '1.6fr 3fr 0.7fr', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 1rem' },
+    barTrack: { background: 'var(--bg-code)', borderRadius: '6px', height: '14px', overflow: 'hidden' },
+    survRow: { display: 'grid', gridTemplateColumns: '1.4fr 1.4fr 0.9fr 1fr', padding: '0.7rem 1rem', borderTop: '1px solid var(--border-primary)', fontSize: '0.82rem' },
+    tag: { display: 'inline-block', padding: '0.1rem 0.5rem', borderRadius: '10px', fontSize: '0.62rem', fontFamily: 'var(--font-mono)', border: '1px solid var(--border-highlight)', color: 'var(--text-secondary)' },
+    note: { marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border-primary)', color: 'var(--text-secondary)', fontSize: '0.75rem', lineHeight: 1.6 },
+    caveat: { marginTop: '1rem', padding: '0.85rem 1rem', borderLeft: '3px solid var(--accent-orange)', background: 'rgba(210,153,34,0.08)', borderRadius: '4px', color: 'var(--text-secondary)', fontSize: '0.75rem', lineHeight: 1.6 }
+  };
+  return (
+    <div style={styles.container}>
+      <p className="sr-only">Figure: the largest effect measured in this package's simulation is not the scoring function but residency-state persistence — letting identity-keyed policy state survive eviction from HBM instead of re-admitting a block as if newly created. At a 32 gibibyte HBM budget, LFU rises from 15.56 percent hit rate when metadata is reset on eviction to 49.71 percent when metadata persists, a gain of 34.15 percentage points; EMA with alpha 0.01 rises from 31.54 to 56.39 percent, a gain of 24.85 percentage points; EMA with alpha 0.15 is essentially unchanged at 44.33 versus 44.12 percent, a change of minus 0.21 percentage points. For scale, the entire spread between scoring functions at the same budget is smaller: LRU 36.85 percent, LFU 15.56 percent, EMA alpha 0.15 44.33 percent, and the tuned optimum EMA alpha 0.05 at 55.96 percent. Persistence is therefore worth more than the choice of policy, and it is a protocol result that can be tested with no CXL hardware. It sits inside the PLACE stage of the KV-State Control Plane. Separately surviving analytical values: memory expansion 6 times; 320 kibibytes of KV per token for Llama-3 70B with grouped-query attention; 2.50 gibibytes at 8K context; 40.0 gibibytes at 128K context; a crossover with model weights at about 427,000 tokens; and one measured value, 236.5 gigabytes per second of achieved streaming bandwidth on DGX Spark GB10, which is 87 percent of the 273 gigabytes per second specification. All simulation values are provisional: a single data-structure defect in Revision 1 inverted four of five findings, so Revision 2 is provisional, not settled. No single hit rate is claimed anywhere; across budgets, policies and workloads the simulated range is 8.5 to 91.6 percent. No CXL hardware was measured.</p>
+      <div style={styles.header}>
+        <div style={{display: 'inline-block', padding: '0.25rem 0.75rem', background: 'rgba(63,185,80,0.18)', color: 'var(--accent-green)', fontSize: '0.75rem', fontFamily: 'var(--font-mono)', borderRadius: '20px', marginBottom: '0.5rem'}}>FIGURE 11.2</div>
+        <h1 style={{fontSize: '1.5rem', fontWeight: 700}}>Residency-State Persistence — the largest effect in the study</h1>
+        <p style={{color: 'var(--text-secondary)', fontSize: '0.875rem'}}>Llama-3 70B GQA, 16-token blocks, 32 GiB HBM over a 512 GiB tier. Letting identity-keyed policy state survive HBM eviction, rather than re-admitting a block as if newly created. This is the <strong style={{color:'var(--accent-purple)'}}>PLACE</strong> stage of the KV-State Control Plane.</p>
+      </div>
+
+      <div style={styles.sectionTitle}>Metadata reset vs. metadata persists — 32 GiB HBM · Simulated (provisional)</div>
+      <div style={styles.table}>
+        <div style={styles.headerRow}>
+          <div>Policy</div><div>Metadata reset</div><div>Metadata persists</div><div>Δ</div>
+        </div>
+        {persistence.map((b, i) => (
+          <div key={i} role="img" aria-label={`${b.metric}: hit rate ${b.baseline} with metadata reset on eviction, ${b.ours} with metadata persisting, a change of ${b.improvement}`} style={styles.row(b.color)}>
+            <div>{b.metric}</div>
+            <div style={{color: 'var(--text-secondary)'}}>{b.baseline}</div>
+            <div style={{color: 'var(--accent-cyan)', fontWeight: 600}}>{b.ours}</div>
+            <div style={styles.improvement(b.color)}>{b.improvement}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={styles.sectionTitle}>For scale — the whole spread between scoring functions at the same budget</div>
+      <div style={{...styles.table, padding: '0.6rem 0'}} role="img" aria-label="Bar chart of hit rate by scoring function at 32 gibibytes, experiment e2: LRU 36.85 percent, LFU 15.56 percent, EMA alpha 0.15 44.33 percent, EMA alpha 0.05 the tuned optimum 55.96 percent. Every one of these is a smaller move than the 34.15 point gain persistence gives LFU.">
+        {policySpread.map((p, i) => (
+          <div key={i} style={styles.barRow}>
+            <div style={{fontSize: '0.82rem'}}>{p.metric}</div>
+            <div style={styles.barTrack}><div style={{width: `${parseFloat(p.v)}%`, height: '100%', background: p.color, borderRadius: '6px'}}></div></div>
+            <div style={{fontFamily: 'var(--font-mono)', fontSize: '0.8rem', color: p.color, textAlign: 'right'}}>{p.v}</div>
+          </div>
+        ))}
+        <div style={{padding: '0.5rem 1rem 0.2rem', color: 'var(--text-muted)', fontSize: '0.72rem'}}>
+          Experiment <code style={{fontFamily:'var(--font-mono)'}}>e2</code>, 1 seed. Never mix rows with the <code style={{fontFamily:'var(--font-mono)'}}>e1</code> budget sweep — different experiments, different baselines.
+        </div>
+      </div>
+
+      <div style={styles.hero}>
+        <div style={styles.heroStat} role="img" aria-label="LFU gains 34.15 percentage points from persistent metadata at 32 gibibytes"><div style={styles.heroVal}>+34.15 pts</div><div style={styles.heroLabel}>LFU · persistent metadata</div></div>
+        <div style={styles.heroStat} role="img" aria-label="EMA alpha 0.01 gains 24.85 percentage points from persistent metadata at 32 gibibytes"><div style={styles.heroVal}>+24.85 pts</div><div style={styles.heroLabel}>EMA α=0.01 · persistent metadata</div></div>
+        <div style={styles.heroStat} role="img" aria-label="Memory expansion of 6 times, analytical arithmetic over stated capacities, independent of any hit rate"><div style={styles.heroVal}>6×</div><div style={styles.heroLabel}>Memory expansion (analytical)</div></div>
+      </div>
+
+      <div style={styles.sectionTitle}>What survives independently of the simulator</div>
+      <div style={styles.table}>
+        <div style={{...styles.headerRow, gridTemplateColumns: '1.4fr 1.4fr 0.9fr 1fr'}}>
+          <div>Quantity</div><div>Basis</div><div>Value</div><div>Evidence</div>
+        </div>
+        {surviving.map((s, i) => (
+          <div key={i} style={styles.survRow}>
+            <div>{s.metric}</div>
+            <div style={{color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)', fontSize: '0.72rem'}}>{s.basis}</div>
+            <div style={{color: 'var(--accent-cyan)', fontWeight: 600}}>{s.v}</div>
+            <div><span style={styles.tag}>{s.label}</span></div>
+          </div>
+        ))}
+      </div>
+
+      <div style={styles.caveat}>
+        <strong style={{color: 'var(--accent-orange)'}}>Standing caveat — Simulated (provisional).</strong> A single data-structure defect in
+        Revision 1 inverted four of five findings. Revision 2 is <em>provisional, not settled</em>: no Belady bound,
+        no bandwidth or queueing model, whole-context residency assumed, synthetic workload, 2–3 seeds, no hardware validation.
+      </div>
+
+      <div style={styles.note}>
+        <strong>Why this figure no longer shows a headline ratio.</strong> The v4.0 comparison table on this page
+        rested on a 97% HBM hit rate that was never measured, and on the 72 → 80 → 87 → 93 → 97 ladder, whose
+        +8/+7/+6/+4 increments were assumed additive and independent and were never run as an ablation. Both are
+        retracted, and everything derived from them goes with them: 16× user capacity, 11.5× effective latency,
+        15.6× TTFT, and the $160,000 → $103,000 / −36% CapEx model. <strong>No single hit rate exists</strong> — the
+        corrected simulation gives <strong>8.5–91.6%</strong> across budgets, policies and workloads. No CXL hardware
+        was measured; tier latency is an assumption across 32 / 64 / 121 GB/s, under which a 5.00 MiB block fetch is
+        164 / 82 / 43 µs. The scoring function is not novel either: a decayed-frequency score is <strong>LRFU</strong>
+        (Lee et al., <em>On the Existence of a Spectrum of Policies that Subsumes the LRU and LFU Policies</em>,
+        ACM SIGMETRICS 1999), and α is its documented LRU↔LFU knob — <span style={styles.tag}>External literature</span>.
+        α = 0.2 was never validated; the simulated optimum is α ≈ 0.05 and α is non-monotonic.
+        Percentage-point differences are quoted as <strong>pts</strong>, never %.
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<PerformanceBenchmarks />);
+</script>
+</body>
+</html>

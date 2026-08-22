@@ -1,14 +1,11 @@
-================================================================================
+==============================================================================
 CH13 - CONCLUSION - FIGURE INDEX
-================================================================================
+==============================================================================
 
-Fig 13.1: Cover Page / Title
-      Source: cover-page.html
+Generated from the filesystem on 2026-08-22.
 
-Fig 13.2: Final System Comparison
-      Source: (reference back to Ch11)
+cover-page.html
+      Distributed Endpoint Architecture
+      embedded: (gallery only)
 
-Fig 13.3: Key Takeaways
-      Source: (reference back to Ch11)
-
-TOTAL: 3 figures (1 unique, 2 references)
+TOTAL: 1 figure (0 new in v6.0)

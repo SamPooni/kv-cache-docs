@@ -4,13 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Section 2.1 — Inference Fundamentals</title>
-<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: system-ui, sans-serif; background: linear-gradient(135deg, #0f172a, #1e293b); min-height: 100vh; color: #e2e8f0; }</style>
+<script src="../../vendor/react.production.min.js"></script>
+<script src="../../vendor/react-dom.production.min.js"></script>
+<script src="../../vendor/babel.min.js"></script>
+<link rel="stylesheet" href="../../vendor/fonts.css">
+<link rel="stylesheet" href="../../css/style.css">
+<style>* { box-sizing: border-box; margin: 0; padding: 0; } body { font-family: var(--font-sans); background: var(--bg-primary); min-height: 100vh; color: var(--text-primary); }</style>
 </head>
 <body>
-<div id="root"></div>
+<div id="root" role="main"></div>
 <script type="text/babel">
 const { useState } = React;
 function InferenceFundamentals() {
@@ -18,18 +20,19 @@ function InferenceFundamentals() {
   const styles = {
     container: { maxWidth: '900px', margin: '0 auto', padding: '2rem' },
     tabs: { display: 'flex', gap: '0.5rem', marginBottom: '2rem', justifyContent: 'center' },
-    tab: (active) => ({ padding: '0.75rem 1.5rem', background: active ? '#3b82f6' : '#334155', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: active ? 600 : 400 }),
-    card: { background: '#1e293b', borderRadius: '16px', padding: '1.5rem', marginBottom: '1rem' },
-    title: { fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem', color: '#60a5fa' },
-    text: { color: '#94a3b8', lineHeight: 1.6 },
-    highlight: { color: '#10b981', fontWeight: 600 },
+    tab: (active) => ({ padding: '0.75rem 1.5rem', background: active ? 'var(--accent-blue)' : 'var(--bg-card-hover)', color: active ? 'var(--bg-primary)' : 'var(--text-primary)', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: active ? 600 : 400 }),
+    card: { background: 'var(--bg-card)', borderRadius: '16px', padding: '1.5rem', marginBottom: '1rem' },
+    title: { fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--accent-cyan)' },
+    text: { color: 'var(--text-secondary)', lineHeight: 1.6 },
+    highlight: { color: 'var(--accent-green)', fontWeight: 600 },
     grid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' },
-    stat: { background: '#0f172a', borderRadius: '8px', padding: '1rem', textAlign: 'center' },
-    statVal: { fontSize: '1.5rem', fontWeight: 700, color: '#60a5fa' },
-    statLabel: { fontSize: '0.75rem', color: '#64748b' }
+    stat: { background: 'var(--bg-code)', borderRadius: '8px', padding: '1rem', textAlign: 'center' },
+    statVal: { fontSize: '1.5rem', fontWeight: 700, color: 'var(--accent-cyan)' },
+    statLabel: { fontSize: '0.75rem', color: 'var(--text-secondary)' }
   };
   return (
     <div style={styles.container}>
+      <p className="sr-only">Figure: inference fundamentals, in three tabbed panels — overview, memory and compute. The overview names the two phases: prefill processes the whole prompt in parallel and builds the KV-cache, decode then generates one token at a time and reads the cache at every step. The memory panel budgets one B200 with 192 GB of HBM3e: 140 GB of Llama-2-70B BF16 weights, 5 GB of activations and 43 GB of KV-cache for one user at 128K make 188 GB, which fits with 4 GB to spare, while a second user needs 140 + 2 × 43 + 5 = 231 GB against 192 GB and overflows — the usable KV budget is 47 GB, one context and no more. The compute panel restates that prefill is compute-bound and decode is memory-bound. All values are an analytical model, not measured.</p>
       <div style={{textAlign: 'center', marginBottom: '2rem'}}>
         <h1 style={{fontSize: '1.75rem', fontWeight: 700}}>Inference Fundamentals</h1>
       </div>
@@ -50,13 +53,19 @@ function InferenceFundamentals() {
       )}
       {view === 'memory' && (
         <div style={styles.card}>
-          <div style={styles.title}>Memory Requirements</div>
+          <div style={styles.title}>Memory Requirements — one B200 (192 GB HBM3e)</div>
           <div style={styles.grid}>
-            <div style={styles.stat}><div style={styles.statVal}>140 GB</div><div style={styles.statLabel}>Llama-70B Weights</div></div>
-            <div style={styles.stat}><div style={styles.statVal}>41 GB</div><div style={styles.statLabel}>KV-Cache @ 128K</div></div>
-            <div style={styles.stat}><div style={styles.statVal}>192 GB</div><div style={styles.statLabel}>B200 HBM</div></div>
-            <div style={styles.stat}><div style={{...styles.statVal, color: '#ef4444'}}>Overflow!</div><div style={styles.statLabel}>With just 1 user</div></div>
+            <div style={styles.stat}><div style={styles.statVal}>140 GB</div><div style={styles.statLabel}>Llama-2-70B Weights (BF16)</div></div>
+            <div style={styles.stat}><div style={styles.statVal}>5 GB</div><div style={styles.statLabel}>Activations / workspace</div></div>
+            <div style={styles.stat}><div style={styles.statVal}>43 GB</div><div style={styles.statLabel}>KV-Cache @ 128K, per user</div></div>
+            <div style={styles.stat}><div style={{...styles.statVal, color: 'var(--accent-green)'}}>188 GB</div><div style={styles.statLabel}>1 user: 140 + 43 + 5 — fits in 192 GB</div></div>
           </div>
+          <div style={{...styles.text, marginTop: '1rem'}}>
+            One 128K user fits, with only 4 GB to spare. The <span style={{color: 'var(--accent-red)', fontWeight: 600}}>second user overflows</span>:
+            140 + 2 × 43 + 5 = <span style={{color: 'var(--accent-red)', fontWeight: 600}}>231 GB</span> against 192 GB of HBM.
+            The usable KV budget is 192 − 140 − 5 = 47 GB, which is one 43 GB context and no more.
+          </div>
+          <div style={{fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '1rem'}}>Analytical model — derived from the sizing formula and vendor capacity specs, not measured.</div>
         </div>
       )}
       {view === 'compute' && (

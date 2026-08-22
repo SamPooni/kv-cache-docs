@@ -3,17 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Figure 3.3 — Attention Locality Patterns</title>
-<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<title>Figure 7.2 — Attention Locality Patterns</title>
+<script src="../../vendor/react.production.min.js"></script>
+<script src="../../vendor/react-dom.production.min.js"></script>
+<script src="../../vendor/babel.min.js"></script>
+<link rel="stylesheet" href="../../css/style.css">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: system-ui, sans-serif; background: linear-gradient(135deg, #0f172a, #1e293b); min-height: 100vh; color: #e2e8f0; }
+body { font-family: var(--font-sans); background: linear-gradient(135deg, var(--bg-primary), var(--bg-card)); min-height: 100vh; color: var(--text-primary); }
 </style>
 </head>
 <body>
-<div id="root"></div>
+<div id="root" role="main"></div>
 <script type="text/babel">
 const { useState } = React;
 
@@ -21,26 +22,26 @@ function AttentionLocality() {
   const [selectedHead, setSelectedHead] = useState('recency');
   
   const headTypes = {
-    recency: { name: 'Recency Head', color: '#10b981', pct: 40, pattern: 'Last 50-200 tokens', description: 'Focuses on recent context for coherent generation' },
-    anchor: { name: 'Anchor Head', color: '#3b82f6', pct: 15, pattern: 'Positions 0-100', description: 'Attends to system prompt and initial instructions' },
-    retrieval: { name: 'Retrieval Head', color: '#8b5cf6', pct: 25, pattern: 'Content-based', description: 'Finds relevant information anywhere in context' },
-    syntactic: { name: 'Syntactic Head', color: '#f59e0b', pct: 20, pattern: 'Grammar patterns', description: 'Tracks grammatical structure and dependencies' }
+    recency: { name: 'Recency Head', color: 'var(--accent-green)', pct: 40, pattern: 'Last 50-200 tokens', description: 'Focuses on recent context for coherent generation' },
+    anchor: { name: 'Anchor Head', color: 'var(--accent-cyan)', pct: 15, pattern: 'Positions 0-100', description: 'Attends to system prompt and initial instructions' },
+    retrieval: { name: 'Retrieval Head', color: 'var(--accent-purple)', pct: 25, pattern: 'Content-based', description: 'Finds relevant information anywhere in context' },
+    syntactic: { name: 'Syntactic Head', color: 'var(--accent-orange)', pct: 20, pattern: 'Grammar patterns', description: 'Tracks grammatical structure and dependencies' }
   };
 
   const styles = {
     container: { maxWidth: '900px', margin: '0 auto', padding: '2rem' },
     header: { textAlign: 'center', marginBottom: '2rem' },
-    badge: { display: 'inline-block', padding: '0.25rem 0.75rem', background: 'rgba(139,92,246,0.2)', color: '#a78bfa', fontSize: '0.75rem', fontFamily: 'monospace', borderRadius: '20px', marginBottom: '0.5rem' },
+    badge: { display: 'inline-block', padding: '0.25rem 0.75rem', background: 'rgba(139,92,246,0.2)', color: 'var(--accent-purple)', fontSize: '0.75rem', fontFamily: 'var(--font-mono)', borderRadius: '20px', marginBottom: '0.5rem' },
     title: { fontSize: '1.75rem', fontWeight: 700, marginBottom: '0.5rem' },
     grid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.75rem', marginBottom: '2rem' },
-    headBtn: (active, color) => ({ padding: '1rem', background: active ? color : '#1e293b', border: `2px solid ${active ? color : '#334155'}`, borderRadius: '12px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s' }),
-    headName: { fontSize: '0.875rem', fontWeight: 600, color: 'white', marginBottom: '0.25rem' },
-    headPct: { fontSize: '1.5rem', fontWeight: 700, color: 'white' },
-    detailCard: { background: '#1e293b', borderRadius: '16px', padding: '2rem', marginBottom: '2rem' },
+    headBtn: (active, color) => ({ padding: '1rem', background: active ? color : 'var(--bg-card)', border: `2px solid ${active ? color : 'var(--border-primary)'}`, borderRadius: '12px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s' }),
+    headName: (active) => ({ fontSize: '0.875rem', fontWeight: 600, color: active ? 'var(--bg-primary)' : 'var(--text-primary)', marginBottom: '0.25rem' }),
+    headPct: (active) => ({ fontSize: '1.5rem', fontWeight: 700, color: active ? 'var(--bg-primary)' : 'var(--text-primary)' }),
+    detailCard: { background: 'var(--bg-card)', borderRadius: '16px', padding: '2rem', marginBottom: '2rem' },
     detailHeader: (color) => ({ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', color }),
     heatmap: { display: 'grid', gridTemplateColumns: 'repeat(20, 1fr)', gap: '2px', marginBottom: '1rem' },
-    heatCell: (intensity, color) => ({ aspectRatio: '1', borderRadius: '2px', background: intensity > 0 ? color : '#334155', opacity: intensity > 0 ? 0.3 + intensity * 0.7 : 0.2 }),
-    legend: { display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#64748b' }
+    heatCell: (intensity, color) => ({ aspectRatio: '1', borderRadius: '2px', background: intensity > 0 ? color : 'var(--border-primary)', opacity: intensity > 0 ? 0.3 + intensity * 0.7 : 0.2 }),
+    legend: { display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-secondary)' }
   };
 
   const head = headTypes[selectedHead];
@@ -61,37 +62,39 @@ function AttentionLocality() {
 
   return (
     <div style={styles.container}>
+      <p className="sr-only">Figure: attention head specialization, showing how four head types divide a model's attention heads and where in the sequence each one looks. Recency heads are about 40 percent and attend to the last 50 to 200 tokens; retrieval heads about 25 percent and attend content-based anywhere in the context; syntactic heads about 20 percent and follow grammar patterns; anchor heads about 15 percent and attend to positions 0 to 100, the system prompt. Because the four types need different spans of the sequence, a per-head cache budget can keep far less than treating every token uniformly. All values are an analytical model, not measured.</p>
       <div style={styles.header}>
-        <div style={styles.badge}>FIGURE 3.3</div>
+        <div style={styles.badge}>FIGURE 7.2</div>
         <h1 style={styles.title}>Attention Head Specialization</h1>
-        <p style={{color: '#94a3b8'}}>Click each head type to see its attention pattern</p>
+        <p style={{color: 'var(--text-secondary)'}}>Click each head type to see its attention pattern</p>
+        <p style={{color: 'var(--accent-orange)', fontSize: '0.8rem', marginTop: '0.5rem'}}>The 40 / 15 / 25 / 20 split is a modeling ASSUMPTION, not a measured result.</p>
       </div>
 
       <div style={styles.grid}>
         {Object.entries(headTypes).map(([key, val]) => (
-          <div key={key} style={styles.headBtn(selectedHead === key, val.color)} onClick={() => setSelectedHead(key)}>
-            <div style={styles.headName}>{val.name}</div>
-            <div style={styles.headPct}>~{val.pct}%</div>
+          <div key={key} role="img" aria-label={`${val.name}, about ${val.pct} percent of heads, attention pattern ${val.pattern}`} style={styles.headBtn(selectedHead === key, val.color)} onClick={() => setSelectedHead(key)}>
+            <div style={styles.headName(selectedHead === key)}>{val.name}</div>
+            <div style={styles.headPct(selectedHead === key)}>~{val.pct}%</div>
           </div>
         ))}
       </div>
 
       <div style={styles.detailCard}>
         <div style={styles.detailHeader(head.color)}>
-          <div style={{width: 48, height: 48, borderRadius: 12, background: head.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem'}}>
+          <div aria-hidden="true" style={{width: 48, height: 48, borderRadius: 12, background: head.color, color: 'var(--bg-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.5rem'}}>
             {selectedHead === 'recency' ? '⏱️' : selectedHead === 'anchor' ? '📌' : selectedHead === 'retrieval' ? '🔍' : '📝'}
           </div>
           <div>
             <div style={{fontSize: '1.25rem', fontWeight: 700}}>{head.name}</div>
-            <div style={{color: '#94a3b8', fontSize: '0.875rem'}}>{head.description}</div>
+            <div style={{color: 'var(--text-secondary)', fontSize: '0.875rem'}}>{head.description}</div>
           </div>
         </div>
 
-        <div style={{marginBottom: '1rem', color: '#94a3b8', fontSize: '0.875rem'}}>Attention Pattern: <strong style={{color: head.color}}>{head.pattern}</strong></div>
+        <div style={{marginBottom: '1rem', color: 'var(--text-secondary)', fontSize: '0.875rem'}}>Attention Pattern: <strong style={{color: head.color}}>{head.pattern}</strong></div>
         
-        <div style={styles.heatmap}>
+        <div style={styles.heatmap} role="img" aria-label={`Attention heatmap for the ${head.name} across 20 sequence positions, left is position 0 and right is the current position. Pattern: ${head.pattern}.`}>
           {getHeatmapData().map((intensity, i) => (
-            <div key={i} style={styles.heatCell(intensity, head.color)}></div>
+            <div key={i} aria-hidden="true" style={styles.heatCell(intensity, head.color)}></div>
           ))}
         </div>
         <div style={styles.legend}>
@@ -101,12 +104,23 @@ function AttentionLocality() {
         </div>
       </div>
 
-      <div style={{background: '#1e293b', borderRadius: '12px', padding: '1rem'}}>
-        <div style={{fontWeight: 600, marginBottom: '0.5rem', color: '#60a5fa'}}>💡 Why This Matters</div>
-        <div style={{color: '#94a3b8', fontSize: '0.875rem'}}>
+      <div style={{background: 'var(--bg-card)', borderRadius: '12px', padding: '1rem'}}>
+        <div style={{fontWeight: 600, marginBottom: '0.5rem', color: 'var(--accent-cyan)'}}><span aria-hidden="true">💡</span> Why This Matters</div>
+        <div style={{color: 'var(--text-secondary)', fontSize: '0.875rem'}}>
           Different heads need different cache strategies. Treating all tokens uniformly wastes resources—
           per-head tracking lets us keep what each head actually needs.
         </div>
+        <div style={{color: 'var(--accent-orange)', fontSize: '0.8rem', marginTop: '0.75rem'}}>
+          <strong>Assumption, not measurement.</strong> The four-way taxonomy (Recency / Anchor /
+          Retrieval / Syntactic) and the 40 / 15 / 25 / 20 share used throughout this package are a
+          modeling assumption chosen to make the per-head budget tractable. They are motivated by the
+          induction-head and retrieval-head literature, but no head census was run on Llama-2-70B for
+          this work.
+        </div>
+      </div>
+
+      <div style={{textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '1.5rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-primary)'}}>
+        Analytical model — head-type shares are assumed, not measured. Canonical numbers v4.0.
       </div>
     </div>
   );

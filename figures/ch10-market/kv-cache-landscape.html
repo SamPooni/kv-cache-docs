@@ -1,1 +1,734 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>KV-State Management Landscape</title><style>*{box-sizing:border-box}body{margin:0;background:#0d1117;color:#e6edf3;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif;line-height:1.55}.wrap{max-width:1080px;margin:auto;padding:36px}.ey{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#8b949e}.hero{font-size:42px;line-height:1.06;margin:8px 0 14px}.lead{font-size:18px;color:#b7c2cf;max-width:900px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin:24px 0}.card{background:#161b22;border:1px solid #30363d;border-radius:14px;padding:18px}.n{font:750 27px ui-monospace,Consolas,monospace;color:#58a6ff}.lab{font-weight:650;margin-top:6px}.note{font-size:13px;color:#8b949e;margin-top:6px}.sec{font-size:24px;margin:30px 0 10px}.flow{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin:18px 0}.box{background:#161b22;border:1px solid #30363d;border-radius:12px;padding:13px 15px;font-weight:650}.arr{font-size:20px;color:#7d8590}.warn{padding:14px 16px;border-left:4px solid #d29922;background:#1c1912;border-radius:8px}.tbl{width:100%;border-collapse:collapse;margin:16px 0}.tbl th,.tbl td{padding:10px 12px;border-bottom:1px solid #30363d;text-align:left}.tbl th{color:#8b949e;font-size:12px;text-transform:uppercase}.footer{margin-top:34px;padding-top:16px;border-top:1px solid #30363d;color:#7d8590;font-size:12px}</style></head><body><main class="wrap"><div class="ey">Market / research landscape · August 2026</div><h1 class="hero">KV-State Management Landscape</h1><p class="lead">This landscape is intentionally capability-based. Product specifications and research results change quickly; v5 does not use competitor superlatives or vendor-gap claims as technical evidence.</p><div class="grid"><div class="card"><div class="lab">Memory expansion / pooling</div><div class="note">Examples include CXL-attached DRAM and pooled-memory platforms. Their existence establishes additional capacity options, not KV-cache performance.</div></div><div class="card"><div class="lab">Inference runtimes</div><div class="note">Paged KV allocation, prefix caching, batching and scheduling reduce fragmentation/recomputation, but behavior is workload- and version-dependent.</div></div><div class="card"><div class="lab">KV disaggregation research</div><div class="note">Research explores CPU/DRAM/SSD/CXL/remote-memory placement, prefetch and near-memory processing. Results are not directly comparable without matching workloads and hardware.</div></div><div class="card"><div class="lab">Application-aware caching</div><div class="note">Emerging agent workloads expose reuse signals such as session identity, prefixes and tool-return timing. These can inform policy but require independent validation.</div></div></div><div class="warn"><strong>Positioning rule:</strong> v5 claims a measured GB10 observation, a corrected simulator and a KV object/control-plane design. It does not claim to be the first, only or universally superior KV-cache solution.</div><div class="footer">© 2025–2026 Subramaniyam (Sam) Pooni. All Rights Reserved. · Technical Documentation v5.0.2 · August 2026</div></main></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The 2026 KV-Cache Map</title>
+<link rel="stylesheet" href="../../vendor/fonts.css">
+<link rel="stylesheet" href="../../css/style.css">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: var(--font-sans);
+  background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-tertiary) 100%);
+  min-height: 100vh;
+  padding: 2rem;
+  color: var(--text-primary);
+}
+
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+/* Header */
+.header {
+  text-align: center;
+  margin-bottom: 2.5rem;
+}
+
+.section-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, var(--accent-purple), #7c3aed);
+  color: var(--bg-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.35rem 1rem;
+  border-radius: 50px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+
+h1 {
+  font-size: 2.25rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 0.5rem;
+}
+
+.subtitle {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+}
+
+/* Category Sections */
+.category {
+  margin-bottom: 2rem;
+}
+
+.category-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.category-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+}
+
+.category-icon.commercial { background: linear-gradient(135deg, var(--accent-blue), #2563eb); }
+.category-icon.software { background: linear-gradient(135deg, var(--accent-purple), #7c3aed); }
+.category-icon.research { background: linear-gradient(135deg, var(--accent-orange), #ea580c); }
+
+.category-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.category-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+/* Product Cards */
+.products-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.product-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: 14px;
+  padding: 1.25rem;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.product-card:hover {
+  border-color: var(--border-highlight);
+  transform: translateY(-2px);
+}
+
+.product-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.product-name {
+  font-weight: 700;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.product-company {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 0.15rem;
+}
+
+.product-tag {
+  font-size: 0.6rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.product-tag.commercial {
+  background: rgba(56, 139, 253, 0.2);
+  color: var(--accent-cyan);
+}
+
+.product-tag.software {
+  background: rgba(163, 113, 247, 0.2);
+  color: var(--accent-purple);
+}
+
+.product-tag.research {
+  background: rgba(210, 153, 34, 0.2);
+  color: var(--accent-orange);
+}
+
+.product-specs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.spec {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  background: var(--bg-code);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  color: var(--text-secondary);
+}
+
+.spec.highlight {
+  background: rgba(63, 185, 80, 0.15);
+  color: var(--accent-green);
+}
+
+.product-desc {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.product-limitation {
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(248, 81, 73, 0.1);
+  border: 1px solid rgba(248, 81, 73, 0.25);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  color: var(--accent-red);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.product-limitation::before {
+  content: "⚠";
+  font-size: 0.7rem;
+}
+
+/* Research Cards - wider */
+.research-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.research-card {
+  background: linear-gradient(135deg, rgba(210, 153, 34, 0.08), rgba(210, 153, 34, 0.03));
+  border: 1px solid rgba(210, 153, 34, 0.25);
+  border-radius: 14px;
+  padding: 1.25rem;
+}
+
+.research-date {
+  font-size: 0.65rem;
+  color: var(--accent-orange);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.research-title {
+  font-weight: 700;
+  color: var(--accent-yellow);
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.research-desc {
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  line-height: 1.5;
+  margin-bottom: 0.75rem;
+}
+
+.research-result {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent-green);
+  background: rgba(63, 185, 80, 0.15);
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  display: inline-block;
+}
+
+/* Gap Section */
+.gap-section {
+  background: linear-gradient(135deg, rgba(248, 81, 73, 0.1), rgba(248, 81, 73, 0.05));
+  border: 2px solid rgba(248, 81, 73, 0.4);
+  border-radius: 20px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+}
+
+.gap-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.gap-icon {
+  font-size: 2.5rem;
+}
+
+.gap-title {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--accent-red);
+}
+
+.gap-subtitle {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.gap-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.gap-item {
+  background: var(--bg-code);
+  border-radius: 12px;
+  padding: 1rem;
+  text-align: center;
+  border: 1px solid rgba(248, 81, 73, 0.2);
+}
+
+.gap-item-icon {
+  font-size: 1.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.gap-item-title {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  margin-bottom: 0.25rem;
+}
+
+.gap-item-desc {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.gap-closest {
+  background: rgba(240, 194, 57, 0.1);
+  border: 1px solid rgba(240, 194, 57, 0.3);
+  border-radius: 10px;
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.gap-closest-icon {
+  font-size: 1.25rem;
+}
+
+.gap-closest-text {
+  font-size: 0.85rem;
+  color: var(--accent-yellow);
+  line-height: 1.5;
+}
+
+.gap-closest-text strong {
+  color: var(--accent-orange);
+}
+
+/* Opportunity Section */
+.opportunity-section {
+  background: linear-gradient(135deg, rgba(63, 185, 80, 0.15), rgba(63, 185, 80, 0.1));
+  border: 2px solid rgba(63, 185, 80, 0.5);
+  border-radius: 20px;
+  padding: 2rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.opportunity-section::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  right: -20%;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(63, 185, 80, 0.2) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.opportunity-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.opportunity-badge {
+  background: linear-gradient(135deg, var(--accent-green), #2d8c3c);
+  color: var(--bg-primary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.35rem 0.75rem;
+  border-radius: 50px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.opportunity-title {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--accent-green);
+}
+
+.opportunity-features {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.feature {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  background: var(--bg-code);
+  border-radius: 12px;
+  padding: 1rem;
+  border: 1px solid rgba(63, 185, 80, 0.2);
+}
+
+.feature-check {
+  width: 24px;
+  height: 24px;
+  background: var(--accent-green);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  color: var(--bg-primary);
+  flex-shrink: 0;
+}
+
+.feature-content {
+  flex: 1;
+}
+
+.feature-title {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+
+.feature-desc {
+  font-size: 0.8rem;
+  color: var(--accent-green);
+}
+
+@media (max-width: 768px) {
+  .products-grid, .opportunity-features { grid-template-columns: 1fr; }
+  .research-grid { grid-template-columns: 1fr; }
+  .gap-grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+<div class="container" role="main">
+
+  <p class="sr-only">Figure: a map of where KV-cache retention policy lives today, in four bands, organised by the decision each layer optimises rather than by any gap. The field did not leave a gap; it specialised, and the earlier "nobody has done this" framing is retired outright. Commercial products: Samsung CMM-D up to 512 GB per module and CMM-B up to 16 TB per box; the XConn Apollo 256-lane switch with MemVerge GISMO; Astera Labs Leo; Marvell Structera. Serving frameworks: vLLM with PagedAttention, the baseline every offload layer sits on; LMCache, now a first-class cross-tier KV layer with pinning, lookup, compression, batched movement, compute and I/O pipelining, cross-engine transfer and prefill-decode disaggregation; SGLang with RadixAttention; NVIDIA Dynamo. TraCT is a rack-scale, prefix-aware CXL KV cache implemented on Dynamo with direct GPU-to-CXL operations — CXL-native KV caching already ships, so this package is not the sole or first CXL-native KV-cache system. PNM-KV selects which KV pages are needed before paying the movement cost, from a processing-near-memory accelerator behind CXL. CacheWise predicts reuse from agent and tool-call state. Tutti removes the CPU from the GPU-to-NVMe KV I/O path. Related work this package builds on rather than competes with: H2O, SnapKV, Scissorhands, PyramidKV, Quest, Ada-KV, HeadKV, InfiniGen, LayerKV, KVPR and PagedAttention. What is genuinely open is not a missing implementation but a missing unification: whether one KV-State Control Plane — SELECT, PLACE, MOVE, ATTEND, OBSERVE — should decide relevance, reuse, residency and movement jointly instead of leaving each to a separate subsystem. Nobody, including this package, has built or tested that. One box inside it has evidence, and it is simulated and provisional: inside PLACE, letting identity-keyed policy state survive HBM eviction is worth plus 34.15 percentage points to LFU, from 15.56 to 49.71 percent, and plus 24.85 to EMA alpha 0.01, from 31.54 to 56.39 percent, at a 32 gibibyte budget, while EMA alpha 0.15 is unchanged at minus 0.21 percentage points — larger than the spread between policies, and testable with no CXL hardware. Retracted from this figure: per-head eviction over 640 GQA queues, since every head of every layer is required for every token and evicting a head produces wrong outputs rather than a cache miss, and the tracked unit is a (sequence, token block) of 16 tokens, 5.00 mebibytes, with per-head signals used only for scoring; alpha = 0.2, never validated, superseded by a simulated optimum near 0.05 with non-monotonic behaviour and no convergence onto LFU as alpha approaches zero; RoPE locality prefetch, since RoPE is a rotation applied to Q and K at compute time and carries no information about which blocks are needed next; and the 97 percent hit rate and 16 times user capacity that once framed the opportunity. The scoring function is not novel either: a decayed-frequency score is LRFU, Lee et al., ACM SIGMETRICS 1999, with alpha its documented LRU-to-LFU knob. No CXL hardware was measured. Simulation numbers are provisional, because a single data-structure defect in Revision 1 inverted four of five findings.</p>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="section-badge">The 2026 Landscape</div>
+    <h1>The 2026 KV-Cache Map</h1>
+    <p class="subtitle">The field did not leave a gap — it <strong>specialised</strong>. Mapped by the decision each layer optimises.</p>
+  </div>
+
+  <!-- Commercial Products -->
+  <div class="category">
+    <div class="category-header">
+      <div class="category-icon commercial" aria-hidden="true">🏢</div>
+      <div>
+        <div class="category-title">Commercial Products</div>
+        <div class="category-subtitle">Available today</div>
+      </div>
+    </div>
+
+    <div class="products-grid">
+      <div class="product-card">
+        <div class="product-header">
+          <div>
+            <div class="product-name">CMM-D / CMM-B</div>
+            <div class="product-company">Samsung</div>
+          </div>
+          <span class="product-tag commercial">CXL Type-3</span>
+        </div>
+        <div class="product-specs">
+          <span class="spec highlight">CMM-D: up to 512 GB / module</span>
+          <span class="spec highlight">CMM-B: up to 16 TB / box</span>
+          <span class="spec">~60 GB/s (box)</span>
+          <span class="spec">~600 ns loaded</span>
+        </div>
+        <div class="product-desc">CXL Type-3 memory expansion: an E3.S DDR5 module (CMM-D) and a rack-level pooled box (CMM-B). Media management, RAS and interleaving live in the controller.</div>
+        <div class="product-limitation">Policy lives in host/OS tiering — the device exposes capacity, not an attention-aware cache policy</div>
+      </div>
+
+      <div class="product-card">
+        <div class="product-header">
+          <div>
+            <div class="product-name">Apollo + GISMO</div>
+            <div class="product-company">XConn + MemVerge</div>
+          </div>
+          <span class="product-tag commercial">CXL switch</span>
+        </div>
+        <div class="product-specs">
+          <span class="spec highlight">256-lane switch</span>
+          <span class="spec">~100 TB pool demos</span>
+          <span class="spec">NVIDIA Dynamo</span>
+        </div>
+        <div class="product-desc">Switched CXL memory pooling with MemVerge GISMO; demonstrated as a KV-cache tier under NVIDIA Dynamo.</div>
+        <div class="product-limitation">Policy lives in switch + host software — block/prefix eviction, not per-head</div>
+      </div>
+
+      <div class="product-card">
+        <div class="product-header">
+          <div>
+            <div class="product-name">Leo (P-/E-Series)</div>
+            <div class="product-company">Astera Labs</div>
+          </div>
+          <span class="product-tag commercial">Smart controller</span>
+        </div>
+        <div class="product-specs">
+          <span class="spec">DDR5 expansion + pooling</span>
+          <span class="spec">COSMOS telemetry</span>
+        </div>
+        <div class="product-desc">Astera's CXL line: <strong>Leo</strong> controller, <strong>Scorpio</strong> switch, <strong>Aries</strong> retimer, <strong>Taurus</strong> smart cable module. Leo runs real on-controller logic for media management, RAS, security and fleet telemetry.</div>
+        <div class="product-limitation">Controller logic is memory management — no view of attention scores or KV-head structure</div>
+      </div>
+
+      <div class="product-card">
+        <div class="product-header">
+          <div>
+            <div class="product-name">Structera</div>
+            <div class="product-company">Marvell</div>
+          </div>
+          <span class="product-tag commercial">Near-memory compute</span>
+        </div>
+        <div class="product-specs">
+          <span class="spec">Arm cores on device</span>
+          <span class="spec">Expansion + pooling</span>
+        </div>
+        <div class="product-desc">Puts general-purpose compute next to DRAM behind CXL — which is why this document does not claim that CXL devices lack on-controller logic.</div>
+        <div class="product-limitation">On-device compute exists, but no published KV-cache eviction policy</div>
+      </div>
+
+      <div class="product-card">
+        <div class="product-header">
+          <div>
+            <div class="product-name">vLLM / LMCache</div>
+            <div class="product-company">Open Source</div>
+          </div>
+          <span class="product-tag software">Framework</span>
+        </div>
+        <div class="product-specs">
+          <span class="spec">PagedAttention</span>
+          <span class="spec">CPU/SSD offload</span>
+        </div>
+        <div class="product-desc">Industry-standard inference framework with block-level KV management and prefix reuse.</div>
+        <div class="product-limitation">Policy lives in the serving framework at block granularity</div>
+      </div>
+
+      <div class="product-card">
+        <div class="product-header">
+          <div>
+            <div class="product-name">SGLang / RadixAttention</div>
+            <div class="product-company">Open Source</div>
+          </div>
+          <span class="product-tag software">Framework</span>
+        </div>
+        <div class="product-specs">
+          <span class="spec">Radix-tree prefix cache</span>
+          <span class="spec">Automatic KV reuse</span>
+        </div>
+        <div class="product-desc">Radix tree over prompt prefixes matches and reuses shared prefixes automatically, with LRU eviction over the tree.</div>
+        <div class="product-limitation">Reuse across requests — not selection within a single long context</div>
+      </div>
+
+      <div class="product-card">
+        <div class="product-header">
+          <div>
+            <div class="product-name">Dynamo</div>
+            <div class="product-company">NVIDIA</div>
+          </div>
+          <span class="product-tag software">Framework</span>
+        </div>
+        <div class="product-specs">
+          <span class="spec">KV-aware routing</span>
+          <span class="spec">Tiered KV offload</span>
+        </div>
+        <div class="product-desc">Disaggregated serving with a KV-cache manager that routes requests to workers already holding the relevant blocks and offloads cold blocks to host memory or storage.</div>
+        <div class="product-limitation">Cluster control plane, block granularity — placement and routing, not per-head retention</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Research -->
+  <div class="category">
+    <div class="category-header">
+      <div class="category-icon research" aria-hidden="true">📚</div>
+      <div>
+        <div class="category-title">Related Work We Build On</div>
+        <div class="category-subtitle">Prior art for every mechanism used here</div>
+      </div>
+    </div>
+
+    <div class="research-grid">
+      <div class="research-card">
+        <div class="research-date">arXiv:2511.00321 — Nov 2025</div>
+        <div class="research-title">PNM-KV</div>
+        <div class="research-desc">CXL-enabled processing-near-memory that offloads token page selection to a PNM accelerator — the closest published work to putting KV decisions on the memory device.</div>
+        <div class="research-result">Token-page granularity, custom PNM silicon</div>
+      </div>
+
+      <div class="research-card">
+        <div class="research-date">H2O: arXiv:2306.14048</div>
+        <div class="research-title">H2O · SnapKV · Scissorhands · PyramidKV · Quest</div>
+        <div class="research-desc">Attention-score-based eviction and query-aware KV selection. Established prior art — this document does not claim to have invented it.</div>
+        <div class="research-result">Policy runs in the GPU model runtime</div>
+      </div>
+
+      <div class="research-card">
+        <div class="research-date">Ada-KV: arXiv:2407.11550</div>
+        <div class="research-title">Ada-KV · HeadKV</div>
+        <div class="research-desc">Per-head cache budget allocation and head-type awareness — the direct antecedent of the per-head tracking used here.</div>
+        <div class="research-result">Framework-level per-head budgets</div>
+      </div>
+
+      <div class="research-card">
+        <div class="research-date">OSDI '24 · 2024 · 2023</div>
+        <div class="research-title">InfiniGen · Mooncake · FlexGen</div>
+        <div class="research-desc">Speculative KV prefetch from host memory, disaggregated prefill/decode with a global KV store, and offload scheduling across GPU/CPU/SSD.</div>
+        <div class="research-result">Policy runs on the host CPU</div>
+      </div>
+
+      <div class="research-card">
+        <div class="research-date">2023 – 2025</div>
+        <div class="research-title">vLLM · SGLang/RadixAttention · NVIDIA Dynamo</div>
+        <div class="research-desc">Block- and prefix-level admission, reuse, routing and tiered offload inside the serving framework.</div>
+        <div class="research-result">Policy runs above the kernel</div>
+      </div>
+
+      <div class="research-card">
+        <div class="research-date">Commercial CXL</div>
+        <div class="research-title">Marvell Structera · Astera Labs Leo</div>
+        <div class="research-desc">Near-memory compute and smart memory control already exist on CXL devices; what is absent is an attention-aware retention policy on them.</div>
+        <div class="research-result">On-device logic, general purpose</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Where policy lives today -->
+  <div class="gap-section">
+    <div class="gap-header">
+      <div class="gap-icon" aria-hidden="true">🗺</div>
+      <div>
+        <div class="gap-title">Where Cache Policy Lives Today</div>
+        <div class="gap-subtitle">Every layer already makes a real retention decision — a different one each. These are complementary specialisations, not competing claims to one prize.</div>
+      </div>
+    </div>
+
+    <div class="gap-grid">
+      <div class="gap-item">
+        <div class="gap-item-icon" aria-hidden="true">🧩</div>
+        <div class="gap-item-title">Serving framework</div>
+        <div class="gap-item-desc">vLLM/PagedAttention · SGLang/RadixAttention · Dynamo · LMCache (a first-class cross-tier KV layer) · CacheWise (reuse prediction from tool-call state) · Tutti (GPU-direct NVMe movement)</div>
+      </div>
+      <div class="gap-item">
+        <div class="gap-item-icon" aria-hidden="true">📈</div>
+        <div class="gap-item-title">Model runtime (GPU)</div>
+        <div class="gap-item-desc">H2O · SnapKV · Scissorhands · PyramidKV · Quest · Ada-KV · HeadKV — eviction over <strong>(head, token)</strong> pairs and per-head budgets. Work built on, not competed with.</div>
+      </div>
+      <div class="gap-item">
+        <div class="gap-item-icon" aria-hidden="true">🖥</div>
+        <div class="gap-item-title">Host CPU</div>
+        <div class="gap-item-desc">FlexGen · InfiniGen · LayerKV · KVPR · Mooncake — offload and speculative fetch over a driver-mediated PCIe path</div>
+      </div>
+      <div class="gap-item">
+        <div class="gap-item-icon" aria-hidden="true">🔌</div>
+        <div class="gap-item-title">CXL device</div>
+        <div class="gap-item-desc">Astera Leo · Marvell Structera · Samsung CMM · <strong>TraCT</strong> — rack-scale, prefix-aware CXL KV caching on Dynamo, already shipping</div>
+      </div>
+    </div>
+
+    <div class="gap-closest">
+      <span class="gap-closest-icon" aria-hidden="true">🔍</span>
+      <span class="gap-closest-text">
+        <strong>What is genuinely open is not an implementation, but a unification.</strong> The pieces above are
+        specialised and real. CacheWise predicts reuse but does not decide residency; PNM-KV selects before movement but
+        keeps selection and movement policy separate; LMCache spans tiers and engines but does not predict reuse from agent
+        signals; TraCT solves rack-wide CXL transport; Tutti solves the GPU↔NVMe movement layer. The open question is
+        whether one <strong>KV-State Control Plane</strong> — SELECT → PLACE → MOVE → ATTEND → OBSERVE — should decide
+        relevance, reuse, residency and movement jointly. <strong>Nobody has built or tested that, this package included.</strong>
+        The one result it has sits inside <strong>PLACE</strong>: identity-keyed policy state surviving HBM eviction —
+        <strong>+34.15 pts to LFU</strong> (15.56 → 49.71) and <strong>+24.85 pts to EMA α=0.01</strong> (31.54 → 56.39) at
+        32 GiB, EMA α=0.15 unchanged (−0.21 pts). A <strong>protocol</strong> result, testable with <strong>no CXL
+        hardware</strong>. <span style="font-family:var(--font-mono);font-size:0.72rem;">Simulated (provisional)</span>
+      </span>
+    </div>
+  </div>
+
+  <!-- Opportunity -->
+  <div class="opportunity-section">
+    <div class="opportunity-header">
+      <span class="opportunity-badge">This work</span>
+      <span class="opportunity-title">KV State and Its Control Metadata as One Migratable Object</span>
+    </div>
+
+    <div class="opportunity-features">
+      <div class="feature">
+        <div class="feature-check" aria-hidden="true">✓</div>
+        <div class="feature-content">
+          <div class="feature-title">Block granularity — never head granularity</div>
+          <div class="feature-desc">The unit is a <strong>(sequence, token block)</strong>: 16 tokens = 5.00 MiB. Every head of every layer is required for every token, so evicting a head gives <strong>wrong outputs, not a cache miss</strong>. The 640 GQA streams are a <em>scoring</em> signal, aggregated into one score per block.</div>
+        </div>
+      </div>
+      <div class="feature">
+        <div class="feature-check" aria-hidden="true">✓</div>
+        <div class="feature-content">
+          <div class="feature-title">LRFU scoring — established prior art</div>
+          <div class="feature-desc">A decayed-frequency score is <strong>LRFU</strong> (Lee et al., ACM SIGMETRICS 1999); α is its documented LRU↔LFU knob. <strong>α = 0.2 was never validated</strong>; the simulated optimum is <strong>α ≈ 0.05</strong> and α is non-monotonic, with no convergence onto LFU as α→0. <span style="font-family:var(--font-mono);font-size:0.7rem;">External literature</span></div>
+        </div>
+      </div>
+      <div class="feature">
+        <div class="feature-check" aria-hidden="true">✓</div>
+        <div class="feature-content">
+          <div class="feature-title">Persistent identity-keyed state <span style="font-size:0.7rem;font-family:var(--font-mono);">Simulated (provisional)</span></div>
+          <div class="feature-desc">Policy state survives the round trip between tiers instead of resetting on re-admission — <strong>+34.15 pts to LFU</strong>, <strong>+24.85 pts to EMA α=0.01</strong> at 32 GiB. Bigger than the choice of policy. <strong>No RoPE prefetch:</strong> RoPE is a rotation applied to Q/K at compute time and carries no information about which blocks are needed next.</div>
+        </div>
+      </div>
+      <div class="feature">
+        <div class="feature-check" aria-hidden="true">✓</div>
+        <div class="feature-content">
+          <div class="feature-title">Host owns policy; device owns mechanism</div>
+          <div class="feature-desc">Payload overhead is negligible (64 B against a 5.00 MiB block = 0.0012%); <strong>metadata processing overhead is not established and must be measured</strong>. Whether the controller must be <em>on the device</em> is open — of four falsifiable claims, only the fourth needs device residency.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p style="text-align:center; color:var(--text-secondary); font-size:0.78rem; margin-top:1.5rem; padding-top:1rem; border-top:1px solid var(--border-primary);">
+    <strong>Evidence labels.</strong> Third-party capabilities are <strong>vendor specifications</strong> or the systems'
+    own <strong>published claims</strong>, cited not reproduced. This package's persistence result is
+    <strong>Simulated (provisional)</strong>: a single data-structure defect in Revision 1 inverted four of five findings,
+    so Revision 2 is provisional, not settled. Capacity arithmetic is an <strong>Analytical model</strong> and stands —
+    320 KiB/token, 2.50 GiB at 8K, 40.0 GiB at 128K, crossover with weights ≈ 427,000 tokens. LRFU attribution is
+    <strong>External literature</strong>. <strong>Retracted from this figure:</strong> the 97% hit rate, 16× user capacity,
+    α = 0.2, per-head eviction, RoPE-informed prefetch, and every "nobody has / the gap" framing.
+    <strong>No CXL hardware was measured.</strong> Canonical numbers v6.0.
+  </p>
+
+</div>
+</body>
+</html>

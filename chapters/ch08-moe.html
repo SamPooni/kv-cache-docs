@@ -4,16 +4,15 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chapter 8: Mixture-of-Experts and KV Cache Interaction — KV-Cache Offloading Architecture</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../vendor/fonts.css">
   <link rel="stylesheet" href="../css/style.css">
   <style>
     .callout { border-left: 4px solid #c9860a; background: rgba(201,134,10,0.08); padding: 0.9rem 1.2rem; margin: 1.5rem 0; border-radius: 4px; font-size: 0.95rem; }
-    .callout-title { font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.78rem; margin-bottom: 0.35rem; color: #c9860a; }
-    .callout.open { border-left-color: #7a5fc4; background: rgba(122,95,196,0.08); }
-    .callout.open .callout-title { color: #7a5fc4; }
-    .callout.hypo { border-left-color: #2f6fc4; background: rgba(47,111,196,0.08); }
-    .callout.hypo .callout-title { color: #2f6fc4; }
+    .callout-title { font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.78rem; margin-bottom: 0.35rem; color: var(--accent-orange); }
+    .callout.open { border-left-color: var(--accent-purple); background: rgba(122,95,196,0.08); }
+    .callout.open .callout-title { color: var(--accent-purple); }
+    .callout.hypo { border-left-color: var(--accent-blue); background: rgba(47,111,196,0.08); }
+    .callout.hypo .callout-title { color: var(--accent-blue); }
   </style>
 </head>
 <body>

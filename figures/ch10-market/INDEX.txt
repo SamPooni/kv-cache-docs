@@ -1,13 +1,24 @@
-Chapter 10: Market Landscape Figures
-=====================================
+==============================================================================
+CH10 - THE 2026 LANDSCAPE - FIGURE INDEX
+==============================================================================
 
-competitive-landscape.html  - MAIN: Competitive landscape, what exists vs. what we address, innovation gap
-market-landscape.html       - Market overview diagrams
-kv-cache-landscape.html     - KV-cache solutions landscape
+Generated from the filesystem on 2026-08-22.
 
-KEY SELLING POINTS (competitive-landscape.html):
-- Commercial Hardware: Samsung CMM-D/B, Apollo CXL Switch, Niagara 2.0
-- Software Frameworks: vLLM/LMCache, Mooncake, FlexGen
-- Academic Papers: PNM-KV, CXL-SpecKV, TraCT
-- The Gap: Per-KV-head tracking, EMA eviction, RoPE prefetch, CXL controller intelligence
-- v5 position: measured GB10 observation + corrected simulator + KV-state control-plane design; no first/only claim
+competitive-landscape.html
+      The 2026 KV-Cache Landscape
+      embedded: (gallery only)
+
+kv-cache-landscape.html
+      The 2026 KV-Cache Map
+      embedded: (gallery only)
+
+landscape-2026.html   [NEW v6.0]
+      2026 Landscape
+      evidence: Figure 10.1 · External literature
+      embedded: chapters/ch10-market.html
+
+market-landscape.html
+      2026 Landscape by Decision
+      embedded: (gallery only)
+
+TOTAL: 4 figures (1 new in v6.0)

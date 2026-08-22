@@ -1,38 +1,42 @@
-================================================================================
-CH03 - ARCHITECTURE - FIGURE INDEX
-================================================================================
+==============================================================================
+CH03 - THE KV-STATE CONTROL PLANE - FIGURE INDEX
+==============================================================================
 
-Fig 3.1: System Topology
-      Source: diagram-architecture-html.html
+Generated from the filesystem on 2026-08-22.
 
-Fig 3.2: CXL Endpoint Architecture
-      Source: endpoint-diagram.html
+cxl-architecture-diagram.html
+      CXL Architecture Diagram
+      embedded: (gallery only)
 
-Fig 3.3: Endpoint Internal Components
-      Source: endpoint-diagram.html -> Internal Architecture
+diagram-architecture-html.html
+      Distributed Endpoint Architecture
+      embedded: (gallery only)
 
-Fig 3.4: CXL Controller
-      Source: endpoint-diagram.html -> CXL Controller
+endpoint-diagram.html
+      Endpoint diagram
+      embedded: (gallery only)
 
-Fig 3.5: Compute Chiplet
-      Source: endpoint-diagram.html -> Compute Chiplet
+figure-3-1-cxl-architecture.html
+      CXL Architecture Diagram
+      embedded: (gallery only)
 
-Fig 3.6: Memory Subsystem
-      Source: endpoint-diagram.html -> Memory Subsystem
+figure-3-2-memory-hierarchy.html
+      Figure 3.2 — Memory Hierarchy
+      embedded: (gallery only)
 
-Fig 3.7: CXL 3.0 Coherency Protocol
-      Source: figure-3-1-cxl-architecture.tsx
+four-constraints.html
+      Four Constraints
+      evidence: Figure 3.1 · Analytical model
+      embedded: (gallery only)
 
-Fig 3.8: Three-Tier Architecture
-      Source: figure-3-2-memory-hierarchy.tsx -> Tier Specifications
+kv-state-control-plane.html   [NEW v6.0]
+      KV-State Control Plane
+      evidence: Figure 3.2 · Illustrative — proposed architecture · one stage Simulated (provisional)
+      embedded: chapters/ch03-architecture.html
 
-Fig 3.9: Tiered Memory Layout
-      Source: figure-3-2-memory-hierarchy.tsx -> KV-Cache Placement
+two-hierarchies.html   [NEW v6.0]
+      Two Orthogonal Hierarchies
+      evidence: Figure 3.1 · Illustrative — proposed architecture
+      embedded: chapters/ch03-architecture.html
 
-Fig 3.10: Bandwidth Hierarchy
-      Source: cxl-architecture-diagram.tsx
-
-Fig 3.11: HBM vs CXL Comparison
-      Source: figure-3-2-memory-hierarchy.tsx
-
-TOTAL: 11 figures
+TOTAL: 8 figures (2 new in v6.0)

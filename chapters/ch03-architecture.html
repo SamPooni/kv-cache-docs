@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Chapter 3: The KV-State Control Plane — KV-Cache Offloading Architecture</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet"><link rel="stylesheet" href="../css/style.css">
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Chapter 3: The KV-State Control Plane — KV-Cache Offloading Architecture</title><link rel="stylesheet" href="../vendor/fonts.css"><link rel="stylesheet" href="../css/style.css">
 <style>
   .hier-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin: 1.5rem 0 2rem; }
   @media (max-width: 720px) { .hier-grid { grid-template-columns: 1fr; } }
@@ -7,37 +7,37 @@
   .hier-chain { display: flex; flex-direction: column; gap: 0.4rem; }
   .hier-chain .hnode { border: 1px solid var(--border, #33383f); border-radius: 6px; padding: 0.5rem 0.7rem; font-size: 0.85rem; font-family: 'IBM Plex Mono', monospace; }
   .hier-chain .harrow { text-align: center; color: var(--text-muted); font-size: 0.85rem; }
-  .hier-col.info .hnode { border-color: #7a5fc4; color: #7a5fc4; }
-  .hier-col.phys .hnode { border-color: #2f8f4e; color: #2f8f4e; }
+  .hier-col.info .hnode { border-color: var(--accent-purple); color: var(--accent-purple); }
+  .hier-col.phys .hnode { border-color: var(--accent-green); color: var(--accent-green); }
 
   .cp-pipeline { display: flex; flex-wrap: wrap; align-items: stretch; gap: 0.6rem; margin: 1.75rem 0 0.5rem; }
   .cp-pipeline .cstep { flex: 1 1 150px; border: 1px solid var(--border, #33383f); border-radius: 8px; padding: 0.8rem 0.9rem; }
   .cp-pipeline .cstep .cn { font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 0.85rem; }
   .cp-pipeline .cstep .cd { font-size: 0.78rem; color: var(--text-muted); margin-top: 0.3rem; line-height: 1.35; }
-  .cp-pipeline .cstep.plane { border-color: #7a5fc4; }
-  .cp-pipeline .cstep.plane .cn { color: #7a5fc4; }
+  .cp-pipeline .cstep.plane { border-color: var(--accent-purple); }
+  .cp-pipeline .cstep.plane .cn { color: var(--accent-purple); }
   .cp-pipeline .carrow { align-self: center; color: var(--text-muted); font-size: 1.1rem; }
   .cp-feedback { margin-top: 0.6rem; text-align: center; font-size: 0.78rem; color: var(--text-muted); font-family: 'IBM Plex Mono', monospace; border: 1px dashed var(--border, #33383f); border-radius: 6px; padding: 0.5rem; }
 
   .callout { border-left: 4px solid #c9860a; background: rgba(201,134,10,0.08); padding: 0.9rem 1.2rem; margin: 1.5rem 0; border-radius: 4px; font-size: 0.95rem; }
-  .callout-title { font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.78rem; margin-bottom: 0.35rem; color: #c9860a; }
-  .callout.protocol { border-left-color: #2f8f4e; background: rgba(47,143,78,0.08); }
-  .callout.protocol .callout-title { color: #2f8f4e; }
-  .callout.open { border-left-color: #7a5fc4; background: rgba(122,95,196,0.08); }
-  .callout.open .callout-title { color: #7a5fc4; }
+  .callout-title { font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; font-size: 0.78rem; margin-bottom: 0.35rem; color: var(--accent-orange); }
+  .callout.protocol { border-left-color: var(--accent-green); background: rgba(47,143,78,0.08); }
+  .callout.protocol .callout-title { color: var(--accent-green); }
+  .callout.open { border-left-color: var(--accent-purple); background: rgba(122,95,196,0.08); }
+  .callout.open .callout-title { color: var(--accent-purple); }
 
   .ev-table { width: 100%; border-collapse: collapse; margin: 1.25rem 0 2rem; font-size: 0.92rem; }
   .ev-table th, .ev-table td { padding: 0.55rem 0.9rem; border: 1px solid var(--border, #33383f); text-align: left; vertical-align: top; }
   .ev-table thead th { background: var(--surface-alt, rgba(127,127,127,0.08)); font-weight: 600; }
-  .ev-table td.status-yes { color: #2f8f4e; font-weight: 600; }
-  .ev-table td.status-no { color: #7a5fc4; font-weight: 600; }
+  .ev-table td.status-yes { color: var(--accent-green); font-weight: 600; }
+  .ev-table td.status-no { color: var(--accent-purple); font-weight: 600; }
 
   .sig-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin: 1.5rem 0 2rem; }
   @media (max-width: 720px) { .sig-grid { grid-template-columns: 1fr; } }
   .sig-col { border: 1px solid var(--border, #33383f); border-radius: 8px; padding: 1rem 1.1rem; }
   .sig-col h4 { margin: 0 0 0.5rem; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.03em; }
-  .sig-col.past h4 { color: #2f8f4e; }
-  .sig-col.pred h4 { color: #7a5fc4; }
+  .sig-col.past h4 { color: var(--accent-green); }
+  .sig-col.pred h4 { color: var(--accent-purple); }
   .sig-col ul { margin: 0; padding-left: 1.1rem; font-size: 0.88rem; }
   .sig-col li { margin-bottom: 0.35rem; }
 </style>
@@ -105,7 +105,16 @@ This is a <strong>proposed architecture</strong>. It is not yet experimentally v
 
 <p>These two hierarchies are <strong>orthogonal</strong>. A block's rank in the information hierarchy — how relevant it is, how likely it is to be reused soon — is a separate question from its rank in the physical hierarchy — which tier currently holds it. A highly relevant block can sit cold in NVMe waiting to be fetched; a block of marginal relevance can sit resident in HBM simply because it was placed there recently and nothing has evicted it yet. v5's single eviction score conflated these: a block's one "keep or evict" number was implicitly answering both "is this worth keeping around" and "should this occupy the expensive tier," as though a positive answer to one settled the other. It does not. Separating relevance/selection from placement/movement is the change this chapter makes to the architecture, and it is what makes a joint control plane — rather than one flat scoring function — the right shape for the problem.</p>
 
-<h2>3.2 The control plane: SELECT, PLACE, MOVE</h2>
+
+      <div class="figure-embed tall">
+        <div class="figure-embed-header">
+          <span class="figure-embed-label">Figure 3.1 &mdash; Two orthogonal hierarchies, and the control plane that connects them</span>
+          <a class="figure-embed-link" href="../figures/ch03-architecture/two-hierarchies.html" target="_blank" rel="noopener">Open Full Screen &#8599;</a>
+        </div>
+        <iframe src="../figures/ch03-architecture/two-hierarchies.html" title="Two orthogonal hierarchies: information (what is worth considering) against physical (where should it live), with the KV-state control plane connecting them" loading="lazy" style="height:900px;background:var(--bg-primary)"></iframe>
+      </div>
+
+      <h2>3.2 The control plane: SELECT, PLACE, MOVE</h2>
 
 <p>The control plane sits between the two hierarchies. It consumes relevance and reuse signals from model/agent state and resolves them into three joint but distinct concerns, each answering a different sub-question, before the model actually attends to anything resident:</p>
 
@@ -119,6 +128,15 @@ This is a <strong>proposed architecture</strong>. It is not yet experimentally v
   <div class="cstep"><div class="cn">OBSERVE</div><div class="cd">attention outcomes and reuse feed back into relevance/reuse signals</div></div>
 </div>
 <div class="cp-feedback">OBSERVE → feeds back into MODEL / AGENT STATE</div>
+
+      <div class="figure-embed tall">
+        <div class="figure-embed-header">
+          <span class="figure-embed-label">Figure 3.2 &mdash; The KV-state control plane as a cycle, with the evidence behind each stage</span>
+          <a class="figure-embed-link" href="../figures/ch03-architecture/kv-state-control-plane.html" target="_blank" rel="noopener">Open Full Screen &#8599;</a>
+        </div>
+        <iframe src="../figures/ch03-architecture/kv-state-control-plane.html" title="SELECT, PLACE, MOVE, ATTEND, OBSERVE as a cycle; each stage annotated with the question it answers and its evidence status, with PLACE marked as the one stage holding a validated mechanism" loading="lazy" style="height:900px;background:var(--bg-primary)"></iframe>
+      </div>
+
 
 <p style="margin-top:1.75rem;">Unpacking the three concerns inside the control plane box:</p>
 

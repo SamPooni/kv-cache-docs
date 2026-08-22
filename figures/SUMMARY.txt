@@ -1,58 +1,65 @@
-================================================================================
-CHAPTER-ORGANIZED FIGURE SUMMARY (CORRECTED)
-================================================================================
+==============================================================================
+FIGURE SUMMARY — generated from the filesystem, not hand-maintained
+==============================================================================
 
-CHAPTER                          FIGURES    SOURCE FILES
--------                          -------    ------------
-CH00 - Executive Summary         14         6 files
-CH01 - Introduction              5          3 files  (was 3, added 2)
-CH02 - Background                8          7 files  (was 7, added 1)
-CH03 - Architecture              11         5 files
-CH04 - Latency                   9          4 files
-CH05 - Bandwidth                 5          1 file
-CH06 - Preprocessing             3          1 file
-CH07 - KV-Cache Management       27         14 files
-CH08 - MoE Routing               5          1 file
-CH09 - GPU Integration           7          2 files
-CH10 - Market Landscape          6          2 files
-CH11 - Performance               6          2 files
-CH12 - Implementation            5          2 files
-CH13 - Conclusion                3          1 file
--------                          -------    ------------
-TOTAL                            114        51 source files
+Generated: 2026-08-22   Source: /root/work/build/figures
 
-================================================================================
-CORRECTED COUNT VERIFICATION
-================================================================================
+CHAPTER                                 FIGURES NEW v6.0   EMBEDDED IN CHAPTER BODY
+-------------------------------------- -------- --------   ------------------------
+CH00 - Executive Summary                      7        0   0 of 7
+CH01 - Introduction                           3        0   0 of 3
+CH02 - Background                             9        0   0 of 9
+CH03 - The KV-State Control Plane             8        2   2 of 8
+CH04 - Hardware Measurement                   5        1   1 of 5
+CH05 - Bandwidth and Tier Economics           2        1   1 of 2
+CH06 - Preprocessing Offload                  1        0   0 of 1
+CH07 - Residency and Policy State            19        4   4 of 19
+CH08 - MoE Routing                            1        0   0 of 1
+CH09 - GPU Integration                        2        0   0 of 2
+CH10 - The 2026 Landscape                     4        1   1 of 4
+CH11 - Results Summary                        5        2   2 of 5
+CH12 - A Decision Procedure                   3        1   1 of 3
+CH13 - Conclusion                             1        0   0 of 1
+-------------------------------------- -------- --------   ------------------------
+TOTAL (live)                                 70       12   12 of 70
 
-Previous count: 111 (missing 3 figures)
-Missing figures found:
-  - Diagram 4.2: Decode Memory Access Pattern -> Added to CH02
-  - Diagram 5.1: Single User Memory Layout -> Added to CH01
-  - Diagram 5.2: Multi-User Memory Explosion -> Added to CH01
+superseded-v4.0 (archive)                    36
+TOTAL FILES ON DISK                         106
 
-Corrected count: 14+5+8+11+9+5+3+27+5+7+6+6+5+3 = 114 ✓
+==============================================================================
+THE TWELVE NEW v6.0 FIGURES
+==============================================================================
 
-================================================================================
-FOLDER STRUCTURE
-================================================================================
+  ch03-architecture/kv-state-control-plane.html        KV-State Control Plane
+                                                       embedded in: Chapter 3
+  ch03-architecture/two-hierarchies.html               Two Orthogonal Hierarchies
+                                                       embedded in: Chapter 3
+  ch04-latency/movement-vs-regeneration.html           Movement vs Regeneration
+                                                       embedded in: Chapter 5
+  ch05-bandwidth/sustainability-vs-hiding.html         Sustainability vs Hiding
+                                                       embedded in: Chapter 5
+  ch07-kv-cache/erratum-pick-victim.html               Erratum: _pick_victim()
+                                                       embedded in: Chapter 7
+  ch07-kv-cache/kv-block-object.html                   KV Block Object
+                                                       embedded in: Chapter 7
+  ch07-kv-cache/lossless-vs-lossy.html                 Lossless vs Lossy Boundary
+                                                       embedded in: Chapter 7
+  ch07-kv-cache/movement-amplification.html            Movement Amplification
+                                                       embedded in: Chapter 7
+  ch10-market/landscape-2026.html                      2026 Landscape
+                                                       embedded in: Chapter 10
+  ch11-performance/alpha-grid.html                     Alpha Grid
+                                                       embedded in: Chapter 11
+  ch11-performance/persistent-metadata.html            Persistent Metadata
+                                                       embedded in: Chapter 11
+  ch12-implementation/decision-procedure.html          Decision Procedure
+                                                       embedded in: Chapter 12
 
-/chapters/
-├── ch00-executive-summary/     (7 files, 14 figures)
-├── ch01-introduction/          (4 files, 5 figures)  
-├── ch02-background/            (8 files, 8 figures)
-├── ch03-architecture/          (6 files, 11 figures)
-├── ch04-latency/               (5 files, 9 figures)
-├── ch05-bandwidth/             (2 files, 5 figures)
-├── ch06-preprocessing/         (2 files, 3 figures)
-├── ch07-kv-cache/              (15 files, 27 figures)
-├── ch08-moe/                   (2 files, 5 figures)
-├── ch09-gpu-integration/       (3 files, 7 figures)
-├── ch10-market/                (3 files, 6 figures)
-├── ch11-performance/           (3 files, 6 figures)
-├── ch12-implementation/        (3 files, 5 figures)
-├── ch13-conclusion/            (2 files, 3 figures)
-├── CHAPTER-DIAGRAM-MAPPING.txt
-└── SUMMARY.txt
+==============================================================================
+ARCHIVE — figures/superseded-v4.0/ (36 files)
+==============================================================================
 
-================================================================================
+  Retracted. Retained unmodified so the retraction stays checkable.
+  See RETRACTIONS.md and CANONICAL-NUMBERS.md §7. Do not cite.
+
+==============================================================================

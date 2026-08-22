@@ -1,1 +1,1577 @@
-<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Corrected Implementation Architecture</title><style>body{margin:0;background:#0d1117;color:#e6edf3;font-family:Inter,system-ui,Segoe UI,Arial,sans-serif}.wrap{max-width:1100px;margin:auto;padding:34px}.k{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#7d8590}.title{font-size:34px;font-weight:750;margin:7px 0 10px}.sub{color:#aab4c0;line-height:1.55;max-width:900px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin:24px 0}.card{background:#161b22;border:1px solid #30363d;border-radius:14px;padding:18px}.big{font:700 28px ui-monospace,SFMono-Regular,Consolas,monospace;color:#58a6ff}.label{margin-top:6px;color:#c9d1d9}.note{font-size:13px;color:#8b949e;margin-top:7px;line-height:1.45}.flow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:22px 0}.box{padding:14px 16px;border-radius:12px;border:1px solid #30363d;background:#161b22;font-weight:650}.arrow{color:#7d8590;font-size:22px}.warn{border-left:4px solid #d29922;background:#1d1a12;padding:14px 16px;border-radius:8px;line-height:1.5}.good{border-left-color:#3fb950}.table{width:100%;border-collapse:collapse;margin-top:18px}.table th,.table td{padding:11px 12px;border-bottom:1px solid #30363d;text-align:left}.table th{color:#8b949e;font-size:12px;text-transform:uppercase;letter-spacing:.06em}.tag{display:inline-block;padding:3px 7px;border-radius:999px;background:#21262d;color:#8b949e;font-size:11px;margin-left:6px}</style></head><body><div class="wrap"><div class="k">v5.0.2 · implementation view</div><div class="title">Implementation Architecture — Corrected</div><div class="sub">This page replaces the pre-v5 implementation poster whose hit-rate, latency, TCO and concurrency numbers were based on the retracted analytical model.</div><div class="flow"><div class="box">Request / session identity</div><div class="arrow">→</div><div class="box">KV object metadata</div><div class="arrow">→</div><div class="box">Placement policy</div><div class="arrow">→</div><div class="box">Transfer / allocation mechanism</div><div class="arrow">→</div><div class="box">Attention execution</div></div><div class="grid"><div class="card"><div class="big">Payload</div><div class="label">K/V tensors</div><div class="note">Representation and block granularity are implementation choices.</div></div><div class="card"><div class="big">Identity</div><div class="label">Sequence · positions · layer · head group</div><div class="note">Must survive movement if policy state is to remain meaningful.</div></div><div class="card"><div class="big">Policy</div><div class="label">Reuse · recency · QoS · priority</div><div class="note">Host-side persistent metadata is promising in simulation, not yet a hardware result.</div></div><div class="card"><div class="big">Mechanism</div><div class="label">Location · transfer · validity</div><div class="note">Device/runtime executes movement under platform constraints.</div></div></div><table class="table"><tr><th>Implementation question</th><th>v5 position</th></tr><tr><td>HBM capacity</td><td>Hard resource constraint; measure actual model + KV footprint.</td></tr><tr><td>HBM-side KV bandwidth</td><td>Measured bottleneck on GB10; software-stack substitution did not remove the slope in the tested pair.</td></tr><tr><td>External-tier bandwidth / latency</td><td>Must be measured on target hardware; no canonical CXL number is asserted.</td></tr><tr><td>Prefetch</td><td>Useful only when prediction accuracy and lead time hide movement; no fixed hit-rate claim.</td></tr><tr><td>Quantized KV</td><td>Promising byte-reduction mechanism; fp8 effect remained unmeasured in the v5 GB10 dataset.</td></tr><tr><td>TCO / CapEx</td><td>Not established by v5.</td></tr></table><div class="warn"><strong>Design rule:</strong> preserve evidence labels in implementation discussions. Measured, model-derived, simulated and design-target values must not be presented as equivalent.</div></div></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KV Cache Offloading — Visual Diagrams (v6.0)</title>
+<link rel="stylesheet" href="../../vendor/fonts.css">
+<link rel="stylesheet" href="../../css/style.css">
+<style>
+:root {
+  /* local names re-pointed at the shared design tokens in css/style.css */
+  --primary: var(--accent-purple); --primary-light: var(--accent-purple); --success: var(--accent-green); --danger: var(--accent-red);
+  --warning: var(--accent-yellow); --info: var(--accent-blue); --cyan: var(--accent-teal); --orange: var(--accent-orange); --pink: var(--accent-pink);
+  --dark: var(--bg-primary); --dark-800: var(--bg-card); --dark-700: var(--border-primary); --dark-600: var(--border-highlight);
+  --gray: var(--text-secondary); --light: var(--text-primary); --white: var(--text-primary);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: var(--font-sans); background: linear-gradient(135deg, var(--dark) 0%, var(--dark-800) 100%); color: var(--light); line-height: 1.7; min-height: 100vh; }
+
+/* Cover Section */
+.cover { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 4rem 2rem; position: relative; overflow: hidden; background: radial-gradient(ellipse at 30% 20%, rgba(59, 130, 246, 0.08) 0%, transparent 50%), radial-gradient(ellipse at 70% 80%, rgba(139, 92, 246, 0.08) 0%, transparent 50%), linear-gradient(135deg, #030308 0%, var(--bg-primary) 50%, #050510 100%); }
+.tech-stack { display: flex; gap: 0.75rem; margin-bottom: 2.5rem; flex-wrap: wrap; justify-content: center; }
+.tech-pill { background: rgba(255, 255, 255, 0.02); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); padding: 0.5rem 1.25rem; border-radius: 50px; font-family: var(--font-mono); font-size: 0.8rem; font-weight: 500; letter-spacing: 0.05em; }
+.tech-pill.cxl { border-color: rgba(88, 166, 255, 0.5); color: var(--accent-cyan); }
+.tech-pill.ucie { border-color: rgba(163, 113, 247, 0.5); color: var(--accent-purple); }
+.tech-pill.uec { border-color: rgba(45, 212, 191, 0.5); color: var(--accent-teal); }
+.cover h1 { font-size: clamp(2.5rem, 5vw, 4.2rem); font-weight: 900; line-height: 1.1; margin-bottom: 1.5rem; }
+.cover h1 .line1 { display: block; background: linear-gradient(135deg, var(--text-primary) 0%, #cbd5e1 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.cover h1 .line2 { display: block; background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 50%, var(--accent-teal) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.cover .tagline { font-size: 1.25rem; color: var(--gray); max-width: 600px; margin-bottom: 2rem; }
+.concept-row { display: flex; gap: 2rem; flex-wrap: wrap; justify-content: center; margin-bottom: 2rem; }
+.concept { display: flex; align-items: center; gap: 0.5rem; }
+.concept-dot { width: 10px; height: 10px; border-radius: 50%; }
+.concept-dot.green { background: var(--success); box-shadow: 0 0 12px rgba(63, 185, 80, 0.6); }
+.concept-dot.blue { background: var(--info); box-shadow: 0 0 12px rgba(56, 139, 253, 0.6); }
+.concept-dot.purple { background: var(--primary); box-shadow: 0 0 12px rgba(163, 113, 247, 0.6); }
+.author-block { margin-top: 2rem; }
+.author-name { font-size: 1.5rem; font-weight: 700; color: var(--white); }
+.author-role { color: var(--gray); font-size: 0.95rem; }
+
+/* Main Content */
+.container { max-width: 1100px; margin: 0 auto; padding: 3rem 2rem; }
+
+/* Section Styling */
+.section { background: var(--dark-800); border-radius: 20px; padding: 2rem; margin-bottom: 2rem; border: 1px solid var(--dark-700); }
+.section-badge { display: inline-block; background: linear-gradient(135deg, var(--info), var(--primary)); color: var(--bg-primary); font-size: 0.75rem; font-weight: 700; padding: 0.35rem 1rem; border-radius: 50px; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 1rem; }
+h2 { font-size: 1.75rem; font-weight: 800; color: var(--white); margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem; }
+h3 { font-size: 1.25rem; font-weight: 700; color: var(--white); margin: 1.5rem 0 1rem; }
+h4 { font-size: 1rem; font-weight: 600; color: var(--light); margin: 1.25rem 0 0.75rem; }
+p { margin-bottom: 1rem; color: var(--light); }
+
+/* Tables */
+table { width: 100%; border-collapse: collapse; margin: 1.5rem 0; font-size: 0.9rem; }
+th, td { padding: 0.75rem 1rem; text-align: left; border-bottom: 1px solid var(--dark-700); }
+th { background: rgba(0,0,0,0.3); font-weight: 600; color: var(--gray); text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.05em; }
+td { color: var(--light); }
+
+/* Code */
+code { background: rgba(0,0,0,0.4); padding: 0.15rem 0.4rem; border-radius: 4px; font-family: var(--font-mono); font-size: 0.85em; color: var(--cyan); }
+pre { background: rgba(0,0,0,0.5); padding: 1.25rem; border-radius: 12px; overflow-x: auto; font-family: var(--font-mono); font-size: 0.8rem; line-height: 1.6; margin: 1rem 0; }
+
+/* Cards */
+.card { background: rgba(0,0,0,0.3); border-radius: 14px; padding: 1.5rem; margin: 1rem 0; border: 1px solid var(--dark-700); }
+.card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+
+/* Metric Cards */
+.metric-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.metric-card { background: rgba(0,0,0,0.3); border: 1px solid var(--dark-600); border-radius: 12px; padding: 1.25rem; text-align: center; }
+.metric-value { font-size: 2rem; font-weight: 800; font-family: var(--font-mono); background: linear-gradient(135deg, var(--info), var(--primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.metric-label { font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem; }
+.metric-label strong, .metric-label em { color: var(--text-primary); }
+
+/* Alert Boxes */
+.alert { padding: 1.25rem; border-radius: 12px; margin: 1.5rem 0; }
+.alert-warning { background: rgba(251, 191, 36, 0.1); border-left: 4px solid var(--warning); }
+.alert-success { background: rgba(34, 197, 94, 0.1); border-left: 4px solid var(--success); }
+.alert-danger { background: rgba(239, 68, 68, 0.1); border-left: 4px solid var(--danger); }
+.alert-info { background: rgba(59, 130, 246, 0.1); border-left: 4px solid var(--info); }
+
+/* Key Insight */
+.key-insight { background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1)); border: 1px solid rgba(59, 130, 246, 0.3); padding: 1.5rem; border-radius: 14px; margin: 1.5rem 0; }
+.key-insight-title { font-weight: 700; color: var(--info); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+
+/* Formula */
+.formula { background: rgba(0,0,0,0.5); border-radius: 10px; padding: 1.25rem; font-family: var(--font-mono); text-align: center; margin: 1rem 0; font-size: 1rem; }
+
+/* Tier Bar */
+.tier-bar { display: flex; margin: 1.5rem 0; border-radius: 10px; overflow: hidden; font-size: 0.8rem; }
+.tier-segment { padding: 1rem 0.5rem; text-align: center; color: var(--bg-primary); }
+.tier-segment strong { color: inherit; }
+.tier-segment em { color: inherit; font-style: italic; }
+.tier-hot { background: var(--danger); flex: 1; }
+.tier-warm { background: var(--orange); flex: 3; }
+.tier-cold { background: var(--info); flex: 4; }
+.tier-total { background: var(--success); flex: 2; }
+
+/* Bandwidth Hierarchy */
+.bw-hierarchy { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.bw-tier { color: white; padding: 1.25rem; border-radius: 12px; text-align: center; }
+.bw-tier.t1 { background: linear-gradient(135deg, #11998e, #38ef7d); }
+.bw-tier.t2 { background: linear-gradient(135deg, #667eea, #764ba2); }
+.bw-tier.t3 { background: linear-gradient(135deg, #f093fb, #f5576c); }
+.bw-tier.t4 { background: linear-gradient(135deg, #4facfe, #00f2fe); }
+.bw-name { font-weight: 700; font-size: 0.85rem; }
+.bw-value { font-size: 1.3rem; font-weight: 800; margin-top: 0.25rem; }
+
+/* Endpoint Package */
+.endpoint-package { border: 3px solid var(--cyan); border-radius: 16px; padding: 1.5rem; background: rgba(6, 182, 212, 0.05); margin: 1.5rem 0; }
+.endpoint-title { text-align: center; color: var(--cyan); font-weight: 700; font-size: 1.1rem; margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 2px solid rgba(6, 182, 212, 0.3); }
+.chiplets-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+.chiplet { background: rgba(0,0,0,0.3); border-radius: 12px; padding: 1rem; border: 1px solid var(--dark-600); }
+.chiplet-title { font-weight: 700; font-size: 0.9rem; text-align: center; margin-bottom: 0.75rem; }
+.chiplet-item { background: rgba(255,255,255,0.05); border-radius: 6px; padding: 0.5rem; text-align: center; margin-bottom: 0.5rem; font-size: 0.8rem; }
+
+/* Comparison Grid */
+.comparison-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.compare-card { background: rgba(0,0,0,0.3); border: 2px solid var(--dark-600); border-radius: 14px; padding: 1.25rem; }
+.compare-card.keep { border-color: var(--success); background: rgba(34, 197, 94, 0.05); }
+.compare-card.evict { border-color: var(--danger); background: rgba(239, 68, 68, 0.05); }
+.verdict { margin-top: 1rem; padding: 0.75rem; border-radius: 8px; text-align: center; font-weight: 700; color: var(--bg-primary); }
+.compare-card.keep .verdict { background: var(--success); }
+.compare-card.evict .verdict { background: var(--danger); }
+
+/* GQA Visual */
+.gqa-comparison { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 1.5rem 0; }
+.method-card { background: rgba(0,0,0,0.3); border-radius: 14px; padding: 1.25rem; border: 2px solid var(--dark-600); text-align: center; }
+.method-card.highlight { border-color: var(--info); background: rgba(59, 130, 246, 0.1); }
+.method-name { font-size: 1.3rem; font-weight: 700; color: var(--white); }
+.method-full { font-size: 0.8rem; color: var(--gray); margin-bottom: 1rem; }
+
+/* Timeline */
+.timeline { background: rgba(0,0,0,0.4); border-radius: 14px; padding: 1.5rem; margin: 1.5rem 0; }
+.timeline-row { display: flex; align-items: center; margin-bottom: 0.75rem; }
+.timeline-label { width: 120px; font-size: 0.85rem; font-weight: 600; color: var(--gray); flex-shrink: 0; }
+.timeline-track { flex: 1; height: 40px; background: rgba(0,0,0,0.3); border-radius: 8px; display: flex; overflow: hidden; }
+.timeline-block { height: 100%; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 0.75rem; font-weight: 600; color: white; border-radius: 6px; }
+.timeline-block.compute { background: linear-gradient(135deg, var(--success), #16a34a); }
+.timeline-block.transfer { background: linear-gradient(135deg, var(--primary), #7c3aed); }
+
+/* Latency Comparison */
+.latency-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1.5rem 0; }
+.latency-box { border-radius: 14px; padding: 1.5rem; text-align: center; }
+.latency-box.bad { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); }
+.latency-box.good { background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.3); }
+.latency-box-label { font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+.latency-box.bad .latency-box-label { color: var(--danger); }
+.latency-box.good .latency-box-label { color: var(--success); }
+.latency-box-value { font-family: var(--font-mono); font-size: 2rem; font-weight: 700; }
+.latency-box.bad .latency-box-value { color: var(--danger); }
+.latency-box.good .latency-box-value { color: var(--success); }
+
+/* Gap Analysis */
+.gap-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin: 1.5rem 0; }
+.gap-item { background: rgba(0,0,0,0.3); border-radius: 12px; padding: 1rem; text-align: center; border: 1px solid rgba(34, 197, 94, 0.3); }
+.gap-item-icon { font-size: 1.75rem; margin-bottom: 0.5rem; }
+.gap-item-title { font-weight: 600; color: var(--white); font-size: 0.85rem; }
+.gap-item-desc { font-size: 0.7rem; color: var(--gray); }
+
+/* Feature Grid */
+.feature-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+.feature { display: flex; align-items: flex-start; gap: 0.75rem; background: rgba(0,0,0,0.2); border-radius: 12px; padding: 1rem; border: 1px solid rgba(34, 197, 94, 0.2); }
+.feature-check { width: 24px; height: 24px; background: var(--success); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: var(--bg-primary); flex-shrink: 0; }
+.feature-title { font-weight: 600; color: var(--white); font-size: 0.9rem; }
+.feature-desc { font-size: 0.8rem; color: var(--success); }
+
+/* Phase Compare */
+.phase-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 1.5rem 0; }
+.phase-card { background: rgba(0,0,0,0.3); border-radius: 14px; padding: 1.5rem; border: 2px solid var(--dark-600); }
+.phase-card.prefill { border-color: var(--orange); }
+.phase-card.decode { border-color: var(--cyan); }
+.phase-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; }
+.phase-card.prefill .phase-title { color: var(--orange); }
+.phase-card.decode .phase-title { color: var(--cyan); }
+
+/* Sensitivity Chart */
+.sensitivity-chart { background: rgba(0,0,0,0.4); border-radius: 12px; padding: 1.5rem; margin: 1.5rem 0; }
+.chart-bar { display: flex; align-items: center; margin-bottom: 0.75rem; }
+.chart-label { width: 100px; font-size: 0.8rem; color: var(--gray); }
+.chart-track { flex: 1; height: 28px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden; position: relative; }
+.chart-fill { height: 100%; border-radius: 4px; display: flex; align-items: center; justify-content: flex-end; padding-right: 0.75rem; font-size: 0.75rem; font-weight: 600; color: white; }
+.chart-fill.excellent { background: linear-gradient(90deg, var(--success), #16a34a); }
+.chart-fill.good { background: linear-gradient(90deg, var(--info), #2563eb); }
+.chart-fill.warning { background: linear-gradient(90deg, var(--warning), #d97706); }
+.chart-fill.danger { background: linear-gradient(90deg, var(--danger), #dc2626); }
+
+/* Software Stack */
+.software-stack { background: linear-gradient(180deg, rgba(59, 130, 246, 0.1), transparent); border-radius: 16px; padding: 2rem; border: 1px solid rgba(59, 130, 246, 0.2); }
+.stack-layer { text-align: center; margin-bottom: 1.5rem; }
+.stack-badge { color: var(--bg-primary); padding: 0.5rem 1.25rem; border-radius: 8px; display: inline-block; font-weight: 700; font-size: 0.9rem; }
+.stack-items { display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; margin-top: 1rem; }
+.stack-item { background: rgba(0,0,0,0.4); padding: 0.75rem 1.25rem; border-radius: 10px; text-align: center; min-width: 140px; border: 1px solid var(--dark-600); }
+.stack-item-name { font-weight: 600; color: var(--white); font-size: 0.9rem; }
+.stack-item-desc { font-size: 0.7rem; color: var(--gray); margin-top: 0.25rem; }
+.arrow-down { text-align: center; color: var(--gray); font-size: 1.5rem; margin: 0.5rem 0; }
+
+/* Coherency Table */
+.coherency-visual { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin: 1.5rem 0; }
+.coherency-state { background: rgba(0,0,0,0.3); border-radius: 10px; padding: 1rem; text-align: center; border: 2px solid var(--dark-600); }
+.coherency-state.invalid { border-color: var(--gray); }
+.coherency-state.shared { border-color: var(--info); }
+.coherency-state.exclusive { border-color: var(--warning); }
+.coherency-state.modified { border-color: var(--danger); }
+.state-name { font-weight: 700; font-size: 0.9rem; margin-bottom: 0.5rem; }
+.coherency-state.invalid .state-name { color: var(--gray); }
+.coherency-state.shared .state-name { color: var(--info); }
+.coherency-state.exclusive .state-name { color: var(--warning); }
+.coherency-state.modified .state-name { color: var(--danger); }
+.state-desc { font-size: 0.7rem; color: var(--gray); }
+
+/* Quantization Visual */
+.quant-bars { margin: 1.5rem 0; }
+.quant-row { display: flex; align-items: center; margin-bottom: 0.75rem; }
+.quant-label { width: 80px; font-size: 0.85rem; font-weight: 600; }
+.quant-track { flex: 1; height: 32px; background: rgba(0,0,0,0.3); border-radius: 6px; overflow: hidden; margin: 0 1rem; }
+.quant-fill { height: 100%; display: flex; align-items: center; padding-left: 1rem; font-size: 0.8rem; font-weight: 600; color: var(--bg-primary); }
+.quant-fill.fp16 { background: linear-gradient(90deg, var(--danger), #dc2626); width: 100%; }
+.quant-fill.fp8 { background: linear-gradient(90deg, var(--orange), #ea580c); width: 50%; }
+.quant-fill.int8 { background: linear-gradient(90deg, var(--warning), #d97706); width: 50%; }
+.quant-fill.int4 { background: linear-gradient(90deg, var(--success), #16a34a); width: 25%; }
+.quant-size { width: 80px; text-align: right; font-family: var(--font-mono); font-size: 0.85rem; }
+
+/* Power Visual */
+.power-comparison { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin: 1.5rem 0; }
+.power-box { background: rgba(0,0,0,0.3); border-radius: 14px; padding: 1.5rem; text-align: center; }
+.power-box.high { border: 2px solid var(--danger); }
+.power-box.low { border: 2px solid var(--success); }
+.power-icon { font-size: 3rem; margin-bottom: 0.5rem; }
+.power-value { font-family: var(--font-mono); font-size: 2.5rem; font-weight: 800; }
+.power-box.high .power-value { color: var(--danger); }
+.power-box.low .power-value { color: var(--success); }
+.power-label { color: var(--gray); font-size: 0.9rem; margin-top: 0.25rem; }
+
+/* Responsive */
+@media (max-width: 768px) {
+  .gqa-comparison, .gap-grid, .latency-compare, .phase-compare, .power-comparison, .coherency-visual { grid-template-columns: 1fr; }
+  .bw-hierarchy { grid-template-columns: repeat(2, 1fr); }
+  .cover h1 { font-size: 2rem; }
+}
+/* Cancel the vertical rail the shared .timeline rule injects — this is a flat track. */
+.timeline::before { content: none; }
+</style>
+</head>
+<body role="main">
+<!-- COVER PAGE -->
+<section class="cover">
+  <div class="tech-stack">
+    <span class="tech-pill cxl">CXL 3.0</span>
+    <span class="tech-pill ucie">UCIe</span>
+    <span class="tech-pill uec">UEC</span>
+  </div>
+  
+  <h1>
+    <span class="line1">KV Cache Offloading</span>
+    <span class="line2">for LLM Inference</span>
+  </h1>
+  
+  <p class="tagline">
+    The KV-State Control Plane — SELECT → PLACE → MOVE → ATTEND → OBSERVE, over an information hierarchy and a physical hierarchy
+  </p>
+
+  <div class="concept-row">
+    <div class="concept">
+      <div class="concept-dot green" aria-hidden="true"></div>
+      <span>Block-granular placement — (sequence, token block), 16 tokens = 5.00 MiB</span>
+    </div>
+    <div class="concept">
+      <div class="concept-dot blue" aria-hidden="true"></div>
+      <span>LRFU scoring — Lee et al., ACM SIGMETRICS 1999, established prior art</span>
+    </div>
+    <div class="concept">
+      <div class="concept-dot purple" aria-hidden="true"></div>
+      <span>Persistent identity-keyed state across the tier boundary</span>
+    </div>
+  </div>
+  
+  <div class="author-block">
+    <div class="author-name">Sam Pooni</div>
+    <div class="author-role">San Jose, CA</div>
+    <div class="author-role" style="margin-top: 0.5rem;">Version 6.0 · August 2026</div>
+    <div class="author-role" style="margin-top: 0.75rem; font-size: 0.8rem;">Every quantitative claim below carries an evidence label: Measured — DGX Spark GB10 · Simulated (provisional) · Analytical model · External literature · Illustrative.</div>
+  </div>
+</section>
+
+<!-- MAIN CONTENT -->
+<div class="container">
+
+<div class="alert alert-info" style="margin-top: 2rem;">
+  <strong>Evidence labels, strongest first.</strong>
+  <strong>Measured — DGX Spark GB10</strong> (19 Aug 2026): 236.5 GB/s achieved streaming bandwidth = 87% of a 273 GB/s spec;
+  a two-term decode fit implies the effective KV path is ~3.4× more costly per byte than the fixed path. ·
+  <strong>Simulated (provisional)</strong>: every hit rate below, from Revision 2 of the tiering simulator. ·
+  <strong>Analytical model</strong>: capacities, block sizes, component budgets. ·
+  <strong>External literature</strong>: LRFU (Lee et al., ACM SIGMETRICS 1999) and third-party systems' published claims,
+  cited not reproduced. · <strong>Illustrative</strong>: worked examples, never a result.
+  <br><br>
+  <strong>Standing caveat, required wherever a simulated number appears:</strong> a single data-structure defect in
+  Revision 1 inverted four of five findings, so <strong>Revision 2 is provisional, not settled</strong> — no Belady bound,
+  no bandwidth or queueing model, whole-context residency assumed, synthetic workload, 2–3 seeds, no hardware validation.
+  <br><br>
+  <strong>Retracted throughout this document, and not replaced:</strong> the 97% HBM hit rate and the
+  72 → 80 → 87 → 93 → 97 ladder (never run as an ablation; increments assumed additive and independent) · +25 pts over LRU ·
+  16× user capacity · 5.4% hot set capturing 97% of accesses · 65× · 200 ns CXL access · 177 ns · 11.5× · 15.6× TTFT ·
+  36% CapEx and $160,000 → $103,000 · α = 0.2 · per-head eviction · RoPE-aware prefetch.
+  <strong>No CXL hardware was measured.</strong> Percentage-point differences are quoted as <strong>pts</strong>, never %.
+</div>
+
+<!-- FIGURE 1: MEMORY WALL -->
+<section class="section" id="fig1">
+  <span class="section-badge">Figure 1</span>
+  <h2>The Memory Wall Problem</h2>
+  <p class="sr-only">Figure: why long-context inference does not fit in GPU memory. A B200 has 192 GB of HBM, Llama-3 70B weights take 140 GB, which is 130.4 gibibytes, and one 128K-token KV cache takes 40.0 gibibytes at 320 kibibytes per token, so eight concurrent 128K contexts plus weights need about 489 GB — a capacity wall of 2.5 times the card. That arithmetic is analytical and stands. The second wall is not the latency ratio this figure used to claim. The 65 times figure — 13.0 microseconds of driver-mediated PCIe DMA divided by a 200 nanosecond hypothetical CXL load-store access — is retracted as a headline: the two are not the same operation, and no CXL hardware was measured. In its place is a measured result. On a DGX Spark GB10 on 19 August 2026, streaming copy achieved 236.5 gigabytes per second against a 273 gigabytes per second specification, 87 percent of spec, which retires the roughly 50 percent effective-bandwidth haircut used in earlier drafts. Fitting decode time as a two-term model, t equals a plus b times KV gibibytes, gave 100.3 plus 16.34 times KV for HuggingFace with SDPA unpaged at R squared 0.991, and 73.9 plus 17.58 times KV for vLLM 0.20.1 with FlashAttention-2 paged at R squared 0.945. Under that fit the inferred fixed-path bandwidth is 205.7 gigabytes per second and the inferred KV path 61.1, so the effective KV path is about 3.4 times more costly per byte than the fixed path — a model-derived ratio, not a direct byte-level hardware measurement. KV is read at roughly a quarter of achievable memory bandwidth. Kernel substitution alone did not eliminate the measured KV slope: two frameworks with different attention implementations and paged versus unpaged layout produced KV slopes within 8 percent, while inferred fixed-path bandwidth improved 34 percent between them. This does not generalise to all kernels, GPUs, models or decode regimes. Capacity was not the binding constraint in any configuration measured: everything fit in 128 gibibytes, yet throughput still fell from 150 tokens per second at batch 16 by 4K to 46 tokens per second at batch 16 by 16K, with memory to spare and nothing evicted. Adding a memory tier does not eliminate the KV memory wall; it changes its shape, from a capacity wall into a data-movement wall. B200 specifications quoted: 2,250 TFLOPS BF16 dense, 8 TB/s HBM3e, 192 GB capacity, 64 GB/s PCIe 5.0.</p>
+  
+  <p>Large language model inference faces a fundamental bottleneck: the memory required to serve long-context requests vastly exceeds what fits in GPU high-bandwidth memory (HBM).</p>
+  
+  <div class="metric-cards">
+    <div class="metric-card">
+      <div class="metric-value">192 GB</div>
+      <div class="metric-label">B200 HBM Capacity</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">140 GB</div>
+      <div class="metric-label">Llama-3 70B weights (130.4 GiB, bf16)</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">40.0 GiB</div>
+      <div class="metric-label">KV @ 128K — 320 KiB/token (43 GB)</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">489 GB</div>
+      <div class="metric-label">Weights + 8 × 128K contexts</div>
+    </div>
+  </div>
+  
+  <div class="comparison-grid">
+    <div class="card" style="background: linear-gradient(180deg, rgba(234, 88, 12, 0.2), rgba(234, 88, 12, 0.1)); border-color: var(--orange);">
+      <div style="color: white; font-weight: 700; text-align: center; margin-bottom: 1rem;">CAPACITY WALL</div>
+      <div style="text-align: center;">
+        <div style="color: #fed7aa; font-size: 0.9rem;">8 users @ 128K exceeds a 192 GB B200 by</div>
+        <div style="color: white; font-size: 2.5rem; font-weight: 800;">2.5×</div>
+      </div>
+    </div>
+    <div class="card" style="background: linear-gradient(180deg, rgba(147, 51, 234, 0.2), rgba(147, 51, 234, 0.1)); border-color: var(--primary);">
+      <div style="color: white; font-weight: 700; text-align: center; margin-bottom: 1rem;">BANDWIDTH WALL <span style="font-size:0.7rem;font-weight:600;">Measured — DGX Spark GB10</span></div>
+      <div style="text-align: center;">
+        <div style="color: #e9d5ff; font-size: 0.9rem;">Inferred effective KV-path cost per byte vs the fixed path (205.7 ÷ 61.1 GB/s, two-term decode fit)</div>
+        <div style="color: white; font-size: 2.5rem; font-weight: 800;">~3.4×</div>
+        <div style="color: #e9d5ff; font-size: 0.8rem; margin-top:0.5rem;">KV is read at roughly a <strong>quarter</strong> of achievable memory bandwidth — 236.5 GB/s achieved = 87% of a 273 GB/s spec.</div>
+        <div style="color: #e9d5ff; font-size: 0.78rem; margin-top:0.5rem;"><strong>Retracted:</strong> the former “65× — PCIe DMA 13.0 µs vs CXL.mem 200 ns”. Two different operations, neither measured. <strong>No CXL hardware was measured.</strong></div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="card" style="background: linear-gradient(135deg, #15803d, #166534); border: none;">
+    <div style="text-align: center; color: white; font-weight: 700; font-size: 1.1rem; margin-bottom: 1rem;">NVIDIA B200 Specifications</div>
+    <div class="metric-cards" style="margin: 0;">
+      <div class="metric-card" style="background: #14532d; border: none;">
+        <div class="metric-value" style="color: white; font-size: 1.5rem;">2,250</div>
+        <div class="metric-label" style="color: #bbf7d0;">TFLOPS BF16 dense</div>
+      </div>
+      <div class="metric-card" style="background: #14532d; border: none;">
+        <div class="metric-value" style="color: white; font-size: 1.5rem;">8</div>
+        <div class="metric-label" style="color: #bbf7d0;">TB/s HBM3e</div>
+      </div>
+      <div class="metric-card" style="background: #14532d; border: none;">
+        <div class="metric-value" style="color: white; font-size: 1.5rem;">192</div>
+        <div class="metric-label" style="color: #bbf7d0;">GB Capacity</div>
+      </div>
+      <div class="metric-card" style="background: #14532d; border: none;">
+        <div class="metric-value" style="color: white; font-size: 1.5rem;">64</div>
+        <div class="metric-label" style="color: #bbf7d0;">GB/s PCIe 5.0</div>
+      </div>
+    </div>
+  </div>
+  <p style="margin-top:1.25rem; padding-top:0.75rem; border-top:1px solid rgba(255,255,255,0.12); font-size:0.78rem; color:#94a3b8;">Evidence labels. Capacity: <strong>Analytical model</strong> — 2 × 80 layers × 8 KV heads × 128 × 2 B = 320 KiB/token → <strong>2.50 GiB at 8K</strong>, <strong>40.0 GiB at 128K</strong> (43 GB); 140 + 8×43 + 5 = 489 GB; crossover with weights ≈ <strong>427,000 tokens</strong>. Simulator-independent, and it stands. Bandwidth: <strong>Measured — DGX Spark GB10</strong>, 19 Aug 2026 — 236.5 GB/s achieved (87% of a 273 GB/s spec); two-term decode fit <code>100.3 + 16.34·KV_GiB</code> (HF+SDPA, R²=0.991) and <code>73.9 + 17.58·KV_GiB</code> (vLLM 0.20.1 + FA-2, R²=0.945). Limits: one model, one size, one machine; fp8 KV not yet measured. Device specs are a <strong>vendor specification</strong>; 4,500 TFLOPS is the 2:4-sparsity figure, the dense BF16 figure is used here. <strong>Retracted:</strong> the 65× latency ratio and the 200 ns CXL access — <strong>no CXL hardware was measured</strong>.</p>
+</section>
+
+<!-- FIGURE 2: KV-CACHE SCALING -->
+<section class="section" id="fig2">
+  <span class="section-badge">Figure 2</span>
+  <h2>KV-Cache Size vs Context Length</h2>
+  <p class="sr-only">Figure: KV-cache size grows linearly with context length, by the formula 2 times layers times key-value heads times head dimension times sequence times bytes. The decisive term is the number of key-value heads, not query heads. For Llama-3 70B with grouped-query attention — 80 layers, 8 key-value heads, head dimension 128, fp16 — that is 320 kibibytes per token; Llama-2-70B is the same, being grouped-query attention with 8 key-value heads and 64 query heads, and the 2,560 kibibytes-per-token multi-head row belongs to Llama-1-65B and the smaller multi-head Llama-2 variants. The table gives, for each context, cache size and share of a 192 gigabyte B200 HBM: 4K tokens 1.3 gigabytes at 0.7 percent, fits easily; 8K tokens 2.50 gibibytes; 32K tokens 10.0 gibibytes, or 10.7 gigabytes, at 5.6 percent, comfortable, and 8 percent of the model weights; 128K tokens 40.0 gibibytes, or 43 gigabytes, at 22 percent, tight, and 31 percent of the weights; 512K tokens 172 gigabytes at 90 percent, leaving no room for weights; and 1M tokens 344 gigabytes at 179 percent, exceeding HBM. Against 130.4 gibibytes of bf16 weights the single-sequence crossover, where key-value state exceeds the weights, is about 427,000 tokens. Block granularity is 16 tokens equals 5.00 mebibytes. This is an analytical model — arithmetic over published model geometry, simulator-independent and independently confirmed — and it stands through the v5.0 retractions unchanged, because none of it ever depended on a hit rate.</p>
+  
+  <div class="formula">
+    KV-cache = 2 × L × H<sub>kv</sub> × D × S × bytes &nbsp;<span style="color: var(--gray); font-size:0.85rem;">— the decisive term is <strong>kv_heads</strong>, not query heads</span><br>
+    <span style="color: var(--warning);">Llama-3 70B (GQA): 2 × 80 × 8 × 128 × S × 2 B = <strong>320 KiB/token</strong></span><br>
+    <span style="color: var(--gray); font-size: 0.85rem;">Llama-2-70B is the same — GQA, 8 KV heads, 64 query heads. The 2,560 KiB/token MHA row belongs to Llama-1-65B, not to any 70B Llama.<br>
+    16-token block = <strong>5.00 MiB</strong> · crossover with 130.4 GiB of bf16 weights ≈ <strong>427,000 tokens</strong></span>
+  </div>
+  
+  <table>
+    <thead>
+      <tr><th scope="col">Context Length</th><th scope="col">KV-Cache Size</th><th scope="col">% of B200 HBM</th><th scope="col">Status</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>4K tokens</td><td>1.3 GB</td><td>0.7%</td><td style="color: var(--success);"><span aria-hidden="true">✓</span> Fits easily</td></tr>
+      <tr><td>8K tokens</td><td>2.50 GiB</td><td>1.4%</td><td style="color: var(--success);"><span aria-hidden="true">✓</span> Fits easily</td></tr>
+      <tr><td>32K tokens</td><td>10.0 GiB (10.7 GB)</td><td>5.6%</td><td style="color: var(--success);"><span aria-hidden="true">✓</span> Comfortable — 8% of the weights</td></tr>
+      <tr><td>128K tokens</td><td>40.0 GiB (43 GB)</td><td>22%</td><td style="color: var(--warning);"><span aria-hidden="true">⚠</span> Tight — 31% of the weights</td></tr>
+      <tr><td>512K tokens</td><td>172 GB</td><td>90%</td><td style="color: var(--danger);"><span aria-hidden="true">✗</span> Leaves no room for weights</td></tr>
+      <tr><td>1M tokens</td><td>344 GB</td><td>179%</td><td style="color: var(--danger);"><span aria-hidden="true">✗</span> Exceeds HBM</td></tr>
+    </tbody>
+  </table>
+  
+  <div class="alert alert-danger">
+    <strong>The Scaling Crisis:</strong> Context lengths are expanding rapidly (GPT-4: 128K, Claude: 200K, Gemini: 1M+). KV-cache requirements grow linearly with context, but GPU memory remains fixed.
+  </div>
+  <p style="margin-top:1.25rem; padding-top:0.75rem; border-top:1px solid rgba(255,255,255,0.12); font-size:0.78rem; color:#94a3b8;"><strong>Evidence label: Analytical model</strong> — arithmetic over published model geometry, simulator-independent and independently confirmed against a third-party survey. Everything on this panel <strong>stands</strong> through the v5.0 retractions: none of it ever depended on a hit rate. 320 KiB/token · 2.50 GiB @ 8K · 40.0 GiB @ 128K · 5.00 MiB blocks · crossover ≈ 427,000 tokens. Canonical numbers v6.0.</p>
+</section>
+
+<!-- FIGURE 3: ENDPOINT ARCHITECTURE -->
+<section class="section" id="fig3">
+  <span class="section-badge">Figure 3</span>
+  <h2>CXL Endpoint Architecture</h2>
+  <p class="sr-only">Figure: the internal layout of one distributed endpoint, a CXL 3.0 Type-3 device. A CXL 3.0 protocol engine carries CXL.mem (HDM-D and HDM-DB), CXL.io (mailbox and config) and CXL.cache (coherency); a UCIe 1.1 die-to-die link at over 1 TB/s joins three chiplets — a memory controller (8 channels of DDR5-5600, 8 times 44.8 GB/s equals 358.4 GB/s), a compute chiplet (8 ARM A78 cores at 3 GHz with 8 MB shared L3) and a control and policy chiplet running the PLACE and MOVE stages: an LRFU scoring engine, a per-KV-head access tracker used as a scoring signal only, and a persistent block-state store keyed by block identity. There is no RoPE prefetch queue: RoPE is a rotation applied to Q and K at compute time and carries no information about which blocks are needed next, so the earlier RoPE prefetch queue is removed. The per-head tracker never evicts a head: every head of every layer is required for every token, so evicting a head produces wrong outputs, not a cache miss, and the placed unit is a (sequence, token block) of 16 tokens, 5.00 mebibytes. Scoring is LRFU, Lee et al., ACM SIGMETRICS 1999, established prior art, with alpha its documented LRU-to-LFU knob; alpha = 0.2 was never validated and the simulated optimum is near 0.05. The persistent block-state store is the one part of this chiplet with an empirical result behind it: letting identity-keyed policy state survive HBM eviction is worth plus 34.15 percentage points to LFU and plus 24.85 to EMA alpha 0.01 at a 32 gibibyte budget, simulated and provisional. Each endpoint holds 256 GB of DDR5 (1 TB across four) and 4 TB of NVMe (16 TB across four) at 80 W typical power. Tier latency is assumed, not measured: no CXL hardware was measured, and the former 200 nanosecond figure is demoted to an assumption inside a 32 to 121 gigabytes per second range, under which one 5.00 mebibyte block transfers in 164, 82 or 43 microseconds.</p>
+  
+  <p>A distributed endpoint is a <strong>CXL 3.0 Type-3 device</strong> combining memory, compute, and control logic into a single package.</p>
+  
+  <div class="endpoint-package">
+    <div class="endpoint-title">DISTRIBUTED ENDPOINT PACKAGE (UCIe Integrated)</div>
+    
+    <div class="card" style="background: linear-gradient(135deg, #1d4ed8, #2563eb); border: none; margin-bottom: 1rem;">
+      <div style="color: white; font-weight: 700; text-align: center; margin-bottom: 0.75rem;">CXL 3.0 PROTOCOL ENGINE</div>
+      <div style="display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+        <div style="background: #1e3a8a; border-radius: 8px; padding: 0.5rem 1rem; text-align: center;">
+          <div style="color: white; font-weight: 600; font-size: 0.85rem;">CXL.mem</div>
+          <div style="color: #93c5fd; font-size: 0.7rem;">HDM-D/HDM-DB</div>
+        </div>
+        <div style="background: #1e3a8a; border-radius: 8px; padding: 0.5rem 1rem; text-align: center;">
+          <div style="color: white; font-weight: 600; font-size: 0.85rem;">CXL.io</div>
+          <div style="color: #93c5fd; font-size: 0.7rem;">Mailbox/Config</div>
+        </div>
+        <div style="background: #1e3a8a; border-radius: 8px; padding: 0.5rem 1rem; text-align: center;">
+          <div style="color: white; font-weight: 600; font-size: 0.85rem;">CXL.cache</div>
+          <div style="color: #93c5fd; font-size: 0.7rem;">Coherency</div>
+        </div>
+      </div>
+    </div>
+    
+    <div style="background: #7c3aed; border-radius: 10px; padding: 0.75rem; text-align: center; margin-bottom: 1rem;">
+      <span style="color: white; font-weight: 700;">UCIe 1.1 — 1+ TB/s Die-to-Die Interconnect</span>
+    </div>
+    
+    <div class="chiplets-row">
+      <div class="chiplet" style="border-color: var(--success);">
+        <div class="chiplet-title" style="color: var(--success);">MEMORY CONTROLLER</div>
+        <div class="chiplet-item">CH 0-3: DDR5-5600</div>
+        <div class="chiplet-item">CH 4-7: DDR5-5600</div>
+        <div style="text-align: center; font-size: 0.75rem; color: var(--success); font-weight: 600;">8ch × 44.8 GB/s = 358.4 GB/s</div>
+      </div>
+      <div class="chiplet" style="border-color: var(--orange);">
+        <div class="chiplet-title" style="color: var(--orange);">COMPUTE CHIPLET</div>
+        <div class="chiplet-item">Core 0-3: ARM A78 @ 3GHz</div>
+        <div class="chiplet-item">Core 4-7: ARM A78 @ 3GHz</div>
+        <div class="chiplet-item">L3 Cache — 8 MB Shared</div>
+      </div>
+      <div class="chiplet" style="border-color: var(--warning);">
+        <div class="chiplet-title" style="color: var(--warning);">CONTROL & POLICY — PLACE / MOVE</div>
+        <div class="chiplet-item">LRFU scoring engine <span style="font-size:0.65rem;opacity:0.8;">(Lee et al., SIGMETRICS 1999 — prior art)</span></div>
+        <div class="chiplet-item">Per-KV-head access tracker <span style="font-size:0.65rem;opacity:0.8;">— scoring signal only, never an eviction unit</span></div>
+        <div class="chiplet-item">Persistent block-state store <span style="font-size:0.65rem;opacity:0.8;">— identity key + score survive eviction</span></div>
+      </div>
+    </div>
+    
+    <div class="card" style="background: rgba(0,0,0,0.4); margin-top: 1rem; margin-bottom: 0;">
+      <div style="display: flex; justify-content: space-around; flex-wrap: wrap; gap: 1rem; text-align: center;">
+        <div>
+          <div style="font-size: 1.75rem; font-weight: 800; color: var(--cyan);">256 GB</div>
+          <div style="font-size: 0.75rem; color: var(--gray);">DDR5 DRAM · 1 TB across 4 endpoints</div>
+        </div>
+        <div>
+          <div style="font-size: 1.75rem; font-weight: 800; color: var(--info);">4 TB</div>
+          <div style="font-size: 0.75rem; color: var(--gray);">NVMe Flash · 16 TB across 4 endpoints</div>
+        </div>
+        <div>
+          <div style="font-size: 1.75rem; font-weight: 800; color: var(--success);">164/82/43 µs</div>
+          <div style="font-size: 0.75rem; color: var(--text-secondary);">5.00 MiB block @ an <strong>assumed</strong> 32/64/121 GB/s — no CXL hardware measured</div>
+        </div>
+        <div>
+          <div style="font-size: 1.75rem; font-weight: 800; color: var(--orange);">80 W</div>
+          <div style="font-size: 0.75rem; color: var(--gray);">Typical Power</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FIGURE 4: TIERED MEMORY -->
+<section class="section" id="fig4">
+  <span class="section-badge">Figure 4</span>
+  <h2>Tiered Memory Architecture</h2>
+  <p class="sr-only">Figure: a three-tier memory stack shown as a proportional bar — hot tier 192 GB of HBM at 8 TB/s, warm tier 1 TB of CXL memory, cold tier 16 TB of NVMe, roughly 17 TB in total. No tier latency here is measured: no CXL hardware was measured anywhere in this package, and the former 200 nanosecond CXL and 25 microsecond flash figures are withdrawn. Tier cost is expressed instead as an assumed bandwidth range of 32, 64 or 121 gigabytes per second, under which one 5.00 mebibyte block of 16 tokens transfers in 164, 82 or 43 microseconds, against 9, 11 or 18 milliseconds to regenerate the same 16 tokens by forward compute at 50, 40 or 25 percent model FLOPs utilisation — two to three orders of magnitude, no precise multiple claimed. The bandwidth hierarchy beneath it runs UCIe internal at over 1 TB/s, DDR5 local at 358.4 GB/s, CXL external at 64 GB/s per link for 256 GB/s across four endpoints, and NVMe flash at about 14 GB/s. The GPU sees one unified address space; the endpoint places data across tiers using CXL.mem load and store semantics, with no DMA setup or driver intervention. All values are an analytical model, not measured.</p>
+  
+  <div class="tier-bar">
+    <div class="tier-segment tier-hot" role="img" aria-label="Hot tier, HBM: 192 GB at 8 TB per second"><strong>Hot (HBM)</strong><br>192 GB<br>8 TB/s</div>
+    <div class="tier-segment tier-warm" role="img" aria-label="Warm tier, CXL memory: 1 TB. Bandwidth is assumed, not measured: a 5.00 mebibyte block transfers in 164, 82 or 43 microseconds at 32, 64 or 121 gigabytes per second."><strong>Warm (CXL)</strong><br>1 TB<br><span style="font-size:0.78em">5.00 MiB block: 164/82/43 µs<br><em>assumed</em></span></div>
+    <div class="tier-segment tier-cold" role="img" aria-label="Cold tier, NVMe: 16 TB. Latency is assumed, not measured."><strong>Cold (NVMe)</strong><br>16 TB<br><span style="font-size:0.78em">latency <em>assumed</em></span></div>
+    <div class="tier-segment tier-total" role="img" aria-label="Total addressable capacity, about 17 TB"><strong>Total</strong><br>~17 TB</div>
+  </div>
+  
+  <h3>Bandwidth Hierarchy</h3>
+  
+  <div class="bw-hierarchy">
+    <div class="bw-tier t1" role="img" aria-label="UCIe internal bandwidth, over 1 TB per second — the fastest tier"><div class="bw-name">UCIe Internal</div><div class="bw-value">1+ TB/s</div></div>
+    <div class="bw-tier t2" role="img" aria-label="DDR5 local bandwidth, 358.4 GB per second"><div class="bw-name">DDR5 Local</div><div class="bw-value">358.4 GB/s</div></div>
+    <div class="bw-tier t3" role="img" aria-label="CXL external bandwidth, 64 GB per second per link, 256 GB per second across four endpoints"><div class="bw-name">CXL External</div><div class="bw-value">64 GB/s ×4 = 256 GB/s</div></div>
+    <div class="bw-tier t4" role="img" aria-label="NVMe flash bandwidth, about 14 GB per second — the slowest tier"><div class="bw-name">NVMe Flash</div><div class="bw-value">~14 GB/s</div></div>
+  </div>
+  
+  <div class="key-insight">
+    <div class="key-insight-title">Key Insight</div>
+    <strong>The tier does not remove the KV memory wall — it changes its shape, from a capacity wall into a data-movement wall.</strong><br>
+    The GPU sees a unified address space and the endpoint manages tier placement; CXL.mem provides load/store semantics, with no
+    explicit I/O commands, no DMA setup and no driver intervention. What the tier buys is <strong>avoiding regeneration</strong>:
+    moving a 5.00 MiB block costs <strong>164 / 82 / 43 µs</strong> at an <em>assumed</em> 32 / 64 / 121 GB/s, while regenerating
+    the same 16 tokens costs <strong>9 / 11 / 18 ms</strong> at 50 / 40 / 25% MFU — two to three orders of magnitude,
+    <strong>no precise multiple claimed</strong>, and an arbitrary <em>interior</em> block is worse still, since interior KV is
+    not independently reproducible. <span style="font-family:var(--font-mono);font-size:0.72rem;">Analytical model · no CXL hardware measured</span>
+  </div>
+</section>
+
+<!-- FIGURE 5: COHERENCY PROTOCOL -->
+<section class="section" id="fig5">
+  <span class="section-badge">Figure 5</span>
+  <h2>CXL 3.0 Coherency Protocol</h2>
+  <p class="sr-only">Figure: the four coherency states CXL 3.0 maintains through the Back-Invalidate protocol. Invalid — the GPU cache is empty and the endpoint is authoritative. Shared — the GPU holds a read copy and the endpoint is still authoritative. Exclusive — the GPU may write and the endpoint copy is stale. Modified — the GPU holds dirty data and must write back. During prefill the GPU issues D2H writes that the endpoint applies to local DRAM; when the endpoint evicts to flash it issues a BI-Snoop that the GPU must acknowledge after writing back dirty data. All values are an analytical model, not measured.</p>
+  
+  <p>CXL 3.0 provides hardware-managed coherency through the <strong>Back-Invalidate (BI)</strong> protocol.</p>
+  
+  <div class="coherency-visual">
+    <div class="coherency-state invalid">
+      <div class="state-name">Invalid</div>
+      <div class="state-desc">GPU cache empty<br>Endpoint authoritative</div>
+    </div>
+    <div class="coherency-state shared">
+      <div class="state-name">Shared</div>
+      <div class="state-desc">GPU has read copy<br>Endpoint authoritative</div>
+    </div>
+    <div class="coherency-state exclusive">
+      <div class="state-name">Exclusive</div>
+      <div class="state-desc">GPU can write<br>Endpoint stale</div>
+    </div>
+    <div class="coherency-state modified">
+      <div class="state-name">Modified</div>
+      <div class="state-desc">GPU has dirty data<br>Must writeback</div>
+    </div>
+  </div>
+  
+  <div class="comparison-grid">
+    <div class="card" style="border-color: var(--info);">
+      <h4 style="color: var(--info);">GPU → Endpoint Writes</h4>
+      <p style="font-size: 0.9rem; margin-bottom: 0;">During prefill, GPU writes new KV entries. Endpoint receives <code>D2H Write</code> with data, updates local DRAM and clears stale metadata.</p>
+    </div>
+    <div class="card" style="border-color: var(--primary);">
+      <h4 style="color: var(--primary);">Endpoint → GPU Invalidation</h4>
+      <p style="font-size: 0.9rem; margin-bottom: 0;">When endpoint evicts entries to flash, it issues <code>BI-Snoop</code>. GPU must writeback dirty data before acknowledging.</p>
+    </div>
+  </div>
+  
+  <div class="alert alert-info">
+    <strong>Concurrent SM Access:</strong> Multiple GPU SMs accessing the same KV-head are serialized at L2 cache. Endpoint sees unified coherent view—no per-SM tracking required.
+  </div>
+</section>
+
+<!-- FIGURE 6: GQA COMPARISON -->
+<section class="section" id="fig6">
+  <span class="section-badge">Figure 6</span>
+  <h2>Attention Mechanisms: MHA vs GQA vs MQA</h2>
+  <p class="sr-only">Figure: three attention layouts compared by how many KV heads they keep. Multi-head attention keeps 64 KV heads at full memory cost; grouped-query attention, the highlighted middle option and the one used here, shares K and V across query heads for 8 KV heads and an 8 times memory saving; multi-query attention shares a single KV head at a quality tradeoff. Eight KV heads across 80 layers gives 640 per-layer-per-KV-head scoring streams — a scoring granularity, not an eviction one. There are not 640 eviction queues: every head of every layer is required for every token, so evicting a head produces wrong outputs, not a cache miss. All 640 streams are aggregated into one score per (sequence, token block) of 16 tokens, 5.00 mebibytes, and that block is what is placed, moved and evicted, with all 8 KV heads across all 80 layers travelling together. H2O and SnapKV evict head-token pairs, and the token axis is not optional. Per-block state is 64 bytes, so a 128K context is 131,072 divided by 16 equals 8,192 blocks, giving 512 kibibytes against 40.0 gibibytes of KV — a payload overhead of 0.0012 percent, not the 640 mebibytes and 1.5 percent this figure previously claimed, which followed from tracking every position in every head. Metadata processing overhead is not established and must be measured. Both Llama-2-70B and Llama-3-70B are grouped-query attention with 8 KV heads and 64 query heads; the 64-KV-head multi-head row is a counterfactual over the same geometry, and the 2,560 kibibytes-per-token multi-head figure belongs to Llama-1-65B and the smaller multi-head Llama-2 variants.</p>
+  
+  <div class="gqa-comparison">
+    <div class="method-card">
+      <div class="method-name">MHA</div>
+      <div class="method-full">Multi-Head Attention</div>
+      <div style="background: rgba(0,0,0,0.3); padding: 0.75rem; border-radius: 8px;">
+        <div style="font-size: 0.85rem; color: var(--gray);">Q heads = K heads = V heads</div>
+        <div style="margin-top: 0.5rem; font-family: var(--font-mono); color: var(--danger);">64 KV heads</div>
+        <div style="font-size: 0.7rem; color: var(--gray);">Full memory cost — <em>counterfactual</em>. The 2,560 KiB/token MHA row belongs to Llama-1-65B, not to any 70B Llama.</div>
+      </div>
+    </div>
+    <div class="method-card highlight">
+      <div class="method-name">GQA</div>
+      <div class="method-full">Grouped Query Attention</div>
+      <div style="background: rgba(0,0,0,0.3); padding: 0.75rem; border-radius: 8px;">
+        <div style="font-size: 0.85rem; color: var(--gray);">Multiple Q share K/V</div>
+        <div style="margin-top: 0.5rem; font-family: var(--font-mono); color: var(--success);">8 KV heads</div>
+        <div style="font-size: 0.7rem; color: var(--gray);">8× memory saving — what <strong>both</strong> Llama-2-70B and Llama-3-70B actually use (64 Q heads, 8 KV heads → 320 KiB/token)</div>
+      </div>
+    </div>
+    <div class="method-card">
+      <div class="method-name">MQA</div>
+      <div class="method-full">Multi-Query Attention</div>
+      <div style="background: rgba(0,0,0,0.3); padding: 0.75rem; border-radius: 8px;">
+        <div style="font-size: 0.85rem; color: var(--gray);">All Q share single K/V</div>
+        <div style="margin-top: 0.5rem; font-family: var(--font-mono); color: var(--warning);">1 KV head</div>
+        <div style="font-size: 0.7rem; color: var(--gray);">Quality tradeoff</div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="formula">
+    8 KV-heads × 80 layers = <strong style="color: var(--warning);">640 scoring streams</strong>
+    &nbsp;→&nbsp; aggregated into <strong style="color: var(--success);">one score per (sequence, token block)</strong><br>
+    <span style="color: var(--gray); font-size: 0.8rem;">Not 640 eviction queues. Every head of every layer is required for every token — evicting a head gives <strong>wrong outputs, not a cache miss</strong>. H2O and SnapKV evict <strong>(head, token)</strong> pairs; the token axis is not optional.</span>
+  </div>
+  
+  <div class="metric-cards">
+    <div class="metric-card">
+      <div class="metric-value">640</div>
+      <div class="metric-label">Scoring streams (never eviction queues)</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">8,192</div>
+      <div class="metric-label">Blocks @ 128K (131,072 ÷ 16)</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">64 B</div>
+      <div class="metric-label">State per block (identity key + score)</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value">512 KiB</div>
+      <div class="metric-label">Total state vs 40.0 GiB KV — <strong>0.0012%</strong></div>
+    </div>
+  </div>
+</section>
+
+<!-- FIGURE 7: EMA EVICTION -->
+<section class="section" id="fig7">
+  <span class="section-badge">Figure 7</span>
+  <h2>LRFU Block Eviction — established prior art, not a new algorithm</h2>
+  <p class="sr-only">Figure: LRFU decayed-frequency scoring for block eviction, with a worked example. This is not a new algorithm. A decayed-frequency score is LRFU — Lee et al., "On the Existence of a Spectrum of Policies that Subsumes the LRU and LFU Policies", ACM SIGMETRICS 1999 — and alpha is its documented knob between LRU-like and LFU-like behaviour. LRU assumes recent access predicts future access, which attention can violate: a block at position 1,000 may go untouched until position 100,000 yet stay important. The update rule is score equals alpha times the new score plus one minus alpha times the old score. Alpha = 0.2 was never validated and is withdrawn; the simulated optimum is alpha about 0.05, giving a half-life of ln 0.5 over ln 0.95 equals 13.5 decode steps. Alpha is non-monotonic with an interior optimum: at a 32 gibibyte budget the simulated hit rates are 37.20 percent at alpha 0.5, 38.84 at 0.3, 44.33 at 0.15, 55.96 at 0.05, 31.54 at 0.01, 25.47 at 0.003 and 24.44 at 0.001, so a smaller alpha is not simply more stable, and there is no convergence onto LFU as alpha approaches zero. The evicted unit is a (sequence, token block) of 16 tokens, 5.00 mebibytes, never a head: every head of every layer is required for every token, so evicting a head produces wrong outputs, not a cache miss. Eviction priority is one minus the score, times recency decay, and higher priority is evicted sooner. Block A, an anchor block at position 1,024 last accessed 50 steps ago, scores 0.059 with recency decay 0.049, giving priority 0.046 — kept. Block B, a low-attention block at position 45,678 last accessed 2,000 steps ago, scores 0.02 with recency decay 0.865, giving priority 0.848 — evicted to NVMe, but its identity key and score persist and are restored on re-admission rather than reset. That persistence, not the scoring function, is the largest effect in the study: at 32 gibibytes it is worth plus 34.15 percentage points to LFU, from 15.56 to 49.71 percent, and plus 24.85 to EMA alpha 0.01, from 31.54 to 56.39 percent, while EMA alpha 0.15 is unchanged at minus 0.21 percentage points — larger than the whole spread between scoring functions, and a protocol result testable with no CXL hardware. The worked numbers are illustrative; the simulated figures are provisional, because a single data-structure defect in Revision 1 inverted four of five findings, and no single hit rate exists anywhere, the range being 8.5 to 91.6 percent across budgets, policies and workloads.</p>
+
+  <div class="alert alert-info" style="border-left:4px solid #a371f7;">
+    <strong>This is LRFU, not a new algorithm</strong> <span style="font-family:var(--font-mono);font-size:0.72rem;">[External literature]</span> —
+    a decayed-frequency score is <strong>LRFU</strong>, Lee et al., <em>“On the Existence of a Spectrum of Policies that Subsumes the
+    LRU and LFU Policies”</em>, ACM SIGMETRICS 1999, and α is its documented LRU↔LFU knob. This package contributes the sweep and the
+    persistence protocol, not the policy.
+  </div>
+
+  <p><strong>Why plain LRU can fail here:</strong> LRU assumes recent access predicts future access. Attention can violate this — a block at position 1,000 may not be read again until position 100,000, yet still matter. <strong>But note the sweep:</strong> no policy dominates. At 32 GiB across workloads, only LFU survives a cyclic sweep (22.06% vs 9.83% for LRU and EMA), while EMA α=0.01 leads a one-shot scan (36.26% vs LRU 31.51%) and EMA α=0.15 leads returning-session traffic (44.44% vs LRU 39.08%). <span style="font-family:var(--font-mono);font-size:0.72rem;">Simulated (provisional)</span></p>
+  
+  <div class="card" style="background: #2d3748; border: none;">
+    <div style="font-family: var(--font-mono); font-size: 1.1rem; color: white; text-align: center; padding: 0.5rem;">
+      <span style="color: #68d391; font-style: italic;">score_ema</span> = 
+      <span style="color: #f6ad55;">α</span> × 
+      <span style="color: #68d391; font-style: italic;">new_score</span> + (1 − 
+      <span style="color: #f6ad55;">α</span>) × 
+      <span style="color: #68d391; font-style: italic;">score_ema</span>
+    </div>
+  </div>
+  
+  <div class="comparison-grid" style="margin-top: 1rem;">
+    <div style="background: rgba(0,0,0,0.2); border-radius: 10px; padding: 1rem;">
+      <div style="font-weight: 700; color: var(--orange); margin-bottom: 0.25rem;">α → 1.0 (LRU end of the spectrum)</div>
+      <div style="font-size: 0.9rem; color: var(--gray);">Weights the most recent observation most. 32 GiB: α=0.5 → 37.20% · α=0.3 → 38.84% · α=0.15 → 44.33%.</div>
+    </div>
+    <div style="background: rgba(0,0,0,0.2); border-radius: 10px; padding: 1rem;">
+      <div style="font-weight: 700; color: var(--cyan); margin-bottom: 0.25rem;">α → 0 — <strong>does NOT converge onto LFU</strong></div>
+      <div style="font-size: 0.9rem; color: var(--gray);">α is <strong>non-monotonic</strong> with an interior optimum at <strong>α ≈ 0.05 → 55.96%</strong>, then it collapses: 0.01 → 31.54% · 0.003 → 25.47% · 0.001 → 24.44%. The Revision 1 claim of convergence onto LFU is withdrawn. Persistent metadata removes the small-α collapse, identifying metadata reset as its cause. <span style="font-family:var(--font-mono);font-size:0.72rem;">Simulated (provisional)</span></div>
+    </div>
+  </div>
+  
+  <div class="formula">
+    <span style="color: var(--primary);">priority</span> = (1 − score) × recency_decay &nbsp;<span style="color: var(--gray); font-size:0.8rem;">— over <strong>(sequence, token block)</strong>, 16 tokens = 5.00 MiB, never over a head</span><br>
+    <span style="color: var(--gray); font-size: 0.85rem;">Higher priority → evict sooner</span>
+  </div>
+
+  <div class="alert alert-info">
+    <strong>α = 0.05 — the simulated optimum, not a derived constant. <span style="color:#f85149;">α = 0.2 was never validated and is withdrawn.</span></strong>
+    Update rule <code>score_t(b) = 0.05 × attention_t(b) + 0.95 × score_<sub>t−1</sub>(b)</code>,
+    half-life ln 0.5 ÷ ln 0.95 = <strong>13.5 steps</strong>. Reference points: α = 0.05 → 13.5 steps · α = 0.1 → 6.6 steps · α = 0.2 → 3.1 steps.
+    Worked example at α = 0.05: a block scoring 0.044 that receives attention 0.050 updates to 0.05 × 0.050 + 0.95 × 0.044 = <strong>0.044</strong>;
+    a further step with attention 0.35 gives 0.05 × 0.35 + 0.95 × 0.044 = <strong>0.059</strong> — the value used for Block A below.
+    α cannot be interpolated: it is <strong>non-monotonic</strong>. <span style="font-family:var(--font-mono);font-size:0.72rem;">Simulated (provisional)</span>
+  </div>
+  
+  <div class="comparison-grid">
+    <div class="compare-card keep">
+      <div style="font-weight: 700; margin-bottom: 0.75rem; color: var(--white);">Block A: anchor block</div>
+      <table style="margin: 0; font-size: 0.85rem;">
+        <tr><td>Block (position)</td><td style="text-align: right;">1,024</td></tr>
+        <tr><td>Last access</td><td style="text-align: right;">50 steps ago</td></tr>
+        <tr><td>score (α = 0.05)</td><td style="text-align: right;"><strong>0.059</strong></td></tr>
+        <tr><td>recency_decay</td><td style="text-align: right;">0.049</td></tr>
+        <tr><td>priority</td><td style="text-align: right; color: var(--success);"><strong>0.046</strong></td></tr>
+      </table>
+      <div class="verdict"><span aria-hidden="true">✓</span> KEEP IN HBM</div>
+    </div>
+    <div class="compare-card evict">
+      <div style="font-weight: 700; margin-bottom: 0.75rem; color: var(--white);">Block B: low-attention block</div>
+      <table style="margin: 0; font-size: 0.85rem;">
+        <tr><td>Block (position)</td><td style="text-align: right;">45,678</td></tr>
+        <tr><td>Last access</td><td style="text-align: right;">2,000 steps ago</td></tr>
+        <tr><td>score (α = 0.05)</td><td style="text-align: right;"><strong>0.02</strong></td></tr>
+        <tr><td>recency_decay</td><td style="text-align: right;">0.865</td></tr>
+        <tr><td>priority</td><td style="text-align: right; color: var(--danger);"><strong>0.848</strong></td></tr>
+      </table>
+      <div class="verdict"><span aria-hidden="true">🗑</span> EVICT TO NVMe — <span style="font-size:0.8rem;">identity key + score persist</span></div>
+    </div>
+  </div>
+  <div class="alert alert-info" style="border-left:4px solid #a371f7;">
+    <strong>The largest effect in the study is not the scoring function.</strong> It is letting identity-keyed policy state
+    survive HBM eviction, rather than re-admitting a block as if newly created. At 32 GiB:
+    <strong>LFU 15.56 → 49.71 (+34.15 pts)</strong> · <strong>EMA α=0.01 31.54 → 56.39 (+24.85 pts)</strong> ·
+    EMA α=0.15 unchanged (−0.21 pts). Larger than the spread between policies, and a <strong>protocol</strong> result —
+    testable with <strong>no CXL hardware</strong>. <span style="font-family:var(--font-mono);font-size:0.72rem;">Simulated (provisional)</span>
+  </div>
+  <p style="margin-top:1.25rem; padding-top:0.75rem; border-top:1px solid rgba(255,255,255,0.12); font-size:0.78rem; color:#94a3b8;">Evidence labels. Worked scores: <strong>Illustrative</strong> — pedagogical, never a result. priority = (1 − score) × recency_decay: Block A (1 − 0.059) × 0.049 = 0.046; Block B (1 − 0.02) × 0.865 = 0.848. Policy attribution: <strong>External literature</strong> — LRFU, Lee et al., ACM SIGMETRICS 1999. Hit rates and α grid: <strong>Simulated (provisional)</strong> — a single data-structure defect in Revision 1 inverted four of five findings, so Revision 2 is provisional, not settled. <strong>Retracted here:</strong> α = 0.2 as an implementation default, the 97% hit rate, and the 72 → 80 → 87 → 93 → 97 ladder. Percentage-point differences are quoted as <strong>pts</strong>, never %.</p>
+</section>
+
+<!-- FIGURE 8: ROPE PREFETCH -->
+<section class="section" id="fig8">
+  <span class="section-badge">Figure 8</span>
+  <h2>RoPE — What the Distance Bound Says, and Why It Cannot Drive Prefetch</h2>
+  <p class="sr-only">Figure: a RoPE explainer. RoPE encodes position by rotating the query and key vectors in d over 2 two-dimensional subspaces, each with its own frequency, so the inner product is a sum over those pairs and does not decay monotonically. What the construction guarantees is an upper-bound envelope: the magnitude of the inner product of q_m and k_n is at most B of the absolute distance m minus n, with B non-increasing. It is never proportional to cosine of (m minus n) times theta; writing it that way converts a bound into a decay law, and a decay law reads like a prediction of access. Critically, RoPE is a rotation applied to Q and K at compute time. The rotation is a function of position alone, known in advance for every position, and identical whether a block is resident or evicted, so it carries no information about which blocks will be needed next and cannot drive prefetch. The prefetch rule this figure previously stated — on accessing position P, prefetch the window P minus W to P plus W, ordered by one over one plus distance over 100 — is withdrawn, together with the claim that RoPE prefetch contributes the last 4 percentage points of a 97 percent hit rate, from 93 to 97. The entire 72 to 80 to 87 to 93 to 97 ladder is retracted: it was never run as an ablation, and its increments were assumed additive and independent even though the mechanisms they decompose overlap. No single hit rate exists; the corrected simulation gives 8.5 to 91.6 percent across budgets, policies and workloads. The 200 nanosecond cost of a prefetch miss is also withdrawn: no CXL hardware was measured, and tier cost is an assumed 32, 64 or 121 gigabytes per second, under which a 5.00 mebibyte block is 164, 82 or 43 microseconds. The assumption that about 70 percent of attention mass falls within plus or minus W positions of the query remains an assumption — model-, layer-, head- and workload-dependent — and it is not something RoPE proves. A position-window prefetch remains an open idea, not a validated technique: it has not been shown to give a predictive advantage over the reuse-prediction approaches already shipping, such as CacheWise's tool-call-driven prediction, and it belongs in future work rather than in a list of contributions.</p>
+
+  <div class="alert alert-info" style="border-left:4px solid #f85149;">
+    <strong>RoPE cannot drive prefetch — the hit-rate claim on this figure is retracted.</strong> RoPE is a
+    <strong>rotation applied to Q/K at compute time</strong>: a function of position alone, known in advance for every
+    position, identical whether a block is resident or evicted. It carries <strong>no information about which blocks are
+    needed next</strong>. Distance decay is an <strong>upper bound</strong>,
+    <code>|⟨q<sub>m</sub>, k<sub>n</sub>⟩| ≤ B(|m − n|)</code> — <strong>never</strong> <code>∝ cos((m − n)·θ)</code>.
+    A position-window prefetch is an <strong>open idea, not a validated technique</strong>.
+  </div>
+  
+  <div class="card-grid">
+    <div class="card">
+      <div style="font-weight: 700; color: var(--primary); margin-bottom: 0.5rem;"><span aria-hidden="true">🔄</span> Rotary Encoding</div>
+      <div style="font-size: 0.9rem; color: var(--gray);">RoPE encodes position by rotating Q/K vectors. Nearby positions have similar rotations → higher dot product → higher attention.</div>
+    </div>
+    <div class="card">
+      <div style="font-weight: 700; color: var(--cyan); margin-bottom: 0.5rem;"><span aria-hidden="true">📍</span> Locality Bias</div>
+      <div style="font-size: 0.9rem; color: var(--gray);"><strong>Modeling assumption</strong> (not a measured result): ~70% of attention mass falls within ±W positions of the query token. The RoPE inner product is a sum over d/2 frequency pairs and distance decay is only an upper bound, |⟨q<sub>m</sub>, k<sub>n</sub>⟩| ≤ B(|m − n|).</div>
+    </div>
+    <div class="card">
+      <div style="font-weight: 700; color: var(--danger); margin-bottom: 0.5rem;"><span aria-hidden="true">🚫</span> What it is NOT: <code>∝ cos((m − n)·θ)</code></div>
+      <div style="font-size: 0.9rem; color: var(--gray);">The inner product is never proportional to a single cosine of the distance. Writing it that way turns a <strong>bound</strong> into a <strong>decay law</strong> — and a decay law reads like a prediction of which blocks will be read. It is not one. A distant position may still attend strongly; the bound permits it.</div>
+    </div>
+  </div>
+  
+  <div class="formula" style="background: rgba(139, 92, 246, 0.15); border: 1px solid rgba(139, 92, 246, 0.3);">
+    <span style="color: var(--primary); font-weight: 700;">What the bound says:</span> |⟨q<sub>m</sub>, k<sub>n</sub>⟩| ≤ B(|m − n|), B non-increasing
+  </div>
+
+  <div class="formula" style="background: rgba(139, 92, 246, 0.1);">
+    <span style="color: var(--primary); font-weight: 700;">Inside |m − n| ≤ W:</span> the bound is <em>loosest</em> — a large inner product is <strong>permitted</strong> there, not <strong>predicted</strong>
+  </div>
+
+  <div class="formula" style="background: rgba(248, 81, 73, 0.12); border: 1px solid rgba(248, 81, 73, 0.35);">
+    <span style="color: var(--danger); font-weight: 700;">Withdrawn:</span> “GPU accesses P → prefetch [P − W, P + W], priority 1 ÷ (1 + distance/100)”
+  </div>
+
+  <div class="metric-cards">
+    <div class="metric-card">
+      <div class="metric-value" style="color: var(--gray); font-size: 1.4rem;">no single<br>hit rate</div>
+      <div class="metric-label"><strong>8.5–91.6%</strong> across budgets, policies and workloads · <em>Simulated (provisional)</em></div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" style="color: var(--danger); font-size: 1.4rem;">retracted</div>
+      <div class="metric-label">The “+4 pts, 93 → 97” RoPE-prefetch rung, and the whole 72 → 80 → 87 → 93 → 97 ladder — never run as an ablation</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" style="color: var(--warning);">~70%</div>
+      <div class="metric-label">Attention within ±W — an <strong>assumption</strong>, model/layer/head/workload dependent, and not something RoPE proves · <em>Illustrative</em></div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" style="color: var(--cyan); font-size: 1.4rem;">164/82/43 µs</div>
+      <div class="metric-label">5.00 MiB block across the tier at an <strong style="color:inherit">assumed</strong> 32/64/121 GB/s — <strong>no CXL hardware measured</strong> · <em>Analytical model</em></div>
+    </div>
+  </div>
+  <p style="margin-top:1.25rem; padding-top:0.75rem; border-top:1px solid rgba(255,255,255,0.12); font-size:0.78rem; color:#94a3b8;">Evidence labels. The bound |⟨q<sub>m</sub>, k<sub>n</sub>⟩| ≤ B(|m − n|) is an <strong>Analytical model</strong>, following from the RoPE construction. The ±W locality figure is <strong>Illustrative</strong> — an assumption drawn from the attention-locality literature, not a measurement. <strong>Retracted from this figure:</strong> the +4 pts / 93 → 97 prefetch rung, the 97% hit rate, the whole 72 → 80 → 87 → 93 → 97 ladder, the [P−W, P+W] prefetch rule with its 1 ÷ (1 + distance/100) priority, and the 200 ns prefetch-miss cost. <strong>No CXL hardware was measured.</strong> Where a real predictive signal exists it comes from elsewhere — InfiniGen speculates from the model's own next-layer state, CacheWise from agent and tool-call metadata <span style="font-family:var(--font-mono);">External literature</span>.</p>
+</section>
+
+<!-- FIGURE 9: PREFILL VS DECODE -->
+<section class="section" id="fig9">
+  <span class="section-badge">Figure 9</span>
+  <h2>Prefill vs Decode Phase Characteristics</h2>
+  <p class="sr-only">Figure: the two inference phases side by side. Prefill is compute-bound, writes sequentially, is write-only as it populates the cache, has high arithmetic intensity of about 100 FLOP per byte and processes the full sequence in parallel — so writes stream straight to CXL and no eviction is needed. Decode is memory-bound, does random reads plus one write per step, reads everything and appends one entry, has low arithmetic intensity of about 0.5 FLOP per byte and runs token by token — this is where placement and eviction matter. There is no RoPE prefetch in that strategy: RoPE is a rotation applied to Q and K at compute time and carries no information about which blocks are needed next, so the earlier "EMA eviction plus RoPE prefetch" strategy line is corrected to LRFU-scored block placement with persistent identity-keyed state. Note also the correctness constraint on the read pattern: under dense attention every block of an active sequence is read every step, so lossless residency requires every block that is read to be present, and treating attention sparsity as a substitute is a lossy relaxation that carries an accuracy-evaluation burden. The endpoint detects the phase from the read-to-write ratio and switches policy when reads exceed writes by 10 times. This is an analytical model; phase detection on real hardware is design, unvalidated, and no CXL hardware was measured.</p>
+  
+  <div class="phase-compare">
+    <div class="phase-card prefill">
+      <div class="phase-title"><span aria-hidden="true">⚡</span> Prefill Phase</div>
+      <table style="margin: 0; font-size: 0.85rem;">
+        <tr><td><strong>Bottleneck</strong></td><td>Compute-bound</td></tr>
+        <tr><td><strong>Access Pattern</strong></td><td>Sequential writes</td></tr>
+        <tr><td><strong>KV Operations</strong></td><td>Write-only (populate cache)</td></tr>
+        <tr><td><strong>Arithmetic Intensity</strong></td><td>High (~100 FLOP/byte)</td></tr>
+        <tr><td><strong>Batching</strong></td><td>Full sequence parallel</td></tr>
+      </table>
+      <div class="alert alert-warning" style="margin-top: 1rem; margin-bottom: 0; padding: 0.75rem;">
+        <strong>Strategy:</strong> Stream writes directly to CXL. No eviction needed—all entries are new.
+      </div>
+    </div>
+    <div class="phase-card decode">
+      <div class="phase-title"><span aria-hidden="true">🔄</span> Decode Phase</div>
+      <table style="margin: 0; font-size: 0.85rem;">
+        <tr><td><strong>Bottleneck</strong></td><td>Memory-bound</td></tr>
+        <tr><td><strong>Access Pattern</strong></td><td>Random reads + 1 write</td></tr>
+        <tr><td><strong>KV Operations</strong></td><td>Read all + append one</td></tr>
+        <tr><td><strong>Arithmetic Intensity</strong></td><td>Low (~0.5 FLOP/byte)</td></tr>
+        <tr><td><strong>Batching</strong></td><td>Token-by-token</td></tr>
+      </table>
+      <div class="alert alert-success" style="margin-top: 1rem; margin-bottom: 0; padding: 0.75rem;">
+        <strong>Strategy:</strong> LRFU-scored block placement (α ≈ 0.05) over <strong>(sequence, token block)</strong> units,
+        with <strong>persistent identity-keyed state</strong> across the tier boundary. This is where placement matters.
+        <strong>No RoPE prefetch</strong> — RoPE carries no information about which blocks are needed next.
+      </div>
+    </div>
+  </div>
+  
+  <div class="key-insight">
+    <div class="key-insight-title">Phase Detection</div>
+    Endpoint monitors write/read ratio. When reads exceed writes by 10×, switch to decode-optimized policy.
+  </div>
+</section>
+
+<!-- FIGURE 10: QUANTIZATION -->
+<section class="section" id="fig10">
+  <span class="section-badge">Figure 10</span>
+  <h2>KV-Cache Quantization Support</h2>
+  <p class="sr-only">Figure: four KV-cache formats as bars proportional to memory used, for one 128K context. FP16 is the 43 GB baseline at full width; FP8 halves it to 21.5 GB at under 0.1 percent accuracy loss; INT8 also gives 21.5 GB at under 0.5 percent loss; INT4 quarters it to 10.8 GB at about 1 percent loss. Conversion throughput is 48 GB/s FP16 to INT8, 32 GB/s FP16 to INT4 and 64 GB/s INT8 back to FP16. Compression is transparent: the GPU writes BF16, the endpoint stores INT8, the GPU reads BF16 again. All values are an analytical model, not measured.</p>
+  
+  <p>Modern inference increasingly uses quantized KV-caches. The endpoint supports transparent compression:</p>
+  
+  <div class="quant-bars">
+    <div class="quant-row">
+      <div class="quant-label" style="color: var(--danger);">FP16</div>
+      <div class="quant-track">
+        <div class="quant-fill fp16" role="img" aria-label="FP16 baseline, 43 GB, full width">Baseline</div>
+      </div>
+      <div class="quant-size">43 GB</div>
+    </div>
+    <div class="quant-row">
+      <div class="quant-label" style="color: var(--orange);">FP8</div>
+      <div class="quant-track">
+        <div class="quant-fill fp8" role="img" aria-label="FP8, 21.5 GB, half the baseline, under 0.1 percent accuracy loss">&lt;0.1% loss</div>
+      </div>
+      <div class="quant-size">21.5 GB</div>
+    </div>
+    <div class="quant-row">
+      <div class="quant-label" style="color: var(--warning);">INT8</div>
+      <div class="quant-track">
+        <div class="quant-fill int8" role="img" aria-label="INT8, 21.5 GB, half the baseline, under 0.5 percent accuracy loss">&lt;0.5% loss</div>
+      </div>
+      <div class="quant-size">21.5 GB</div>
+    </div>
+    <div class="quant-row">
+      <div class="quant-label" style="color: var(--success);">INT4</div>
+      <div class="quant-track">
+        <div class="quant-fill int4" role="img" aria-label="INT4, 10.8 GB, a quarter of the baseline, about 1 percent accuracy loss">~1% loss</div>
+      </div>
+      <div class="quant-size">10.8 GB</div>
+    </div>
+  </div>
+  
+  <div class="metric-cards">
+    <div class="metric-card">
+      <div class="metric-value" style="font-size: 1.5rem;">48</div>
+      <div class="metric-label">GB/s FP16→INT8</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" style="font-size: 1.5rem;">32</div>
+      <div class="metric-label">GB/s FP16→INT4</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" style="font-size: 1.5rem;">64</div>
+      <div class="metric-label">GB/s INT8→FP16</div>
+    </div>
+  </div>
+  
+  <div class="alert alert-info">
+    <strong>Transparent compression:</strong> GPU writes BF16 → Endpoint stores INT8 → GPU reads BF16. Compression invisible to inference stack.
+  </div>
+  <div class="alert alert-warning">
+    <strong>fp8 KV has not been measured.</strong> The DGX Spark GB10 run measured bf16 only. An fp8 KV run is the
+    <strong>direct test of the compression claim</strong> on this page and is the next experiment; until it exists, the
+    halving shown here is arithmetic over the format width, not a demonstrated end-to-end result.
+  </div>
+  <p style="margin-top:1.25rem; padding-top:0.75rem; border-top:1px solid rgba(255,255,255,0.12); font-size:0.78rem; color:#94a3b8;">Evidence labels. Sizes: <strong>Analytical model</strong> — one 128K context (40.0 GiB / 43 GB at BF16, 320 KiB/token) scaled by the format width. Accuracy-loss figures: <strong>External literature</strong> — published claims from the quantization literature, cited not reproduced. Conversion throughputs are a <strong>Design target</strong>, not demonstrated. <strong>fp8 KV not yet measured</strong> on the DGX Spark GB10 platform; that run is the next experiment. Canonical numbers v6.0.</p>
+</section>
+
+<!-- FIGURE 11: LATENCY COMPARISON -->
+<section class="section" id="fig11">
+  <span class="section-badge">Figure 11</span>
+  <h2>Two Unmeasured Component Budgets — and the Comparison That Survives</h2>
+  <p class="sr-only">Figure: two component budgets for a single access, and the comparison that replaces the ratio between them. The CXL budget sums 15, 20, 25, 40, 80 and 20 nanoseconds for request issue, PCIe Gen5 PHY, switch traversal, controller decode, DDR5 array access and return path, totalling 200 nanoseconds. The PCIe DMA budget sums 4.00, 2.50, 1.50, 0.70, 0.10, 0.20 and 4.00 microseconds, totalling 13.00 microseconds. Both are component sums over vendor specifications, and neither was measured: no CXL hardware was measured anywhere in this package. The 65 times ratio between them is retracted as a headline, because the two are not the same operation — a hypothetical load-store path against a driver-mediated DMA path. The 200 nanosecond CXL access is demoted to an unmeasured assumption inside a 32 to 121 gigabytes per second effective-bandwidth range. Also retracted: the end-to-end effective access latency of 177 nanoseconds against a 2,035 nanosecond baseline, 11.5 times lower, together with the 97 over 2.7 over 0.3 tier split it was computed from, because that split was derived from a 97 percent hit rate that was never measured. No single hit rate exists; the corrected simulation gives 8.5 to 91.6 percent across budgets, policies and workloads. What replaces the ratio is the comparison that survives, per 5.00 mebibyte block of 16 tokens: moving the block costs 164, 82 or 43 microseconds at an assumed 32, 64 or 121 gigabytes per second, while regenerating the same 16 tokens by forward compute costs 9, 11 or 18 milliseconds at 50, 40 or 25 percent model FLOPs utilisation. Moving is two to three orders of magnitude cheaper than regenerating, and no precise multiple is claimed, because the two quantities do not measure the same operation; the 218 times figure formed from 17.9 milliseconds divided by 82 microseconds is one point in that range and must always be quoted with its inputs. Regenerating an arbitrary interior block is at least that expensive and potentially far higher, because interior KV is not independently reproducible: hidden states depend recursively on all preceding context. Separately, a genuinely measured result stands in this area: on a DGX Spark GB10, streaming copy achieved 236.5 gigabytes per second, 87 percent of a 273 gigabytes per second specification, and a two-term decode fit implies the effective KV path is about 3.4 times more costly per byte than the fixed path.</p>
+
+  <div class="alert alert-info" style="border-left:4px solid #f85149;">
+    <strong>The 65× is retracted, and no CXL hardware was measured.</strong> Both tables below are
+    <strong>component budgets</strong> summed from vendor specifications — neither is a measurement. Dividing one by the
+    other compares a <em>hypothetical load/store path</em> against a <em>driver-mediated DMA path</em>: two different
+    operations. The <strong>200 ns</strong> CXL access is <strong>demoted</strong> to an unmeasured assumption inside a
+    <strong>32–121 GB/s</strong> range.
+  </div>
+  
+  <div class="latency-compare">
+    <div class="latency-box bad" role="img" aria-label="PCIe DMA transfer, 13.0 microseconds — the slow path, with the CPU in the critical path for driver, DMA setup and completion interrupt">
+      <div class="latency-box-label">PCIe DMA Transfer</div>
+      <div class="latency-box-value">13.0 μs</div>
+      <div style="font-size: 0.8rem; color: var(--gray); margin-top: 0.5rem;">CPU in critical path<br>Driver + DMA setup + completion interrupt</div>
+    </div>
+    <div class="latency-box good" role="img" aria-label="CXL.mem direct access, a 200 nanosecond component budget — an assumption, not a measurement. No CXL hardware was measured.">
+      <div class="latency-box-label">CXL.mem Direct — <em>assumed</em></div>
+      <div class="latency-box-value">200 ns</div>
+      <div style="font-size: 0.8rem; color: var(--gray); margin-top: 0.5rem;">Load/store semantics, no per-access CPU involvement in steady state.<br><strong>A component budget, never measured.</strong></div>
+    </div>
+  </div>
+
+  <div class="card" style="text-align: center; background: rgba(248, 81, 73, 0.10); border-color: var(--danger);">
+    <div style="font-size: 2.2rem; font-weight: 800; color: var(--danger); text-decoration: line-through;">65× — 13,000 ns ÷ 200 ns</div>
+    <div style="color: var(--gray); margin-top: 0.5rem;"><strong>Retracted as a headline.</strong> A component sum for a hypothetical load/store path divided by a component sum for a driver-mediated DMA path — not the same operation, and <strong>no CXL hardware was measured</strong>.</div>
+  </div>
+
+  <div class="card" style="background: rgba(34, 197, 94, 0.10); border-color: var(--success);">
+    <div style="font-weight: 700; color: var(--success); text-align:center; margin-bottom: 0.75rem;">The comparison that survives — move vs. regenerate, per 5.00 MiB block (16 tokens)</div>
+    <table>
+      <thead><tr><th scope="col">Operation</th><th scope="col">Cost</th><th scope="col">Basis</th></tr></thead>
+      <tbody>
+        <tr><td>Move the block @ 121 GB/s</td><td style="color: var(--success);">43 µs</td><td>CXL 3.0 ×16 theoretical, one direction — <strong>assumed</strong></td></tr>
+        <tr><td>Move the block @ 64 GB/s</td><td style="color: var(--success);">82 µs</td><td>mid-range — <strong>assumed, no CXL hardware measured</strong></td></tr>
+        <tr><td>Move the block @ 32 GB/s</td><td style="color: var(--success);">164 µs</td><td>pessimistic — <strong>assumed</strong></td></tr>
+        <tr><td>Regenerate: forward compute, 16 tokens</td><td style="color: var(--warning);">9 / 11 / 18 ms</td><td>50% / 40% / 25% MFU, linear term</td></tr>
+        <tr><td>Regenerate an arbitrary <em>interior</em> block</td><td style="color: var(--danger);">≥ the above</td><td>interior KV is not independently reproducible — hidden states depend recursively on all preceding context</td></tr>
+        <tr style="font-weight: 700;"><td>Verdict</td><td style="color: var(--success);">2–3 orders</td><td><strong>No precise multiple claimed.</strong> The 218× point (17.9 ms ÷ 82 µs) must always be quoted with its inputs.</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="comparison-grid">
+    <table>
+      <thead>
+        <tr><th scope="col">CXL.mem component</th><th scope="col">Latency</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>GPU/host request issue</td><td>15 ns</td></tr>
+        <tr><td>PCIe Gen5 ×16 PHY</td><td>20 ns</td></tr>
+        <tr><td>CXL switch traversal</td><td>25 ns</td></tr>
+        <tr><td>Endpoint CXL controller decode</td><td>40 ns</td></tr>
+        <tr><td>DDR5-5600 array access</td><td>80 ns</td></tr>
+        <tr><td>Return path</td><td>20 ns</td></tr>
+        <tr style="font-weight: 700;"><td>Total — <em>assumed component budget</em></td><td style="color: var(--warning);">200 ns</td></tr>
+      </tbody>
+    </table>
+
+    <table>
+      <thead>
+        <tr><th scope="col">PCIe DMA component</th><th scope="col">Latency</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Driver call + doorbell</td><td>4.00 µs</td></tr>
+        <tr><td>DMA descriptor fetch/setup</td><td>2.50 µs</td></tr>
+        <tr><td>Software TLB + pinning management</td><td>1.50 µs</td></tr>
+        <tr><td>PCIe Gen5 round trip</td><td>0.70 µs</td></tr>
+        <tr><td>Host DRAM access</td><td>0.10 µs</td></tr>
+        <tr><td>4 KiB payload @ 32 GB/s</td><td>0.20 µs</td></tr>
+        <tr><td>Completion interrupt + resync</td><td>4.00 µs</td></tr>
+        <tr style="font-weight: 700;"><td>Total</td><td style="color: var(--danger);">13.00 µs</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="key-insight">
+    <div class="key-insight-title">Effective access latency — retracted, and not replaced</div>
+    This panel previously computed an end-to-end figure from a 97 / 2.7 / 0.3 tier split:
+    <span style="text-decoration: line-through;">0.97 × 100 ns + 0.027 × 200 ns + 0.003 × 25 µs = 177 ns</span> against a baseline of
+    <span style="text-decoration: line-through;">0.85 × 100 ns + 0.15 × 13 µs = 2,035 ns</span>, an <span style="text-decoration: line-through;">11.5×</span> improvement.
+    <strong>All of it is withdrawn.</strong> The split was derived from a <strong>97% hit rate that was never measured</strong>, and
+    <strong>no single hit rate exists</strong>: the corrected simulation gives <strong>8.5–91.6%</strong> across budgets, policies and
+    workloads. <span style="font-family:var(--font-mono);font-size:0.72rem;">Simulated (provisional)</span> No replacement
+    effective-latency figure is offered, because the tier latency it would need has never been measured.
+  </div>
+  <p style="margin-top:1.25rem; padding-top:0.75rem; border-top:1px solid rgba(255,255,255,0.12); font-size:0.78rem; color:#94a3b8;">Evidence labels. Both component tables are an <strong>Analytical model</strong> and sum exactly to the totals shown (15+20+25+40+80+20 = 200 ns; 4.00+2.50+1.50+0.70+0.10+0.20+4.00 = 13.00 µs) — but a sum of specifications is not a measurement, and <strong>no CXL hardware was measured</strong>. The move-vs-regenerate table is an <strong>Analytical model</strong> over <em>assumed</em> bandwidths and MFU. <strong>Retracted here:</strong> 65×, 11.5×, 177 ns as an effective latency, the 2,035 ns baseline, the 97 / 2.7 / 0.3 split and the 25 µs tier. The genuinely measured neighbour: <strong>Measured — DGX Spark GB10</strong>, 236.5 GB/s achieved = 87% of a 273 GB/s spec, with a two-term decode fit implying the effective KV path is ~3.4× more costly per byte than the fixed path (205.7 ÷ 61.1) — a model-derived ratio, not a direct byte-level hardware measurement.</p>
+</section>
+
+<!-- FIGURE 12: LAYER PREFETCH -->
+<section class="section" id="fig12">
+  <span class="section-badge">Figure 12</span>
+  <h2>Layer Prefetch Pipeline</h2>
+  <p class="sr-only">Figure: how the tier fabric is loaded, and why the steady-state load depends entirely on a hit rate that is not settled. The strawman it refutes stands: streaming a whole 2.22 gigabyte layer, 302 megabytes of attention plus 1.41 gigabytes of feed-forward plus a 512 megabyte KV slice, over one 64 gigabytes per second link would take 34.7 milliseconds against the few milliseconds that layer takes to compute, and no endpoint count fixes that; the architecture does not do this. The 140 gigabytes of model weights stay HBM-resident and never cross the tier boundary. What crosses is the miss tail, and its size is set by the hit rate. The earlier claim of about 11.4 gigabytes per second steady state, 4.5 percent of a 256 gigabytes per second supply, assumed a 3 percent miss rate taken from the retracted 97 percent hit rate. That hit rate was never measured, and no single hit rate exists: the corrected simulation gives 8.5 to 91.6 percent across budgets, policies and workloads. Recomputing the same arithmetic across that range, with 16 concurrent 128K sequences at 10 tokens per second and a full read volume of 2.4 gigabytes per sequence-step: at a 91.6 percent hit rate the miss tail is about 32 gigabytes per second, 13 percent of a 256 gigabytes per second supply; at 44.18 percent it is about 214 gigabytes per second, 84 percent of supply; and at 8.5 percent it is about 351 gigabytes per second, which exceeds the supply outright. The fabric is therefore not comfortably capacity-driven at every operating point, and this is exactly the shape change the package describes: a memory tier does not eliminate the KV memory wall, it converts a capacity wall into a data-movement wall, creating a tier-ingress bandwidth constraint and a per-transfer latency constraint that did not previously exist. The admission burst is separate: writing or reloading one 128K context of 40.0 gibibytes, or 43 gigabytes, takes 672 milliseconds at 64 gigabytes per second, 336 at 128, 224 at 192 and 168 at the 256 gigabytes per second four-endpoint design point. Those are arithmetic over assumed aggregate bandwidths — no CXL hardware was measured — and the 15.6 times time-to-first-token claim once built on the 168 millisecond figure is retracted, because it rested on a 16.4 gigabytes per second host-DRAM baseline that the measured 236.5 gigabytes per second, 87 percent of specification, on DGX Spark GB10 contradicts. Baselines must be measured, not estimated. The pipeline diagram shows GPU compute on layers N through N plus 3 overlapped with tier transfers of layers N plus 1 through N plus 4; overlap and hiding on real hardware are design, unvalidated. Under idealised overlap the simulation puts fetch at 0.35 to 1.25 milliseconds per turn and recompute at more than 99 percent of stall, so once movement is hidden, recompute avoidance is the only term that matters. Simulation figures are provisional, because a single data-structure defect in Revision 1 inverted four of five findings.</p>
+  
+  <div class="alert alert-danger">
+    <strong>The strawman this refutes:</strong> if whole layers were streamed over CXL, a 2.22 GB layer
+    (attention 302 MB + FFN 1.41 GB + KV slice 512 MB) over one 64 GB/s link would take 34.7 ms against the few milliseconds that layer takes to compute —
+    and no endpoint count fixes that. The architecture does not do this.
+  </div>
+
+  <div class="key-insight">
+    <div class="key-insight-title">The steady-state fabric load is set by the hit rate — and no single hit rate exists</div>
+    1. The 140 GB of model weights are HBM-resident and <strong>never cross the tier boundary</strong>. That part stands.<br>
+    2. What crosses is the <strong>miss tail</strong>, and its size follows directly from the hit rate.<br>
+    3. This panel previously assumed a <strong>3% miss rate</strong> — taken from the <strong>retracted 97% hit rate</strong> — giving
+    <span style="text-decoration: line-through;">11.4 GB/s steady state, 4.5% of 256 GB/s</span>. Withdrawn.
+    <table style="margin-top:0.75rem;">
+      <caption style="text-align:left;color:#94a3b8;font-size:0.8rem;padding-bottom:0.4rem;">Same arithmetic, recomputed across the corrected hit-rate range. 16 concurrent 128K sequences × 10 tok/s, full read volume 2.4 GB per sequence-step. <strong>Simulated (provisional)</strong> hit rates; <strong>Analytical model</strong> arithmetic.</caption>
+      <thead><tr><th scope="col">HBM hit rate</th><th scope="col">Miss tail across the tier</th><th scope="col">Against 256 GB/s supplied</th></tr></thead>
+      <tbody>
+        <tr><td>91.6% (128 GiB, EMA α=0.01)</td><td>≈ 32 GB/s</td><td style="color: var(--success);">13% — comfortable</td></tr>
+        <tr><td>44.18% (32 GiB, EMA α=0.15)</td><td>≈ 214 GB/s</td><td style="color: var(--warning);">84% — tight</td></tr>
+        <tr><td>8.5% (8 GiB, LRU)</td><td>≈ 351 GB/s</td><td style="color: var(--danger);">137% — exceeds supply</td></tr>
+      </tbody>
+    </table>
+    <strong>A memory tier does not eliminate the KV memory wall. It changes its shape — from a capacity wall into a
+    data-movement wall</strong>, creating a tier-ingress bandwidth constraint and a per-transfer latency constraint that did
+    not exist before. Sustainability and hiding are independent: aggregate bandwidth can hold while individual transfers
+    still stall.
+  </div>
+
+  <p>Separately, the fabric must absorb the <strong>prefill/admission burst</strong>: writing or reloading one 128K context —
+  <strong>40.0 GiB</strong> at 320 KiB/token (43 GB). The bandwidths below are <strong>assumed</strong>;
+  <strong>no CXL hardware was measured</strong>.</p>
+
+  <table>
+    <thead>
+      <tr><th scope="col">Endpoints</th><th scope="col">Aggregate BW (<em>assumed</em>)</th><th scope="col">40.0 GiB (43 GB) context admission</th><th scope="col">Result</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>1</td><td>64 GB/s</td><td>672 ms</td><td style="color: var(--danger);"><span aria-hidden="true">❌</span> Dominates TTFT</td></tr>
+      <tr><td>2</td><td>128 GB/s</td><td>336 ms</td><td style="color: var(--warning);"><span aria-hidden="true">⚠</span> Still visible</td></tr>
+      <tr><td>3</td><td>192 GB/s</td><td>224 ms</td><td style="color: var(--warning);"><span aria-hidden="true">⚠</span> Borderline</td></tr>
+      <tr style="font-weight: 700;"><td>4</td><td>256 GB/s</td><td>168 ms</td><td style="color: var(--success);"><span aria-hidden="true">✓</span> Design point</td></tr>
+    </tbody>
+  </table>
+  
+  <div class="timeline">
+    <div class="timeline-row">
+      <div class="timeline-label"><span aria-hidden="true">🖥</span> GPU Compute</div>
+      <div class="timeline-track">
+        <div class="timeline-block compute" style="width: 25%;" role="img" aria-label="GPU computes layer N, first quarter of the window">Layer N</div>
+        <div class="timeline-block compute" style="width: 25%;" role="img" aria-label="GPU computes layer N plus 1, second quarter">Layer N+1</div>
+        <div class="timeline-block compute" style="width: 25%;" role="img" aria-label="GPU computes layer N plus 2, third quarter">Layer N+2</div>
+        <div class="timeline-block compute" style="width: 25%;" role="img" aria-label="GPU computes layer N plus 3, final quarter">Layer N+3</div>
+      </div>
+    </div>
+    <div class="timeline-row">
+      <div class="timeline-label"><span aria-hidden="true">📡</span> Tier transfer (MOVE)</div>
+      <div class="timeline-track" style="background: rgba(139, 92, 246, 0.15);">
+        <div class="timeline-block transfer" style="width: 22%; margin-left: 3%;" role="img" aria-label="The tier transfers layer N plus 1 while the GPU computes layer N — layer-pipelined admission, Design / unvalidated">N+1</div>
+        <div class="timeline-block transfer" style="width: 22%; margin-left: 3%;" role="img" aria-label="The tier transfers layer N plus 2 while the GPU computes layer N plus 1 — layer-pipelined admission, Design / unvalidated">N+2</div>
+        <div class="timeline-block transfer" style="width: 22%; margin-left: 3%;" role="img" aria-label="The tier transfers layer N plus 3 while the GPU computes layer N plus 2 — layer-pipelined admission, Design / unvalidated">N+3</div>
+        <div class="timeline-block transfer" style="width: 22%; margin-left: 3%;" role="img" aria-label="The tier transfers layer N plus 4 while the GPU computes layer N plus 3 — layer-pipelined admission, Design / unvalidated">N+4</div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="key-insight">
+    <div class="key-insight-title">Pipeline Efficiency — <em>Design / unvalidated</em></div>
+    With <strong>4 endpoints (256 GB/s aggregate, 1 TB DDR5, 16 TB NVMe)</strong>, layer-pipelined admission would overlap compute
+    and admit a 128K context in <strong>168 ms</strong> — arithmetic over an <em>assumed</em> aggregate bandwidth, not a measurement.
+    <strong>The 15.6× TTFT claim built on that 168 ms is retracted:</strong> it rested on a 16.4 GB/s host-DRAM baseline that the
+    <strong>measured 236.5 GB/s (87% of spec) on DGX Spark GB10</strong> contradicts. Baselines must be measured, not estimated.
+    Steady-state decode load is <em>not</em> a fixed 11.4 GB/s: it ranges from ~32 GB/s to beyond the fabric's supply, depending on
+    a hit rate that is not settled. Whether overlap actually hides movement on real hardware is
+    <strong>Design / unvalidated</strong> — no CXL device has been measured. Under idealised overlap the simulation puts fetch at
+    <strong>0.35–1.25 ms/turn</strong> and recompute at <strong>&gt;99%</strong> of stall: once movement is hidden, recompute
+    avoidance is the only term that matters. <span style="font-family:var(--font-mono);font-size:0.72rem;">Simulated (provisional)</span>
+  </div>
+  <p style="margin-top:1.25rem; padding-top:0.75rem; border-top:1px solid rgba(255,255,255,0.12); font-size:0.78rem; color:#94a3b8;">Evidence labels. Admission arithmetic: <strong>Analytical model</strong> over an <em>assumed</em> aggregate bandwidth — 43 GB ÷ 256 GB/s = 168 ms; endpoint count fixed at 4 and aggregate at 256 GB/s throughout this document. <strong>No CXL hardware was measured.</strong> Hit rates driving the miss-tail table: <strong>Simulated (provisional)</strong> — one data-structure defect in Revision 1 inverted four of five findings, so Revision 2 is provisional, not settled. <strong>Retracted here:</strong> the 3% miss rate and the 11.4 GB/s / 4.5%-utilised steady state derived from the 97% hit rate; the 15.6× TTFT claim and its 16.4 GB/s baseline. The measured neighbour: <strong>Measured — DGX Spark GB10</strong>, 236.5 GB/s = 87% of a 273 GB/s spec.</p>
+</section>
+
+<!-- FIGURE 13: SOFTWARE STACK -->
+<section class="section" id="fig13">
+  <span class="section-badge">Figure 13</span>
+  <h2>Software Integration Stack</h2>
+  <p class="sr-only">Figure: a four-layer software stack, top to bottom. Application layer: vLLM with PagedAttention, TensorRT-LLM through its plugin API, and SGLang with RadixAttention. Runtime layer: libcxl_kv for KV allocation, CUDA unified virtual memory, and a hint interface for policy parameters. Driver layer: the Linux 6.8-or-later CXL driver and an NVIDIA driver with CXL.mem support. Hardware layer: a B200 GPU acting as CXL 3.0 host, a CXL switch, and Type-3 endpoint devices. No kernel changes are required — CXL memory appears as ordinary GPU-accessible memory and framework changes are confined to the allocator. All values are an analytical model, not measured.</p>
+  
+  <div class="software-stack">
+    <div class="stack-layer">
+      <div class="stack-badge" style="background: var(--info);">Application Layer</div>
+      <div class="stack-items">
+        <div class="stack-item">
+          <div class="stack-item-name">vLLM</div>
+          <div class="stack-item-desc">PagedAttention</div>
+        </div>
+        <div class="stack-item">
+          <div class="stack-item-name">TensorRT-LLM</div>
+          <div class="stack-item-desc">Plugin API</div>
+        </div>
+        <div class="stack-item">
+          <div class="stack-item-name">SGLang</div>
+          <div class="stack-item-desc">RadixAttention</div>
+        </div>
+      </div>
+    </div>
+    <div class="arrow-down" aria-hidden="true">↓</div>
+    <div class="stack-layer">
+      <div class="stack-badge" style="background: var(--primary);">Runtime Layer</div>
+      <div class="stack-items">
+        <div class="stack-item">
+          <div class="stack-item-name">libcxl_kv</div>
+          <div class="stack-item-desc">KV Allocation API</div>
+        </div>
+        <div class="stack-item">
+          <div class="stack-item-name">CUDA UVM</div>
+          <div class="stack-item-desc">Unified Memory</div>
+        </div>
+        <div class="stack-item">
+          <div class="stack-item-name">Hint Interface</div>
+          <div class="stack-item-desc">Policy Params</div>
+        </div>
+      </div>
+    </div>
+    <div class="arrow-down" aria-hidden="true">↓</div>
+    <div class="stack-layer">
+      <div class="stack-badge" style="background: var(--success);">Driver Layer</div>
+      <div class="stack-items">
+        <div class="stack-item">
+          <div class="stack-item-name">CXL Driver</div>
+          <div class="stack-item-desc">Linux 6.8+</div>
+        </div>
+        <div class="stack-item">
+          <div class="stack-item-name">NVIDIA Driver</div>
+          <div class="stack-item-desc">CXL.mem Support</div>
+        </div>
+      </div>
+    </div>
+    <div class="arrow-down" aria-hidden="true">↓</div>
+    <div class="stack-layer">
+      <div class="stack-badge" style="background: var(--cyan);">Hardware Layer</div>
+      <div class="stack-items">
+        <div class="stack-item">
+          <div class="stack-item-name">B200 GPU</div>
+          <div class="stack-item-desc">CXL 3.0 Host</div>
+        </div>
+        <div class="stack-item">
+          <div class="stack-item-name">CXL Switch</div>
+          <div class="stack-item-desc">Multi-Endpoint</div>
+        </div>
+        <div class="stack-item">
+          <div class="stack-item-name">Endpoints</div>
+          <div class="stack-item-desc">Type-3 Devices</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="alert alert-success">
+    <strong>No kernel changes required.</strong> CXL memory appears as normal GPU-accessible memory. Framework changes limited to allocator layer.
+  </div>
+</section>
+
+<!-- FIGURE 14: SENSITIVITY ANALYSIS -->
+<section class="section" id="fig14">
+  <span class="section-badge">Figure 14</span>
+  <h2>Hit Rate vs. HBM Budget — the corrected sweep</h2>
+  <p class="sr-only">Figure: HBM hit rate as a function of the HBM budget and the eviction policy, from Revision 2 of the trace-driven simulation. There is no single hit rate. Across budgets, policies and workloads the range is 8.5 to 91.6 percent. At an 8 gibibyte budget: LRU 8.52 percent, LFU 8.76, EMA alpha 0.15 12.35, EMA alpha 0.01 12.12. At 16 gibibytes: LRU 17.87, LFU 12.70, EMA alpha 0.15 22.58, EMA alpha 0.01 18.70. At 32 gibibytes: LRU 38.34, LFU 16.09, EMA alpha 0.15 44.18, EMA alpha 0.01 35.91. At 64 gibibytes: LRU 67.12, LFU 23.00, EMA alpha 0.15 69.65, EMA alpha 0.01 66.83. At 128 gibibytes: LRU 88.01, LFU 32.70, EMA alpha 0.15 88.14, EMA alpha 0.01 91.59. EMA alpha 0.15 leads at four of five budgets and EMA alpha 0.01 leads at 128 gibibytes. The margin over LRU is plus 2.5 to plus 5.8 percentage points at the specified alpha, not plus 25; at a tuned optimum of alpha about 0.05 it is plus 19.1 percentage points, 55.96 against LRU 36.85 at 32 gibibytes, from a different experiment with a different baseline that must never be mixed with the budget sweep. LFU collapses once decode growth is modelled, through classical LFU aging: fresh count-one blocks are evicted in favour of stale high-count blocks. Alpha is non-monotonic at 32 gibibytes: 0.5 gives 37.20, 0.3 gives 38.84, 0.15 gives 44.33, 0.05 gives 55.96, 0.01 gives 31.54, 0.003 gives 25.47 and 0.001 gives 24.44, with no convergence onto LFU as alpha approaches zero. No policy dominates across workloads either: at 32 gibibytes over three seeds, returning-session traffic gives LRU 39.08, LFU 15.12, EMA alpha 0.15 44.44 and EMA alpha 0.01 38.87; a one-shot scan gives LRU 31.51, LFU 12.52, EMA alpha 0.15 32.57 and EMA alpha 0.01 36.26; and a cyclic sweep gives LRU 9.83, LFU 22.06 and both EMA settings 9.83, so only LFU survives the loop. The largest effect is none of these. Letting identity-keyed policy state survive HBM eviction, rather than re-admitting a block as if newly created, raises LFU at 32 gibibytes from 15.56 to 49.71 percent, plus 34.15 percentage points, and EMA alpha 0.01 from 31.54 to 56.39 percent, plus 24.85 percentage points, while EMA alpha 0.15 is unchanged at minus 0.21 percentage points. That is larger than the spread between policies, it removes the small-alpha collapse and identifies metadata reset as its cause, and it is a protocol result, testable with no CXL hardware. Retracted from this figure and not replaced: the 72 to 80 to 87 to 93 to 97 ladder and its plus 8 for anchor pinning, plus 7 for EMA at alpha 0.2, plus 6 for per-head tracking and plus 4 for RoPE-aware prefetch — no ablation ever produced it, and the increments were assumed additive and independent although the mechanisms they decompose overlap. Also retracted: the effective-access-latency curve computed from those hit rates, since it used a 200 nanosecond CXL access and a 25 microsecond flash access that no hardware ever produced, and the claim that the full stack holds 97 percent at 16 users while a seventeenth user drops it below target. No CXL hardware was measured. Revision 2 is provisional, not settled: a single data-structure defect in Revision 1 inverted four of five findings, and it has no Belady bound, no bandwidth or queueing model, whole-context residency assumed, a synthetic workload, 2 to 3 seeds and no hardware validation.</p>
+
+  <div class="alert alert-info" style="border-left:4px solid #f85149;">
+    <strong>The 72 → 80 → 87 → 93 → 97 ladder is retracted, and not replaced.</strong> No ablation ever produced it: the
+    +8 / +7 / +6 / +4 increments for anchor pinning, EMA at α = 0.2, per-head tracking and RoPE-aware prefetch were
+    <em>assumed additive and independent</em>, and the mechanisms they decompose overlap. Per-technique ablation
+    <strong>remains unrun</strong>. <strong>No single hit rate exists</strong> — the corrected sweep gives
+    <strong>8.5–91.6%</strong> across budgets, policies and workloads. The effective-latency curve that used to sit here
+    is withdrawn with it: it priced misses at a 200 ns CXL access and a 25 µs flash access, and
+    <strong>no CXL hardware was measured</strong>.
+  </div>
+
+  <p>Hit rate as a function of the HBM budget, Revision 2 of the trace-driven simulation. Llama-3 70B GQA, 16-token blocks,
+  200 sessions, Zipf(1.1) return frequency, 1–12K contexts, shared 2048-token prefix, 2500 turns, 421 GiB total footprint,
+  HBM over a 512 GiB tier, 2–3 seeds. Longer bar = higher hit rate.
+  <span style="font-family:var(--font-mono);font-size:0.72rem;">Simulated (provisional)</span></p>
+
+  <div class="sensitivity-chart">
+    <div class="chart-bar">
+      <div class="chart-label">128 GiB — EMA α=0.01</div>
+      <div class="chart-track">
+        <div class="chart-fill excellent" style="width: 91.6%;" role="img" aria-label="128 gibibyte HBM budget, EMA alpha 0.01: 91.59 percent hit rate — the highest in the sweep">91.59%</div>
+      </div>
+    </div>
+    <div class="chart-bar">
+      <div class="chart-label">64 GiB — EMA α=0.15</div>
+      <div class="chart-track">
+        <div class="chart-fill excellent" style="width: 69.7%;" role="img" aria-label="64 gibibyte HBM budget, EMA alpha 0.15: 69.65 percent hit rate, against LRU 67.12">69.65%</div>
+      </div>
+    </div>
+    <div class="chart-bar">
+      <div class="chart-label">32 GiB — EMA α=0.15</div>
+      <div class="chart-track">
+        <div class="chart-fill good" style="width: 44.2%;" role="img" aria-label="32 gibibyte HBM budget, EMA alpha 0.15: 44.18 percent hit rate, against LRU 38.34">44.18%</div>
+      </div>
+    </div>
+    <div class="chart-bar">
+      <div class="chart-label">16 GiB — EMA α=0.15</div>
+      <div class="chart-track">
+        <div class="chart-fill warning" style="width: 22.6%;" role="img" aria-label="16 gibibyte HBM budget, EMA alpha 0.15: 22.58 percent hit rate, against LRU 17.87">22.58%</div>
+      </div>
+    </div>
+    <div class="chart-bar">
+      <div class="chart-label">8 GiB — EMA α=0.15</div>
+      <div class="chart-track">
+        <div class="chart-fill danger" style="width: 12.4%;" role="img" aria-label="8 gibibyte HBM budget, EMA alpha 0.15: 12.35 percent hit rate, against LRU 8.52 — the lowest in the sweep">12.35%</div>
+      </div>
+    </div>
+  </div>
+
+  <table>
+    <caption style="text-align:left;color:#94a3b8;font-size:0.8rem;padding-bottom:0.4rem;">Hit rate (%) vs HBM budget — experiment <code>e1</code>, 2 seeds, no persistent metadata, no overlap. <strong>Simulated (provisional)</strong></caption>
+    <thead>
+      <tr><th scope="col">HBM</th><th scope="col">LRU</th><th scope="col">LFU</th><th scope="col">EMA α=0.15</th><th scope="col">EMA α=0.01</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>8 GiB</td><td>8.52</td><td>8.76</td><td style="color: var(--success);"><strong>12.35</strong></td><td>12.12</td></tr>
+      <tr><td>16 GiB</td><td>17.87</td><td>12.70</td><td style="color: var(--success);"><strong>22.58</strong></td><td>18.70</td></tr>
+      <tr><td>32 GiB</td><td>38.34</td><td>16.09</td><td style="color: var(--success);"><strong>44.18</strong></td><td>35.91</td></tr>
+      <tr><td>64 GiB</td><td>67.12</td><td>23.00</td><td style="color: var(--success);"><strong>69.65</strong></td><td>66.83</td></tr>
+      <tr><td>128 GiB</td><td>88.01</td><td>32.70</td><td>88.14</td><td style="color: var(--success);"><strong>91.59</strong></td></tr>
+    </tbody>
+  </table>
+
+  <div class="alert alert-warning">
+    <strong>The margin over LRU is +2.5 to +5.8 pts at the specified α — not +25 pts.</strong> At a tuned optimum of
+    <strong>α ≈ 0.05</strong> it reaches <strong>+19.1 pts</strong> (55.96 vs LRU 36.85 at 32 GiB) — but that is
+    experiment <code>e2</code>, a different experiment with its own baseline. <strong>Never mix a row from one table with a
+    row from the other.</strong> LFU collapses once decode growth is modelled: classical LFU aging evicts fresh count-1
+    blocks in favour of stale high-count ones. Percentage-point differences are <strong>pts</strong>, never %.
+  </div>
+
+  <table>
+    <caption style="text-align:left;color:#94a3b8;font-size:0.8rem;padding-bottom:0.4rem;">α is non-monotonic, with an interior optimum — 32 GiB, experiment <code>e2</code>, 1 seed. <strong>Simulated (provisional)</strong></caption>
+    <thead>
+      <tr><th scope="col">α</th><th scope="col">0.5</th><th scope="col">0.3</th><th scope="col">0.15</th><th scope="col">0.05</th><th scope="col">0.01</th><th scope="col">0.003</th><th scope="col">0.001</th><th scope="col">LFU</th><th scope="col">LRU</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>hit %</td><td>37.20</td><td>38.84</td><td>44.33</td><td style="color: var(--success);"><strong>55.96</strong></td><td>31.54</td><td>25.47</td><td>24.44</td><td>15.56</td><td>36.85</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:0.85rem;color:#94a3b8;"><strong>α = 0.2 was never validated and is withdrawn.</strong> There is <strong>no</strong> convergence onto LFU as α → 0; the Revision 1 claim that there was is retracted.</p>
+
+  <div class="key-insight">
+    <div class="key-insight-title">The largest effect in the study is not on the ladder — it is a protocol</div>
+    Letting identity-keyed policy state <strong>survive HBM eviction</strong>, rather than re-admitting a block as if newly
+    created, at a 32 GiB budget:
+    <table style="margin-top:0.6rem;">
+      <thead><tr><th scope="col">Policy</th><th scope="col">Metadata reset on eviction</th><th scope="col">Metadata persists</th><th scope="col">Δ</th></tr></thead>
+      <tbody>
+        <tr><td>LFU</td><td>15.56%</td><td>49.71%</td><td style="color: var(--success);"><strong>+34.15 pts</strong></td></tr>
+        <tr><td>EMA α=0.01</td><td>31.54%</td><td>56.39%</td><td style="color: var(--success);"><strong>+24.85 pts</strong></td></tr>
+        <tr><td>EMA α=0.15</td><td>44.33%</td><td>44.12%</td><td style="color: var(--gray);">−0.21 pts</td></tr>
+      </tbody>
+    </table>
+    <strong>Persistence is worth more than the choice of policy.</strong> It also removes the small-α collapse, identifying
+    metadata reset as its cause — and it is testable with <strong>no CXL hardware</strong>.
+  </div>
+
+  <table>
+    <caption style="text-align:left;color:#94a3b8;font-size:0.8rem;padding-bottom:0.4rem;">No policy dominates across workloads — 32 GiB, 3 seeds. <strong>Simulated (provisional)</strong></caption>
+    <thead><tr><th scope="col">Workload</th><th scope="col">LRU</th><th scope="col">LFU</th><th scope="col">EMA α=0.15</th><th scope="col">EMA α=0.01</th></tr></thead>
+    <tbody>
+      <tr><td>zipf (returning sessions)</td><td>39.08</td><td>15.12</td><td style="color: var(--success);"><strong>44.44</strong></td><td>38.87</td></tr>
+      <tr><td>scan (one-shot flood)</td><td>31.51</td><td>12.52</td><td>32.57</td><td style="color: var(--success);"><strong>36.26</strong></td></tr>
+      <tr><td>loop (cyclic sweep)</td><td>9.83</td><td style="color: var(--success);"><strong>22.06</strong></td><td>9.83</td><td>9.83</td></tr>
+    </tbody>
+  </table>
+
+  <p style="margin-top:1.25rem; padding-top:0.75rem; border-top:1px solid rgba(255,255,255,0.12); font-size:0.78rem; color:#94a3b8;"><strong>Evidence label: Simulated (provisional).</strong> Standing caveat, required wherever these numbers appear: a single data-structure defect in Revision 1 inverted four of five findings (99.6% wrong victims for EMA α=0.15). Revision 2 is <strong>provisional, not settled</strong> — no Belady bound, no bandwidth or queueing model, whole-context residency assumed, synthetic workload, 2–3 seeds, no hardware validation. Scripts <code>kv_tiering_sim_v2.py</code>, data <code>results_v2.json</code>. <strong>Retracted here:</strong> the 72 → 80 → 87 → 93 → 97 ladder and its +8/+7/+6/+4 increments, the 97% hit rate, the 177 / 281 / 435 / 616 / 822 / 1,132 ns effective-latency curve (it priced misses at a 200 ns CXL and 25 µs flash access — <strong>no CXL hardware was measured</strong>), and the "97% at 16 users, dropping at 17" hot-set claim, which was downstream of the retracted 16× user capacity. Percentage-point differences are <strong>pts</strong>, never %.</p>
+</section>
+
+<!-- FIGURE 15: POWER COMPARISON -->
+<section class="section" id="fig15">
+  <span class="section-badge">Figure 15</span>
+  <h2>Power & Thermal Analysis</h2>
+  <p class="sr-only">Figure: the power budget of one tier endpoint, and why the two-configuration power comparison this panel used to make is withdrawn. Per endpoint the budget is 40 watts for eight DDR5 channels, 15 watts for eight ARM A78 cores, 12 watts for CXL PHY and controller, 8 watts for the UCIe interface and 5 watts for the NVMe controller — 80 watts typical and 123 watts peak, summing exactly, so four endpoints add 320 watts. That component budget stands as an analytical model over vendor specifications. What does not stand is the comparison it was placed inside: three B200s plus a host with 2 terabytes of DDR5 drawing 3.9 kilowatts against one B200 plus a switch and four endpoints drawing 1.9 kilowatts, 51 percent less, for the same 16 users at 128K context and at least 10 tokens per second. Both sides of that comparison were sized by a 16 times user-capacity claim that is retracted. The 16 times figure was downstream of a 97 percent hit rate that was never measured, and it also fails a correctness constraint: under dense attention every block of an active sequence is read every step, so there is no 5.4 percent resident subset that serves the other 94.6 percent. Concurrency is therefore stated as KV-only capacity arithmetic, not as a served-user count, and no replacement power comparison is offered, because there is no defensible served-user count to hold constant between the two configurations. The capacity arithmetic that survives is: 320 kibibytes per token for Llama-3 70B with grouped-query attention, 2.50 gibibytes at 8K context, 40.0 gibibytes at 128K context, a 5.00 mebibyte block for 16 tokens, and a single-sequence crossover against 130.4 gibibytes of bf16 weights at about 427,000 tokens. The power-usage-effectiveness figure of 1.4 and the 12 cents per kilowatt-hour rate remain stated assumptions, but the three-year cost model they fed is withdrawn along with the 36 percent CapEx reduction and the $160,000 to $103,000 comparison. No hardware power measurement was taken.</p>
+
+  <div class="alert alert-info" style="border-left:4px solid #f85149;">
+    <strong>The two-configuration power comparison is withdrawn.</strong> <span style="text-decoration: line-through;">3.9 kW → 1.9 kW, −51%, for the same 16 users</span>.
+    Both sides were sized by a <strong>16× user-capacity claim that is retracted</strong> — it was downstream of a 97% hit rate
+    that was never measured, and it fails a correctness constraint: under dense attention <em>every</em> block of an active
+    sequence is read every step, so there is no 5.4% resident subset serving the rest. <strong>No replacement comparison is
+    offered</strong>, because there is no defensible served-user count to hold constant between the two configurations.
+    Concurrency is stated as <strong>KV-only capacity arithmetic</strong>, never as a served-user count.
+  </div>
+  
+  <div class="power-comparison">
+    <div class="power-box low">
+      <div class="power-icon" aria-hidden="true">📐</div>
+      <div class="power-value">320 W</div>
+      <div class="power-label">4 endpoints @ 80 W typical — the part that survives</div>
+      <div style="font-size: 0.8rem; color: var(--gray); margin-top: 0.5rem;">A component budget over vendor specifications, summing exactly. <em>Analytical model.</em></div>
+    </div>
+    <div class="power-box high">
+      <div class="power-icon" aria-hidden="true">📊</div>
+      <div class="power-value" style="font-size: 1.4rem;">320 KiB/token<br>2.50 GiB @ 8K · 40.0 GiB @ 128K</div>
+      <div class="power-label">What concurrency is stated as instead: KV-only capacity arithmetic</div>
+      <div style="font-size: 0.8rem; color: var(--gray); margin-top: 0.5rem;">5.00 MiB per 16-token block; crossover with 130.4 GiB of bf16 weights ≈ <strong>427,000 tokens</strong>. <em>Analytical model — never a served-user count.</em></div>
+    </div>
+  </div>
+  
+  <table>
+    <thead>
+      <tr><th scope="col">Endpoint Component</th><th scope="col">Typical Power</th><th scope="col">Peak Power</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>DDR5 (8 channels)</td><td>40 W</td><td>60 W</td></tr>
+      <tr><td>ARM A78 cores (8×)</td><td>15 W</td><td>25 W</td></tr>
+      <tr><td>CXL PHY + controller</td><td>12 W</td><td>18 W</td></tr>
+      <tr><td>UCIe interface</td><td>8 W</td><td>12 W</td></tr>
+      <tr><td>NVMe controller</td><td>5 W</td><td>8 W</td></tr>
+      <tr style="font-weight: 700; background: rgba(34, 197, 94, 0.1);"><td>Total per Endpoint</td><td>80 W</td><td>123 W</td></tr>
+    </tbody>
+  </table>
+  
+  <div class="metric-cards">
+    <div class="metric-card">
+      <div class="metric-value" style="color: var(--danger); font-size: 1.4rem;">retracted</div>
+      <div class="metric-label">The −51% wall-power comparison — it priced two configurations both sized by the retracted 16× user capacity</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" style="color: var(--info);">320 W</div>
+      <div class="metric-label">4 endpoints @ 80 W typical — <em>Analytical model</em>, stands</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" style="color: var(--primary);">1.4</div>
+      <div class="metric-label">PUE — a stated assumption. The three-year cost model it fed is withdrawn.</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" style="color: var(--cyan);">$0.12</div>
+      <div class="metric-label">per kWh — a stated assumption. No cost model is restated.</div>
+    </div>
+  </div>
+  <p style="margin-top:1.25rem; padding-top:0.75rem; border-top:1px solid rgba(255,255,255,0.12); font-size:0.78rem; color:#94a3b8;">Evidence labels. The per-endpoint budget is an <strong>Analytical model</strong> over vendor specifications and sums exactly: 40 + 15 + 12 + 8 + 5 = <strong>80 W typical</strong>, 60 + 25 + 18 + 12 + 8 = <strong>123 W peak</strong>, and 4 endpoints contribute <strong>320 W</strong>. It stands. Capacity arithmetic is an <strong>Analytical model</strong> and stands: 320 KiB/token, 2.50 GiB at 8K, 40.0 GiB at 128K, crossover ≈ 427,000 tokens. <strong>Retracted:</strong> the 3.9 kW → 1.9 kW / −51% comparison and the 16× user capacity it rested on. <strong>No hardware power measurement was taken</strong>, and no replacement system-level power comparison is offered.</p>
+</section>
+
+<!-- FIGURE 16: TCO -->
+<section class="section" id="fig16">
+  <span class="section-badge">Figure 16</span>
+  <h2>The Cost Model Is Withdrawn — What Survives Is Capacity Arithmetic</h2>
+  <p class="sr-only">Figure: the three-year cost comparison this panel used to make, and the capacity arithmetic that replaces it. The withdrawn comparison priced a baseline of three B200s with host-DRAM offload at $105,000 for GPUs plus $55,000 for host platform and 2 terabytes of DDR5, giving $160,000 CapEx, plus $17,219 of power at 3.9 kilowatts, a power-usage effectiveness of 1.4 and 12 cents per kilowatt-hour, for a $177,219 three-year total cost of ownership; and a proposed system at $35,000 for one B200, $40,000 for host platform and 512 gigabytes of DDR5, $8,000 for a CXL 3.0 switch and $20,000 for four endpoints at $5,000 each, giving $103,000 CapEx, plus $8,389 of power at 1.9 kilowatts, for a $111,389 three-year total. It concluded 36 percent less CapEx, 37 percent less three-year cost and 51 percent less wall power. All of it is retracted outright, and no replacement cost model is offered. The reason is that both configurations were sized to serve the same 16 users at 128K context, and that 16 times user capacity is itself retracted: it was derived from a 97 percent HBM hit rate that was never measured, and it also fails a correctness constraint, because under dense attention every block of an active sequence is read every step, so there is no 5.4 percent resident hot set serving 97 percent of accesses. Pricing a configuration justified by a retracted claim cannot be repaired by re-pricing it; the claim has to go. No payback period, no cost per served user and no replacement dollar figure is invented here. What does survive is arithmetic that never depended on any hit rate, and is simulator-independent and independently confirmed. For Llama-3 70B with grouped-query attention — 80 layers, 8 key-value heads, head dimension 128, fp16 — the key-value cache is 2 times 80 times 8 times 128 times 2 bytes equals 327,680 bytes per token, which is 320 kibibytes per token. At 8K context that is 2.50 gibibytes; at 32K, 10.0 gibibytes, which is 8 percent of the model weights; at 128K, 40.0 gibibytes, which is 31 percent of the weights. Block granularity is 16 tokens equals 5.00 mebibytes. Against 130.4 gibibytes of bf16 weights, the single-sequence crossover at which key-value state exceeds the weights is about 427,000 tokens. Memory expansion of 6 times also stands, as 192 plus 1,024 divided by 192 equals 6.3 times over stated capacities. Concurrency is expressed as this capacity arithmetic, never as a served-user count. No hardware cost or power measurement was taken.</p>
+
+  <div class="alert alert-info" style="border-left:4px solid #f85149;">
+    <strong>Retracted outright, and deliberately not replaced.</strong> The $160,000 → $103,000 CapEx comparison, the −36%
+    CapEx figure, the −37% three-year TCO and the −51% wall power all priced two configurations
+    <em>both assumed to serve 16 users at 128K</em>. That <strong>16× user capacity is itself retracted</strong>: it was
+    derived from a <strong>97% hit rate that was never measured</strong>, and it fails a correctness constraint — under
+    dense attention <em>every</em> block of an active sequence is read every step, so there is no 5.4% resident hot set
+    capturing 97% of accesses. Re-pricing cannot repair a configuration justified by a retracted claim.
+    <strong>No cost model, no payback period and no cost-per-user figure is restated.</strong>
+  </div>
+
+  <div class="comparison-grid">
+    <div class="card" style="border-color: var(--danger);">
+      <div style="text-align: center; margin-bottom: 1rem;">
+        <div style="font-weight: 700; color: var(--danger); font-size: 1.1rem;">Withdrawn — the v4.0 cost model</div>
+      </div>
+      <table style="margin: 0; font-size: 0.85rem;">
+        <tr><td>Baseline CapEx</td><td style="text-align: right; text-decoration: line-through;">$160,000</td></tr>
+        <tr><td>Proposed CapEx</td><td style="text-align: right; text-decoration: line-through;">$103,000</td></tr>
+        <tr><td>CapEx reduction</td><td style="text-align: right; text-decoration: line-through;">−36%</td></tr>
+        <tr><td>3-year TCO reduction</td><td style="text-align: right; text-decoration: line-through;">−37%</td></tr>
+        <tr><td>Wall power reduction</td><td style="text-align: right; text-decoration: line-through;">−51%</td></tr>
+        <tr style="font-weight: 700; border-top: 2px solid var(--dark-600);"><td>Rested on</td><td style="text-align: right; color: var(--danger);">16× users → 97% hit rate</td></tr>
+        <tr><td colspan="2" style="color:#94a3b8; font-size:0.78rem;">Both retracted. PUE 1.4 and $0.12/kWh remain stated assumptions, but the model they fed is gone.</td></tr>
+      </table>
+    </div>
+    <div class="card" style="border-color: var(--success);">
+      <div style="text-align: center; margin-bottom: 1rem;">
+        <div style="font-weight: 700; color: var(--success); font-size: 1.1rem;">Stands — capacity arithmetic (Llama-3 70B GQA)</div>
+      </div>
+      <table style="margin: 0; font-size: 0.85rem;">
+        <tr><td>2 × 80 × 8 × 128 × 2 B</td><td style="text-align: right; color: var(--success);"><strong>320 KiB/token</strong></td></tr>
+        <tr><td>16-token block</td><td style="text-align: right;"><strong>5.00 MiB</strong></td></tr>
+        <tr><td>KV at 8K context</td><td style="text-align: right;"><strong>2.50 GiB</strong></td></tr>
+        <tr><td>KV at 32K context</td><td style="text-align: right;">10.0 GiB <span style="color:#94a3b8;">(8% of weights)</span></td></tr>
+        <tr><td>KV at 128K context</td><td style="text-align: right;"><strong>40.0 GiB</strong> <span style="color:#94a3b8;">(31% of weights)</span></td></tr>
+        <tr style="font-weight: 700; border-top: 2px solid var(--dark-600);"><td>Crossover vs 130.4 GiB bf16 weights</td><td style="text-align: right; color: var(--success);">≈ 427,000 tokens</td></tr>
+        <tr><td colspan="2" style="color:#94a3b8; font-size:0.78rem;">Arithmetic over published model geometry — simulator-independent, independently confirmed, and it never depended on a hit rate.</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="metric-cards">
+    <div class="metric-card">
+      <div class="metric-value" style="color: var(--success);">320 KiB</div>
+      <div class="metric-label">per token — <em>Analytical model</em>, stands</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" style="color: var(--info);">40.0 GiB</div>
+      <div class="metric-label">KV at 128K context (2.50 GiB at 8K)</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" style="color: var(--primary);">427,000</div>
+      <div class="metric-label">tokens — single-sequence crossover with the weights</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" style="color: var(--cyan);">6×</div>
+      <div class="metric-label">Memory expansion, (192 + 1,024) ÷ 192 = 6.3× — stands, never depended on the hit rate</div>
+    </div>
+  </div>
+
+  <div class="key-insight">
+    <div class="key-insight-title">Why the retraction is severe but bounded</div>
+    What fell was the layer of claims built on a single unverified number — the 97% hit rate, and with it 16× users,
+    11.5× effective latency, 15.6× TTFT and the whole cost model. What stands is the layer underneath: <strong>analytic or
+    definitional quantities that never depended on the hit rate</strong> — 320 KiB/token, 5.00 MiB blocks, the capacity
+    table, the 6× expansion, the four-constraint decomposition, and the write-once property of KV blocks with the
+    <code>A_traffic = 2</code> floor that follows. Nothing retracted here was dishonest; all of it was
+    <strong>constructed rather than observed</strong>, and the construction did not survive contact with a measurement.
+  </div>
+  <p style="margin-top:1.25rem; padding-top:0.75rem; border-top:1px solid rgba(255,255,255,0.12); font-size:0.78rem; color:#94a3b8;"><strong>Evidence label: Analytical model</strong> — every surviving figure on this panel is arithmetic over published model geometry and stated capacities: 2 × 80 × 8 × 128 × 2 B = 327,680 B = 320 KiB/token; × 8,192 = 2.50 GiB; × 131,072 = 40.0 GiB; 320 KiB × 16 = 5.00 MiB; (192 + 1,024) ÷ 192 = 6.3×. <strong>Retracted:</strong> $160,000 → $103,000, −36% CapEx, −37% three-year TCO, −51% wall power, 16× user capacity, and the 97% hit rate they all descended from. <strong>No cost model is restated in v5.0 or v6.0</strong>, and no hardware cost or power measurement was taken.</p>
+</section>
+
+<!-- FIGURE 17: WHERE CACHE POLICY LIVES -->
+<section class="section" id="fig17">
+  <span class="section-badge">Figure 17</span>
+  <h2>The 2026 Landscape — the field specialised, it did not leave a gap</h2>
+  <p class="sr-only">Figure: where KV-cache retention policy executes today, organised by the decision each layer optimises, and a table of the related work at each level. The earlier framing on this panel — that no publicly documented system did what this package proposes, so the combination and its placement were the contribution — is retired outright, not softened. In the serving framework: vLLM with PagedAttention, the allocation and paging baseline every offload layer sits on; SGLang with RadixAttention; NVIDIA Dynamo; LMCache, now a first-class cross-tier KV layer doing pinning, lookup, compression, batched movement, compute and I/O pipelining, cross-engine transfer and prefill-decode disaggregation; CacheWise, which predicts future KV reuse from agent and tool-call metadata; and Tutti, which removes the CPU from the GPU-to-NVMe KV I/O critical path. In the GPU model runtime: H2O, SnapKV, Scissorhands, PyramidKV, Quest, Ada-KV and HeadKV, which evict head-token pairs and allocate per-head budgets with attention scores in hand. On the host CPU: FlexGen, InfiniGen, LayerKV, KVPR and Mooncake, over a driver-mediated PCIe path. On the CXL device: Marvell Structera, Astera Labs Leo, Samsung CMM, PNM-KV, which selects which KV pages are needed before paying the movement cost from a processing-near-memory accelerator, and TraCT, a rack-scale prefix-aware CXL KV cache implemented on NVIDIA Dynamo with direct GPU-to-CXL operations. TraCT means CXL-native KV caching already ships, so describing this package as the sole complete CXL-native KV-cache system is false on its face. This package claims no novelty for its scoring function or its per-head structure either: a decayed-frequency score is LRFU, Lee et al., ACM SIGMETRICS 1999, established prior art with alpha as its documented LRU-to-LFU knob, and per-head signals are a scoring granularity only, since every head of every layer is required for every token and evicting a head produces wrong outputs rather than a cache miss. What is genuinely open is a unification, not an implementation: whether one KV-State Control Plane — SELECT, PLACE, MOVE, ATTEND, OBSERVE — should decide relevance, reuse, residency and movement jointly rather than leaving each to a separate subsystem tuned in isolation. Nobody has built or tested that, this package included. Its one empirical result sits inside PLACE and is simulated and provisional: letting identity-keyed policy state survive HBM eviction is worth plus 34.15 percentage points to LFU, from 15.56 to 49.71 percent, and plus 24.85 to EMA alpha 0.01, from 31.54 to 56.39 percent, at a 32 gibibyte budget, with EMA alpha 0.15 unchanged at minus 0.21 percentage points. It is a protocol result, testable with no CXL hardware. Treating it as validation of the whole pipeline would be a significant overclaim: it validates one box.</p>
+
+  <div class="alert alert-info" style="border-left:4px solid #d29922;">
+    <strong>The “nobody has done this” framing is retired, not softened.</strong> An earlier draft argued the
+    KV-cache-over-CXL landscape was uniformly unsophisticated with a wide-open gap. That does not survive contact with
+    what has shipped: <strong>TraCT is already a CXL-native, rack-scale KV-cache system running on NVIDIA Dynamo</strong>.
+    This package also claims no novelty for its scoring function — a decayed-frequency score is <strong>LRFU</strong>
+    (Lee et al., ACM SIGMETRICS 1999), with α its documented LRU↔LFU knob
+    <span style="font-family:var(--font-mono);font-size:0.72rem;">External literature</span> — nor for per-head
+    structure, which is a <em>scoring</em> granularity only.
+  </div>
+
+  <p>Every mechanism used here has prior art, and each system below solves a different sub-decision <strong>well</strong>.
+  Attention-score eviction over <strong>(head, token)</strong> pairs is H2O, SnapKV, Scissorhands, PyramidKV and Quest;
+  per-head budget allocation is Ada-KV and HeadKV; block allocation and paging is PagedAttention in vLLM; cross-tier KV
+  persistence and movement is LMCache; offload and speculative fetch are InfiniGen, LayerKV, KVPR and Mooncake; rack-scale
+  CXL KV transport is TraCT; near-memory selection before movement is PNM-KV; reuse prediction from agent state is
+  CacheWise; GPU-direct NVMe movement is Tutti. These are <strong>complementary decisions, not competing claims to one
+  prize</strong>:</p>
+
+  <div class="gap-grid">
+    <div class="gap-item">
+      <div class="gap-item-icon" aria-hidden="true">🧩</div>
+      <div class="gap-item-title">Serving framework</div>
+      <div class="gap-item-desc">vLLM/PagedAttention · SGLang/RadixAttention · Dynamo · LMCache · CacheWise (reuse prediction from tool-call state) · Tutti (GPU-direct NVMe)</div>
+    </div>
+    <div class="gap-item">
+      <div class="gap-item-icon" aria-hidden="true">📈</div>
+      <div class="gap-item-title">Model runtime (GPU)</div>
+      <div class="gap-item-desc">H2O · SnapKV · Scissorhands · PyramidKV · Quest · Ada-KV · HeadKV — eviction over <strong>(head, token)</strong> pairs; the token axis is not optional</div>
+    </div>
+    <div class="gap-item">
+      <div class="gap-item-icon" aria-hidden="true">🖥</div>
+      <div class="gap-item-title">Host CPU</div>
+      <div class="gap-item-desc">FlexGen · InfiniGen · LayerKV · KVPR · Mooncake — driver-mediated PCIe path</div>
+    </div>
+    <div class="gap-item">
+      <div class="gap-item-icon" aria-hidden="true">🔌</div>
+      <div class="gap-item-title">CXL device</div>
+      <div class="gap-item-desc">Structera · Leo · Samsung CMM · PNM-KV · <strong>TraCT</strong> — a rack-scale, prefix-aware CXL KV cache on Dynamo. CXL-native KV caching already ships.</div>
+    </div>
+  </div>
+
+  <table>
+    <thead>
+      <tr><th scope="col">Related work</th><th scope="col">Where its policy runs</th><th scope="col">Relationship to this work</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>H2O (arXiv:2306.14048) · SnapKV · Scissorhands · PyramidKV · Quest</td><td>GPU model runtime</td><td>Attention-score eviction over <strong>(head, token)</strong> pairs — built on, not claimed. The token axis is not optional; token dropping is a <em>lossy</em> relaxation with an accuracy-evaluation burden.</td></tr>
+      <tr><td>Ada-KV (arXiv:2407.11550) · HeadKV</td><td>Serving framework</td><td>Per-head budget allocation — built on, not claimed. Here the same signal is aggregated into one score per (sequence, token block).</td></tr>
+      <tr><td>vLLM PagedAttention · SGLang/RadixAttention · NVIDIA Dynamo</td><td>Serving framework / control plane</td><td>GPU KV allocation and paging, and block/prefix reuse — the baseline every offload layer sits on.</td></tr>
+      <tr><td>LMCache</td><td>Cross-tier / cross-engine KV layer</td><td>KV persistence, reuse and movement across tiers and engines: pinning, lookup, cleanup, compression, batched movement, compute/I·O pipelining, cross-engine transfer, prefill/decode disaggregation. Calling it a simple offload cache understates it.</td></tr>
+      <tr><td>TraCT</td><td>CXL, rack scale, on NVIDIA Dynamo</td><td>Rack-scale KV sharing and transfer over CXL with direct GPU↔CXL operations behind a rack-wide prefix-aware cache. <strong>Already a CXL-native KV-cache system</strong> — not a gap waiting to be filled.</td></tr>
+      <tr><td>CacheWise</td><td>Serving framework (vLLM)</td><td>Predicts future KV reuse from agent and tool-call metadata; reports 2–2.6× fewer evictions and up to 3.5× faster agent session completion — <em>their published result, not reproduced here</em>.</td></tr>
+      <tr><td>Tutti (arXiv:2605.03375)</td><td>GPU ↔ NVMe movement layer</td><td>Removes the CPU from the KV I·O critical path using GPU io_uring and slack-aware scheduling; reports 78.3% TTFT reduction against GDS-enabled SSD-backed LMCache — <em>their published result</em>.</td></tr>
+      <tr><td>FlexGen · InfiniGen · LayerKV · KVPR · Mooncake</td><td>Host CPU</td><td>Offload and speculative fetch over a µs-scale DMA path. InfiniGen speculates from the model's own next-layer state — a real predictive signal.</td></tr>
+      <tr><td>PNM-KV (arXiv:2511.00321, Nov 2025)</td><td>CXL near-memory accelerator</td><td>Selects which KV/token pages are needed <em>before</em> paying the movement cost — conceptually adjacent to the SELECT stage, not a cruder version of it. Reports up to 21.9× throughput in its own benchmarks — <em>their result, not independently verified</em>.</td></tr>
+      <tr><td>Marvell Structera · Astera Labs Leo · Samsung CMM</td><td>CXL device</td><td>On-controller logic and pooling that already exists.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="key-insight">
+    <div class="key-insight-title">What is genuinely open — and what this package actually has</div>
+    The pieces above are specialised but <strong>not unified</strong>. CacheWise predicts reuse but does not decide residency;
+    PNM-KV selects before movement but keeps selection and movement policy separate; LMCache spans tiers and engines but does
+    not predict reuse from agent signals; TraCT solves rack-wide CXL transport; Tutti solves the GPU↔NVMe movement layer.
+    The open question is whether a higher-level <strong>KV-State Control Plane</strong> —
+    SELECT → PLACE → MOVE → ATTEND → OBSERVE — should sit above them, deciding relevance, reuse, residency and movement
+    jointly. <strong>Nobody has built or tested that, this package included.</strong><br><br>
+    What this package does have is <strong>one box</strong> inside <strong>PLACE</strong>: identity-keyed policy state
+    surviving HBM eviction — <strong>LFU 15.56 → 49.71 (+34.15 pts)</strong> and
+    <strong>EMA α=0.01 31.54 → 56.39 (+24.85 pts)</strong> at 32 GiB, EMA α=0.15 unchanged (−0.21 pts). Larger than the
+    spread between policies, and a <strong>protocol</strong> result — testable with <strong>no CXL hardware</strong>.
+    Treating it as validation of the full pipeline would be a significant overclaim.
+    <span style="font-family:var(--font-mono);font-size:0.72rem;">Simulated (provisional)</span>
+    <br><br>
+    <span style="font-size:0.8rem;color:#94a3b8;"><strong>Retracted from this panel:</strong> the "no publicly documented
+    system executes per-head EMA scoring with RoPE-informed prefetch inside CXL controller firmware" claim, along with
+    per-head eviction, α = 0.2 and RoPE-informed prefetch themselves. Third-party figures are those systems' own published
+    claims <span style="font-family:var(--font-mono);">External literature</span>, cited not reproduced.</span>
+  </div>
+</section>
+
+<!-- FIGURE 18: SUMMARY -->
+<section class="section" id="fig18">
+  <span class="section-badge">Figure 18</span>
+  <h2>Summary: What Stands, What Is Provisional, What Is Retracted</h2>
+  <p class="sr-only">Figure: the corrected summary of results and specification. The four headline figures this panel previously carried are all retracted: 65 times better latency than PCIe per access, a 97 percent HBM hit rate stated as 72 percent under LRU plus 25 points, a 37 percent reduction in three-year total cost of ownership, and by association the 16 times user capacity the last of those was priced against. What replaces them, by evidence class, strongest first. Measured on DGX Spark GB10 on 19 August 2026: streaming copy achieved 236.5 gigabytes per second, which is 87 percent of the 273 gigabytes per second specification, retiring the roughly 50 percent effective-bandwidth haircut used in earlier drafts; a two-term decode fit implies the effective KV path is about 3.4 times more costly per byte than the fixed path, 205.7 divided by 61.1, a model-derived ratio rather than a direct byte-level hardware measurement; KV is read at roughly a quarter of achievable memory bandwidth; and capacity was not the binding constraint in any configuration measured, since everything fit in 128 gibibytes yet throughput still fell from 150 tokens per second at batch 16 by 4K to 46 at batch 16 by 16K with memory to spare and nothing evicted. Simulated and provisional, Revision 2: letting identity-keyed policy state survive HBM eviction raises LFU at a 32 gibibyte budget from 15.56 to 49.71 percent, plus 34.15 percentage points, and EMA alpha 0.01 from 31.54 to 56.39 percent, plus 24.85 percentage points, while EMA alpha 0.15 is unchanged at minus 0.21 percentage points; that is larger than the spread between policies and is a protocol result, testable with no CXL hardware. There is no single hit rate: the range is 8.5 to 91.6 percent across budgets, policies and workloads. The margin over LRU is plus 2.5 to plus 5.8 percentage points at the specified alpha and plus 19.1 at a tuned optimum of alpha about 0.05, from a different experiment with its own baseline. Alpha is non-monotonic and there is no convergence onto LFU as alpha approaches zero; alpha = 0.2 was never validated. Analytical: 320 kibibytes per token for Llama-3 70B with grouped-query attention, 2.50 gibibytes at 8K, 40.0 gibibytes at 128K, 5.00 mebibytes per 16-token block, a single-sequence crossover with the weights at about 427,000 tokens, 6 times memory expansion, and about 17 terabytes of tiered capacity across 192 gigabytes of HBM, 1 terabyte of tier DRAM and 16 terabytes of NVMe. Tier transfer cost is assumed, not measured: no CXL hardware was measured, and a 5.00 mebibyte block takes 164, 82 or 43 microseconds at 32, 64 or 121 gigabytes per second, against 9, 11 or 18 milliseconds to regenerate the same 16 tokens at 50, 40 or 25 percent model FLOPs utilisation — two to three orders of magnitude, no precise multiple claimed. External literature: the scoring function is LRFU, Lee et al., ACM SIGMETRICS 1999, with alpha its documented LRU-to-LFU knob. The specification is corrected accordingly: tracking granularity is a (sequence, token block) of 16 tokens, 5.00 mebibytes, with 640 per-layer-per-KV-head streams used as scoring signals only, because every head of every layer is required for every token and evicting a head produces wrong outputs rather than a cache miss; eviction is by LRFU score at alpha about 0.05 with recency decay and persistent identity-keyed state; there is no RoPE prefetch, because RoPE is a rotation applied to Q and K at compute time and carries no information about which blocks are needed next; state overhead is 64 bytes per block, so 512 kibibytes against 40.0 gibibytes at 128K, a payload overhead of 0.0012 percent, with processing overhead not established and requiring measurement; and concurrency is stated as KV-only capacity arithmetic, never as a served-user count. Revision 2 is provisional, not settled: a single data-structure defect in Revision 1 inverted four of five findings.</p>
+
+  <div class="metric-cards">
+    <div class="metric-card">
+      <div class="metric-value" style="color: var(--success);">236.5 GB/s</div>
+      <div class="metric-label">Achieved streaming bandwidth = 87% of a 273 GB/s spec · <strong>Measured — DGX Spark GB10</strong></div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" style="color: var(--info);">+34.15 pts</div>
+      <div class="metric-label">LFU @ 32 GiB from persistent identity-keyed state (15.56 → 49.71) · <strong>Simulated (provisional)</strong></div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" style="color: var(--primary);">320 KiB/token</div>
+      <div class="metric-label">2.50 GiB @ 8K · 40.0 GiB @ 128K · crossover ≈ 427,000 tokens · <strong>Analytical model</strong></div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-value" style="color: var(--cyan);">17 TB</div>
+      <div class="metric-label">Tiered capacity: 192 GB HBM + 1 TB tier DRAM + 16 TB NVMe · <strong>Analytical model</strong></div>
+    </div>
+  </div>
+
+  <div class="alert alert-info" style="border-left:4px solid #f85149;">
+    <strong>The four figures this panel used to lead with are all retracted:</strong>
+    <span style="text-decoration: line-through;">65× latency vs PCIe</span> (two different operations, neither measured),
+    <span style="text-decoration: line-through;">97% HBM hit rate = 72% LRU + 25 pts</span> (never measured; the ladder was
+    never run as an ablation and its increments were assumed additive and independent),
+    <span style="text-decoration: line-through;">−37% three-year TCO</span> (it priced a configuration justified by the
+    retracted 16× user capacity), and with them <span style="text-decoration: line-through;">16× users</span>,
+    <span style="text-decoration: line-through;">11.5× effective latency</span>,
+    <span style="text-decoration: line-through;">15.6× TTFT</span> and
+    <span style="text-decoration: line-through;">−36% CapEx, $160,000 → $103,000</span>.
+    <strong>No CXL hardware was measured.</strong> <strong>No single hit rate exists</strong> — 8.5–91.6% across budgets,
+    policies and workloads.
+  </div>
+
+  <table>
+    <caption style="text-align:left;color:#94a3b8;font-size:0.8rem;padding-bottom:0.4rem;">Results by evidence class, strongest first</caption>
+    <thead>
+      <tr><th scope="col">Result</th><th scope="col">Value</th><th scope="col">Evidence</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Achieved streaming bandwidth</td><td>236.5 GB/s = 87% of a 273 GB/s spec</td><td><strong>Measured — DGX Spark GB10</strong></td></tr>
+      <tr><td>Effective KV-path cost per byte vs the fixed path</td><td>~3.4× (205.7 ÷ 61.1 GB/s, two-term decode fit)</td><td><strong>Measured — DGX Spark GB10</strong> <span style="color:#94a3b8;">— model-derived ratio, not a direct byte-level measurement</span></td></tr>
+      <tr><td>Capacity was not the binding constraint measured</td><td>150 → 46 tok/s from 4K to 16K at batch 16, memory to spare, nothing evicted</td><td><strong>Measured — DGX Spark GB10</strong></td></tr>
+      <tr><td>Residency-state persistence (PLACE)</td><td>LFU +34.15 pts · EMA α=0.01 +24.85 pts · EMA α=0.15 −0.21 pts @ 32 GiB</td><td><strong>Simulated (provisional)</strong></td></tr>
+      <tr><td>Hit rate — there is no single number</td><td>8.5–91.6% across budgets, policies and workloads</td><td><strong>Simulated (provisional)</strong></td></tr>
+      <tr><td>Margin over LRU</td><td>+2.5 to +5.8 pts at the specified α; +19.1 pts at a tuned α ≈ 0.05 <span style="color:#94a3b8;">(different experiment, different baseline — never mix rows)</span></td><td><strong>Simulated (provisional)</strong></td></tr>
+      <tr><td>Capacity arithmetic</td><td>320 KiB/token · 2.50 GiB @ 8K · 40.0 GiB @ 128K · 5.00 MiB blocks · crossover ≈ 427,000 tokens · 6× expansion</td><td><strong>Analytical model</strong> — stands</td></tr>
+      <tr><td>Tier transfer of one 5.00 MiB block</td><td>164 / 82 / 43 µs at an <em>assumed</em> 32 / 64 / 121 GB/s</td><td><strong>Analytical model</strong> — <strong>no CXL hardware measured</strong></td></tr>
+      <tr><td>Regenerating the same 16 tokens</td><td>9 / 11 / 18 ms at 50 / 40 / 25% MFU — two to three orders of magnitude, <strong>no precise multiple claimed</strong></td><td><strong>Analytical model</strong></td></tr>
+      <tr><td>The scoring function is not novel</td><td><strong>LRFU</strong> — Lee et al., <em>On the Existence of a Spectrum of Policies that Subsumes the LRU and LFU Policies</em>, ACM SIGMETRICS 1999; α is its documented LRU↔LFU knob</td><td><strong>External literature</strong></td></tr>
+    </tbody>
+  </table>
+
+  <table>
+    <caption style="text-align:left;color:#94a3b8;font-size:0.8rem;padding-bottom:0.4rem;">Specification, corrected</caption>
+    <thead>
+      <tr><th scope="col">Component</th><th scope="col">Specification</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Interface</td><td>CXL 3.0 Type-3 (memory expander)</td></tr>
+      <tr><td>Internal bandwidth</td><td>UCIe: 1+ TB/s <span style="color:#94a3b8;">— vendor specification</span></td></tr>
+      <tr><td>External bandwidth</td><td>64 GB/s per link — 256 GB/s across 4 endpoints. Effective tier bandwidth is <strong>assumed</strong> across 32–121 GB/s; <strong>no CXL hardware was measured</strong>.</td></tr>
+      <tr><td>Memory capacity</td><td>DDR5: 256 GB per endpoint — 1 TB across 4; 4 TB NVMe each, 16 TB total</td></tr>
+      <tr><td>Compute</td><td>ARM/RISC-V cores for policy execution. <strong>Whether the controller must be on the device is open</strong> — of four falsifiable claims, only the fourth (policy state surviving eviction) needs device residency at all.</td></tr>
+      <tr><td>Tracking granularity</td><td><strong>(sequence, token block)</strong> — 16 tokens = 5.00 MiB. The 640 per-(layer, KV-head) streams are <strong>scoring signals only</strong>: every head of every layer is required for every token, so evicting a head gives <strong>wrong outputs, not a cache miss</strong>. H2O and SnapKV evict <strong>(head, token)</strong> pairs; the token axis is not optional.</td></tr>
+      <tr><td>Eviction policy</td><td><strong>LRFU</strong> decayed-frequency score (α ≈ 0.05, the simulated optimum) + recency decay, with <strong>persistent identity-keyed state</strong> that survives the tier boundary. <strong>α = 0.2 was never validated;</strong> α is non-monotonic and does <strong>not</strong> converge onto LFU as α → 0.</td></tr>
+      <tr><td>Movement strategy</td><td>Batched, scheduled transfers (MOVE) — <strong>Design / unvalidated</strong>. <strong>No RoPE prefetch:</strong> RoPE is a rotation applied to Q/K at compute time and carries no information about which blocks are needed next. Distance decay is an upper bound, |⟨q<sub>m</sub>, k<sub>n</sub>⟩| ≤ B(|m − n|), never ∝ cos((m − n)·θ).</td></tr>
+      <tr><td>State overhead</td><td>64 B per block → 8,192 blocks at 128K = <strong>512 KiB</strong> against 40.0 GiB of KV = <strong>0.0012%</strong>. <strong>Processing overhead is not established and must be measured.</strong></td></tr>
+      <tr><td>Concurrency</td><td>Stated as <strong>KV-only capacity arithmetic</strong>, never as a served-user count. The 16-user / 37 GB hot-set / 2.31 GB-per-user claim is <strong>retracted</strong>.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="key-insight" style="background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(16, 185, 129, 0.1)); border-color: rgba(34, 197, 94, 0.5);">
+    <div class="key-insight-title" style="color: var(--success);">The Core Claim, stated at the right level</div>
+    <strong style="color: var(--white);">Make KV state and its control metadata a single migratable object, with identity-keyed
+    policy state that survives the round trip between tiers.</strong><br>
+    Not the scoring function — that is LRFU, and it is thirty years old. Host owns policy; device owns mechanism. The
+    largest effect measured anywhere in this study is that persistence, and it is a <strong>protocol</strong> result:
+    testable with <strong>no CXL hardware</strong>. A memory tier does not eliminate the KV memory wall — it changes its
+    shape, from a capacity wall into a data-movement wall.
+  </div>
+  <p style="margin-top:1.25rem; padding-top:0.75rem; border-top:1px solid rgba(255,255,255,0.12); font-size:0.78rem; color:#94a3b8;"><strong>Standing caveat on every simulated number above.</strong> A single data-structure defect in Revision 1 inverted four of five findings (99.6% wrong victims for EMA α=0.15). Revision 2 is <strong>provisional, not settled</strong>: no Belady bound, no bandwidth or queueing model, whole-context residency assumed, synthetic workload, 2–3 seeds, no hardware validation. Measurement limits: one model, one size, one machine; fixed-length uniform batches, no continuous batching; vLLM fit noisier (R² 0.945); no thermal log; FlashAttention-2, not 3; <strong>fp8 KV not yet measured</strong> — that run is the direct test of the compression claim and is the next experiment. Percentage-point differences are quoted as <strong>pts</strong>, never %. Canonical numbers v6.0.</p>
+</section>
+
+</div>
+</body>
+</html>

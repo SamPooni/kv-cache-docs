@@ -4,8 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chapter 5: Bandwidth and Tier Economics — KV-Cache Offloading Architecture</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../vendor/fonts.css">
   <link rel="stylesheet" href="../css/style.css">
 </head>
 <body>
@@ -73,6 +72,15 @@
 
       <p>None of these three numbers is "the" CXL bandwidth for this system — they bracket a plausible range under different loading and protocol-overhead assumptions, and the 64 GB/s mid-range figure is the one used for illustrative comparisons later in this chapter unless stated otherwise. Anyone extending this analysis with a bandwidth number pulled from a vendor datasheet or a different platform's measurement should re-derive the fetch time from that number directly rather than reusing 43/82/164 µs.</p>
 
+      
+      <div class="figure-embed tall">
+        <div class="figure-embed-header">
+          <span class="figure-embed-label">Figure 5.2 &mdash; SUSTAINABILITY and HIDING are independent constraints</span>
+          <a class="figure-embed-link" href="../figures/ch05-bandwidth/sustainability-vs-hiding.html" target="_blank" rel="noopener">Open Full Screen &#8599;</a>
+        </div>
+        <iframe src="../figures/ch05-bandwidth/sustainability-vs-hiding.html" title="Sustainability is an aggregate rate across the whole decode set; hiding is a per-transfer deadline. A case where average bandwidth is sufficient and individual transfers still stall" loading="lazy" style="height:900px;background:var(--bg-primary)"></iframe>
+      </div>
+
       <h2>5.3 Regeneration Cost: Forward Compute</h2>
       <p>The alternative to fetching a block from a slower tier is to discard it and regenerate the 16 tokens it represents by running them back through the model's forward pass. That cost depends on an assumption about achieved GPU utilization — model FLOPs utilization (MFU) — which nothing in this chapter measures directly:</p>
 
@@ -100,6 +108,15 @@
       <p>Putting the two sides together: moving a KV block across a slower tier is <strong>two to three orders of magnitude cheaper</strong> than regenerating it by forward compute. This is deliberately stated as a range of orders of magnitude, not a single precise multiple, because the two costs are not measurements of the same operation type and each carries its own uncertainty — tier-fetch cost depends on an unmeasured bandwidth assumption (32 to 121 GB/s above), and regeneration cost depends on an assumed GPU utilization figure (25% to 50% MFU above). Multiplying a specific numerator by a specific denominator from those ranges produces a specific ratio, but that ratio is an artifact of which two assumptions you happened to pick, not a fixed property of the system.</p>
 
       <p>As one illustrative point within that broader range — and only as one point, not as the headline number — take the mid-range 64 GB/s tier-fetch time of 82 µs against the conservative 18 ms (25% MFU, rounded here to 17.9 ms before rounding) regeneration cost for a tail block: 17.9 ms ÷ 82 µs ≈ 218×. That is a real arithmetic result for those two specific inputs, and it sits comfortably inside the two-to-three-orders-of-magnitude range this chapter claims. It is not "the" ratio. Pick the optimistic ends of both ranges — 121 GB/s fetch, 50% MFU regeneration — and the ratio comes out closer to two orders of magnitude instead of three. Anyone citing this chapter should carry the range, or state which two specific assumptions produced whatever single number they quote. The claim worth remembering is the order of magnitude, not the digit.</p>
+
+      
+      <div class="figure-embed tall">
+        <div class="figure-embed-header">
+          <span class="figure-embed-label">Figure 5.1 &mdash; Movement against regeneration, per 5.00 MiB block, log scale</span>
+          <a class="figure-embed-link" href="../figures/ch04-latency/movement-vs-regeneration.html" target="_blank" rel="noopener">Open Full Screen &#8599;</a>
+        </div>
+        <iframe src="../figures/ch04-latency/movement-vs-regeneration.html" title="Tier fetch at 121, 64 and 32 GB/s against forward compute for 16 tokens at 50, 40 and 25 per cent MFU, on a log axis, with the interior-block floor" loading="lazy" style="height:860px;background:var(--bg-primary)"></iframe>
+      </div>
 
       <h2>5.6 Capacity Crossover: When KV-Cache Rivals the Model Itself</h2>
       <p>Tier economics matter operationally because KV-cache footprint grows with context length while model weight footprint is fixed, and at long enough context the two become comparable — which changes what "offload" even means, since the tier is now being asked to hold something on the scale of the model itself. For Llama-3 70B in bf16, weights occupy 140 GB (130.4 GiB). Two reference context lengths for a single sequence:</p>
